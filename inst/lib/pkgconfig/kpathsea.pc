@@ -1,0 +1,11 @@
+prefix=/Users/holzschu/src/Xcode_iPad/texlive/inst
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: kpathsea
+Description: Kpathsea filename lookup library
+Version: 6.2.4/dev
+Libs: -L${libdir} -lkpathsea
+Cflags: -I${libdir} -I${includedir}
+

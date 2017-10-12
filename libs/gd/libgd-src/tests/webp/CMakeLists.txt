@@ -1,0 +1,8 @@
+IF(WEBP_FOUND)
+SET(TESTS_FILES
+	bug00111
+	bug_double_free
+)
+ENDIF(WEBP_FOUND)
+
+ADD_GD_TESTS()

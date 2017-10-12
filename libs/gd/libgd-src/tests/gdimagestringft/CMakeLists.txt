@@ -1,0 +1,7 @@
+IF(FREETYPE_FOUND)
+SET(TESTS_FILES
+	gdimagestringft_bbox
+)
+ENDIF(FREETYPE_FOUND)
+
+ADD_GD_TESTS()

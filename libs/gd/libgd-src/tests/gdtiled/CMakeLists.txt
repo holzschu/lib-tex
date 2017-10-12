@@ -1,0 +1,5 @@
+SET(TESTS_FILES
+	bug00032
+)
+
+ADD_GD_TESTS()

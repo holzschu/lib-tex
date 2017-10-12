@@ -1,0 +1,60 @@
+This is the file .../info/dir, which contains the
+topmost node of the Info hierarchy, called (dir)Top.
+The first time you invoke Info you start off looking at this node.
+
+File: dir,	Node: Top	This is the top of the INFO tree
+
+  This (the Directory node) gives a menu of major topics.
+  Typing "q" exits, "H" lists all Info commands, "d" returns here,
+  "h" gives a primer for first-timers,
+  "mEmacs<Return>" visits the Emacs manual, etc.
+
+  In Emacs, you can click mouse button 2 on a menu item or cross reference
+  to select it.
+
+* Menu:
+
+Individual utilities
+* bibtex: (web2c)bibtex invocation.             Maintaining bibliographies.
+* dvicopy: (web2c)dvicopy invocation.           Virtual font expansion
+* dvitomp: (web2c)dvitomp invocation.           DVI to MPX (MetaPost pictures).
+* dvitype: (web2c)dvitype invocation.           DVI to human-readable text.
+* gftodvi: (web2c)gftodvi invocation.           Generic font proofsheets.
+* gftopk: (web2c)gftopk invocation.             Generic to packed fonts.
+* gftype: (web2c)gftype invocation.             GF to human-readable text.
+* install-tl::                  Installing TeX Live.
+* mf: (web2c)mf invocation.                     Creating typeface families.
+* mft: (web2c)mft invocation.                   Prettyprinting Metafont source.
+* mltex: (web2c)MLTeX.                          Multi-lingual TeX.
+* mpost: (web2c)mpost invocation.               Creating technical diagrams.
+* patgen: (web2c)patgen invocation.             Creating hyphenation patterns.
+* pktogf: (web2c)pktogf invocation.             Packed to generic fonts.
+* pktype: (web2c)pktype invocation.             PK to human-readable text.
+* pltotf: (web2c)pltotf invocation.             Property list to TFM.
+* pooltype: (web2c)pooltype invocation.         Display WEB pool files.
+* tangle: (web2c)tangle invocation.             WEB to Pascal.
+* tex: (web2c)tex invocation.                   Typesetting.
+* tftopl: (web2c)tftopl invocation.             TFM -> property list.
+* tlmgr::                       Managing TeX Live.
+* vftovp: (web2c)vftovp invocation.             Virtual font -> virtual pl.
+* vptovf: (web2c)vptovf invocation.             Virtual pl -> virtual font.
+* weave: (web2c)weave invocation.               WEB to TeX.
+
+TeX
+* Kpathsea: (kpathsea).         File lookup along search paths.
+* TLbuild: (tlbuild).           TeX Live configuration and development.
+* Web2c: (web2c).               TeX, Metafont, and companion programs.
+* kpsewhich: (kpathsea)Invoking kpsewhich.
+                                TeX file searching.
+* mktexfmt: (kpathsea)mktex scripts.
+                                Format (fmt/base/mem) generation.
+* mktexlsr: (kpathsea)Filename database.
+                                Update ls-R.
+* mktexmf: (kpathsea)mktex scripts.
+                                MF source generation.
+* mktexpk: (kpathsea)mktex scripts.
+                                PK bitmap generation.
+* mktextex: (kpathsea)mktex scripts.
+                                TeX source generation.
+* mktextfm: (kpathsea)mktex scripts.
+                                TeX font metric generation.
