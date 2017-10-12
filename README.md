@@ -20,4 +20,16 @@ extern int dllluatexmain(int argc, char *argv[]);
 extern int dllpdftexmain(int argc, char *argv[]);
 ```
 
-Each of them is equivalent to calling "main()" in the respective command. To call "lualatex myFile.tex", you call "dllluatexmain(3, "lualatex", "myFile.tex")";
+Each of them is equivalent to calling "main()" in the respective command. To call "lualatex myFile.tex", you call:
+```
+dllluatexmain(2, "lualatex", "myFile.tex");
+```
+
+If you do not have access to the standard input, you will need to disable interactive mode: 
+```
+dllluatexmain(3, "lualatex", "--nonstopmode", "myFile.tex");
+```
+
+# Successive calls
+
+Because the TeX commands are in a library and not shell commands, variables that were allocated or set the first time remain allocated or set on the second launch. For this reason, the commands may break down entirely on the second call (and take the enclosing application with them). Use with caution. As of now, I think pdftex can be called several times, but not luatex.
