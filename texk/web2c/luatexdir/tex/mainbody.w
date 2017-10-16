@@ -421,6 +421,7 @@ void main_body(void)
         char *fname = NULL;
         if (format_ident != 0 && !ini_version)
             initialize();       /* erase preloaded format */
+        // Most likely: open_fmt_file breaks things. 
         if ((fname = open_fmt_file()) == NULL)
             goto FINAL_END;
         if (!load_fmt_file(fname)) {
@@ -428,8 +429,9 @@ void main_body(void)
             goto FINAL_END;
         }
         zwclose(fmt_file);
-        while ((iloc < ilimit) && (buffer[iloc] == ' '))
+        while ((iloc < ilimit) && (buffer[iloc] == ' ')) {
             incr(iloc);
+            }
     }
     if (output_mode_option != 0)
         output_mode_par = output_mode_value;
@@ -449,8 +451,9 @@ void main_body(void)
     initialize_math();
     fixup_selector(log_opened_global);
     check_texconfig_init();
-    if ((iloc < ilimit) && (get_cat_code(cat_code_table_par, buffer[iloc]) != escape_cmd))
+    if ((iloc < ilimit) && (get_cat_code(cat_code_table_par, buffer[iloc]) != escape_cmd)) {
         start_input();          /* \.{\\input} assumed */
+	}
     /* DIR: Initialize |text_dir_ptr| */
     text_dir_ptr = new_dir(0);
 

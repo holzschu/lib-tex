@@ -553,6 +553,7 @@ main (int ac, string *av)
 #    endif
     av[0] = kpse_program_basename (av[0]);
     _setmaxstdio(2048);
+
 /*
  *  We choose to crash for fatal errors
     SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
@@ -902,7 +903,7 @@ string normalize_quotes(const_string name, const_string mesg)
     *p = '\0';
     if (quoted) {
         fprintf(stderr, "! Unbalanced quotes in %s %s\n", mesg, name);
-        uexit(1);
+        uexit_lua(1);
     }
     return ret;
 }
@@ -1087,7 +1088,7 @@ boolean input_line(FILE * f)
         fprintf(stderr, "! Unable to read an entire line---bufsize=%u.\n",
                 (unsigned) buf_size);
         fputs("Please increase buf_size in texmf.cnf.\n", stderr);
-        uexit(1);
+        uexit_lua(1);
     }
 
     buffer[last] = ' ';

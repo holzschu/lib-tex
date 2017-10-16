@@ -166,6 +166,9 @@ fd_entry *lookup_fd_entry(char *);
 fd_entry *new_fd_entry(internal_font_number);
 void write_fontstuff(PDF);
 void register_fd_entry(fd_entry * fd);
+// cleanup:
+extern void font_free(void);
+extern void dictionary_free(void); 
 
 /* writet1.c */
 boolean t1_subset(char *, char *, unsigned char *);

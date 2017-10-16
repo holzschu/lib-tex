@@ -192,6 +192,7 @@
 @define procedure usagehelp ();
 @define procedure uexit ();
 @define procedure uexitandclear ();
+@define procedure uexit_lua ();
 @define procedure vgetc ();
 @define procedure write ();
 @define procedure writedvi ();

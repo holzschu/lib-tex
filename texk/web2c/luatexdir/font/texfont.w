@@ -1160,7 +1160,7 @@ void delete_font(int f)
 {
     int i;
     charinfo *co;
-    assert(f > 0);
+    assert(f >= 0);
     if (font_tables[f] != NULL) {
         set_font_name(f, NULL);
         set_font_filename(f, NULL);
@@ -1201,6 +1201,14 @@ void delete_font(int f)
         }
     }
 }
+
+void clear_font_data() 
+{
+	while (font_id_maxval >=0) delete_font(font_id_maxval); 
+	font_arr_max = 0; 
+	xfree(font_tables); 
+}
+
 
 @ @c
 void create_null_font(void)

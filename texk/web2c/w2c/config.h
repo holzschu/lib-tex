@@ -139,6 +139,8 @@ WEB2C_NORETURN
 extern void uexit (int status);
 WEB2C_NORETURN
 extern void uexitandclear (int status);
+WEB2C_NORETURN
+extern void uexit_lua (int status);
 
 /* usage.c */
 extern void usage (const_string progname);

@@ -248,6 +248,14 @@ void def_math_param(int param_id, int style_id, scaled value, int lvl)
     }
 }
 
+void clear_math_data()
+{
+   if (math_param_head != NULL) destroy_sa_tree(math_param_head);
+   math_param_head = NULL; 
+   if (math_fam_head != NULL) destroy_sa_tree(math_fam_head); 
+   math_fam_head = NULL; 
+}
+
 scaled get_math_param(int param_id, int style_id)
 {
     int n = param_id + (256 * style_id);

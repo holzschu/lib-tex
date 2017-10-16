@@ -221,10 +221,11 @@ void do_final_end(void)
     update_terminal();
     ready_already = 0;
     lua_close(Luas); /* new per 0.99 */
+    Luas = NULL; /* new per 1.04 */
     if ((history != spotless) && (history != warning_issued))
-        uexit(1);
+        uexit_lua(1);
     else
-        uexit(0);
+        uexit_lua(0);
 }
 
 __attribute__ ((noreturn))

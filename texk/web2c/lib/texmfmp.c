@@ -558,9 +558,10 @@ runsystem (const char *cmd)
     status =  system (safecmd);
 #else 
   if (allow == 1)
-  	  fprintf(stderr, "web2c/lib/texmfmp.c: we should start this command: %s\n", cmd); 
+  	  fprintf(stderr, "\nweb2c/lib/texmfmp.c: we should start this command: %s\n", cmd); 
   else if (allow == 2)
-  	  fprintf(stderr, "web2c/lib/texmfmp.c: we should start this command: %s\n", safecmd); 
+  	  fprintf(stderr, "\nweb2c/lib/texmfmp.c: we should start this command: %s\n", safecmd); 
+  fflush(stderr);
   status = 0;
 #endif
 

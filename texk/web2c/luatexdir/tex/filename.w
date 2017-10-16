@@ -297,6 +297,7 @@ void tprint_file_name(unsigned char *n, unsigned char *a, unsigned char *e)
     boolean must_quote;         /* whether to quote the filename */
     unsigned char *j;           /* index into string */
     must_quote = false;
+    
     if (a != NULL) {
         j = a;
         while ((!must_quote) && (*j)) {

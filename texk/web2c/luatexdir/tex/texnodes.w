@@ -1927,6 +1927,20 @@ void undump_node_mem(void)
     }
 }
 
+void clear_node_mem() 
+{
+	xfree(varmem); 
+
+#ifdef CHECK_NODE_USAGE
+	xfree(varmem_sizes);
+#endif
+	var_mem_max = 0;
+	rover = 0;
+	for (int t = 0; t < MAX_CHAIN_SIZE; t++) free_chain[t] = null; 
+	my_prealloc = 0;
+	fix_node_lists = 1; /* used in font and lang */
+}
+
 @ @c
 halfword slow_get_node(int s)
 {

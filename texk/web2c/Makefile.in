@@ -1104,8 +1104,9 @@ luajittex_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(luajittex_CXXFLAGS) \
 	$(CXXFLAGS) $(luajittex_LDFLAGS) $(LDFLAGS) -o $@
 am__objects_34 = luatexdir/luatex-luatex.$(OBJEXT) \
+	luatexdir/luatex-uexit_lua.$(OBJEXT) \
 	mplibdir/luatex-lmplib.$(OBJEXT)
-nodist_luatex_OBJECTS = $(am__objects_34)
+nodist_luatex_OBJECTS = $(am__objects_34) 
 luatex_OBJECTS = $(nodist_luatex_OBJECTS)
 am__DEPENDENCIES_7 = $(am__DEPENDENCIES_1)
 luatex_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -3530,6 +3531,7 @@ luatex_sources = \
 	luatexdir/luatex_svnversion.h \
 	luatexdir/luatex.c \
 	luatexdir/luatex.h \
+	luatexdir/uexit_lua.c \
 	mplibdir/lmplib.c
 
 call_luatex_CPPFLAGS = -DEXEPROG=\"luatex.exe\"
@@ -9986,6 +9988,21 @@ libluatex_a-equivalents.obj: equivalents.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='equivalents.c' object='libluatex_a-equivalents.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libluatex_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libluatex_a-equivalents.obj `if test -f 'equivalents.c'; then $(CYGPATH_W) 'equivalents.c'; else $(CYGPATH_W) '$(srcdir)/equivalents.c'; fi`
+
+luatexdir/luatex-uexit_lua.o: luatexdir/uexit_lua.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(luatex_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT luatexdir/luatex-uexit_lua.o -MD -MP -MF luatexdir/$(DEPDIR)/luatex-uexit_lua.Tpo -c -o luatexdir/luatex-uexit_lua.o `test -f 'luatexdir/uexit_lua.c' || echo '$(srcdir)/'`luatexdir/uexit_lua.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) luatexdir/$(DEPDIR)/luatex-uexit_lua.Tpo luatexdir/$(DEPDIR)/luatex-uexit_lua.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='luatexdir/uexit_lua.c' object='luatexdir/luatex-uexit_lua.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(luatex_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o luatexdir/luatex-uexit_lua.o `test -f 'luatexdir/uexit_lua.c' || echo '$(srcdir)/'`luatexdir/uexit_lua.c
+
+luatexdir/luatex-uexit_lua.obj: luatexdir/uexit_lua.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(luatex_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT luatexdir/luatex-uexit_lua.obj -MD -MP -MF luatexdir/$(DEPDIR)/luatex-uexit_lua.Tpo -c -o luatexdir/luatex-uexit_lua.obj `if test -f 'luatexdir/uexit_lua.c'; then $(CYGPATH_W) 'luatexdir/uexit_lua.c'; else $(CYGPATH_W) '$(srcdir)/luatexdir/uexit_lua.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) luatexdir/$(DEPDIR)/luatex-uexit_lua.Tpo luatexdir/$(DEPDIR)/luatex-uexit_lua.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='luatexdir/uexit_lua.c' object='luatexdir/luatex-uexit_lua.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(luatex_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o luatexdir/luatex-uexit_lua.obj `if test -f 'luatexdir/uexit_lua.c'; then $(CYGPATH_W) 'luatexdir/uexit_lua.c'; else $(CYGPATH_W) '$(srcdir)/luatexdir/uexit_lua.c'; fi`
+
 
 libluatex_a-errors.o: errors.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libluatex_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libluatex_a-errors.o -MD -MP -MF $(DEPDIR)/libluatex_a-errors.Tpo -c -o libluatex_a-errors.o `test -f 'errors.c' || echo '$(srcdir)/'`errors.c

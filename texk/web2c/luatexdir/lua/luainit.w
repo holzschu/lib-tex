@@ -283,9 +283,13 @@ void initFlagValues() {
     ini_version = 0; 
     haltonerrorp = 0; 
     shellenabledp = 0; 
-    debug_format_file = 0; 
+    debug_format_file = 0;
     filelineerrorstylep = 0;
     parsefirstlinep = 0; 
+	lua_only = 0;
+	lua_offset = 0;
+	show_luahashchars = 0;
+	user_progname = NULL;
 }
 #endif
 
@@ -329,6 +333,13 @@ static void parse_options(int ac, char **av)
     int g;                      /* `getopt' return code.  */
     int option_index;
 #ifdef __IPHONE__
+  lua_only = 0;
+  lua_offset = 0;
+  show_luahashchars = 0;
+  safer_option = 0;
+  nosocket_option = 0;
+  utc_option = 0;
+
     initFlagValues();
     optind = 1; 
     opterr = 1;
@@ -454,7 +465,7 @@ static void parse_options(int ac, char **av)
                  "named COPYING and the LuaTeX source.\n\n"
                  "LuaTeX is Copyright 2017 Taco Hoekwater and the LuaTeX Team.\n");
             /* *INDENT-ON* */
-            uexit(0);
+            uexit_lua(0);
         } else if (ARGUMENT_IS("credits")) {
             char *versions;
             initversionstring(&versions);
@@ -475,7 +486,7 @@ static void parse_options(int ac, char **av)
                  "luajit    : Mike Pall (used in LuajitTeX)\n");
             /* *INDENT-ON* */
             puts(versions);
-            uexit(0);
+            uexit_lua(0);
         }
     }
     /* attempt to find |input_name| / |dump_name| */

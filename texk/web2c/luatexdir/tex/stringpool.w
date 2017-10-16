@@ -351,3 +351,13 @@ void flush_str(str_number s)
     while (str_string((str_ptr - 1)) == NULL)
         str_ptr--;
 }
+
+void clear_string_pool()
+{
+	while (str_ptr > STRING_OFFSET) {
+		flush_str(str_ptr); 
+		str_ptr--;
+	}
+	str_ptr = (STRING_OFFSET + 1);
+	xfree(string_pool); 
+}

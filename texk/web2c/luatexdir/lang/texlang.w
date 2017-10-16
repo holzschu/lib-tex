@@ -68,6 +68,15 @@ struct tex_language *new_language(int n)
     }
 }
 
+void clear_tex_languages() {
+	for(int n = 0; n < MAX_TEX_LANGUAGES; n++) {
+		if (tex_languages[n] != NULL) {
+			xfree(tex_languages[n]->patterns); 
+			xfree(tex_languages[n]); 
+		}
+	}
+}
+
 struct tex_language *get_language(int n)
 {
     if (n >= 0 && n < MAX_TEX_LANGUAGES) {
@@ -1123,6 +1132,7 @@ void undump_language_data(void)
     for (i = 0; i < numlangs; i++) {
         undump_int(x);
         if (x == 1) {
+            // The bug is in this function here: 
             undump_one_language(i);
         }
     }

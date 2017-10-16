@@ -660,6 +660,80 @@ static void write_fontdictionaries(PDF pdf)
         write_fontdictionary(pdf, fo);
 }
 
+@ Cleaning up of font tree and dictionary tree
+@c
+static void destroy_tx_entry(void *pa, void *pb) 
+{
+  int *p; 
+  p = (int *) pa;
+  xfree(p);
+}
+
+static void destroy_glw_cid_entry(void *pa, void *pb)
+{
+    glw_entry *e = (glw_entry *) pa;
+    (void) pb;
+    xfree(e);
+}
+
+
+static void destroy_fd_entry(void *pa, void *pb)
+{
+    fd_entry *p;
+    int i;
+    p = (fd_entry *) pa;
+
+    xfree(p->fontname);
+    xfree(p->subset_tag);
+    // xfree(fd->fe); // already freed
+    p->fe = NULL;
+    if (p->builtin_glyph_names != NULL)
+        for (i = 0; i < 256; i++)
+            if (p->builtin_glyph_names[i] != notdef)
+                xfree(p->builtin_glyph_names[i]);
+    xfree(p->builtin_glyph_names);
+    // if (p->fm) xfree(p->fm); 
+    p->fm = NULL; // xfree(p->fm); fprintf(stderr, "Destroyed p->fm\n"); fflush(stderr); 
+    if (p->tx_tree != NULL) {
+    	avl_destroy(p->tx_tree, destroy_tx_entry); 
+    	p->tx_tree = NULL;
+	}
+    if (p->gl_tree != NULL) {
+    	avl_destroy(p->gl_tree, destroy_glw_cid_entry); 
+    	p->gl_tree = NULL;
+	}
+
+	xfree(p);
+}
+
+void font_free(void)
+{
+    if (fd_tree != NULL)
+        avl_destroy(fd_tree, destroy_fd_entry);
+    fd_tree = NULL;
+}
+
+static void destroy_fo_entry(void *pa, void *pb)
+{
+    fo_entry *p;
+    int i;
+    p = (fo_entry *) pa;
+
+	p->fm = NULL; // xfree(p->fm); // fprintf(stderr, "Destroyed fm\n"); fflush(stderr); 
+	p->fd = NULL; // Already destroyed
+	p->fe = NULL; // Already destroyed
+
+    xfree(p);
+}
+
+void dictionary_free(void)
+{
+    if (fo_tree != NULL)
+        avl_destroy(fo_tree, destroy_fo_entry);
+    fo_tree = NULL;
+}
+
+
 @ Final flush of all font related stuff by call from \.{Output fonts
 definitions} elsewhere
 @c
@@ -980,14 +1054,6 @@ static void write_cid_charwidth_array(PDF pdf, fo_entry * fo)
     pdf_end_array(pdf);
     pdf_end_obj(pdf);
 }
-
-static void destroy_glw_cid_entry(void *pa, void *pb)
-{
-    glw_entry *e = (glw_entry *) pa;
-    (void) pb;
-    xfree(e);
-}
-
 
 static void create_cid_fontdictionary(PDF pdf, internal_font_number f)
 {

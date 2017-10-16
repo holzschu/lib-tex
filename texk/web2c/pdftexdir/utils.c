@@ -405,10 +405,6 @@ scaled extxnoverd(scaled x, scaled n, scaled d)
     return (scaled) r;
 }
 
-#ifdef __IPHONE__
-extern void PdfObjTree_free(void);
-#endif
-
 void libpdffinish(void)
 {
 	xfree(fb_array);

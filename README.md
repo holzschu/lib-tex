@@ -27,9 +27,12 @@ dllluatexmain(2, "lualatex", "myFile.tex");
 
 If you do not have access to the standard input, you will need to disable interactive mode: 
 ```
-dllluatexmain(3, "lualatex", "--nonstopmode", "myFile.tex");
+dllluatexmain(3, "lualatex", "--interactionmode=nonstopmode", "myFile.tex");
 ```
 
 # Successive calls
 
-Because the TeX commands are in a library and not shell commands, variables that were allocated or set the first time remain allocated or set on the second launch. For this reason, the commands may break down entirely on the second call (and take the enclosing application with them). Use with caution. As of now, I think pdftex can be called several times, but not luatex.
+The TeX commands are in a library, not shell commands. On exit, variables are reset to their default values and memory is freed. This way, you can call the commands several times in a row. 
+
+There may still be some side effects, but I can run several instances of pdftex and luatex. 
+

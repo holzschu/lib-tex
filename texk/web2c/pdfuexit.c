@@ -7,9 +7,9 @@
 #include <w2c/config.h>
 #ifdef __IPHONE__
 #include <pthread.h>
-#endif
 #ifndef xfree
 #  define xfree(p)            do { if (p != NULL) free(p); p = NULL; } while (0)
+#endif
 //
 // from pdftexini.c
 extern void* yhash; 

@@ -393,7 +393,7 @@ boolean load_fmt_file(const char *fmtname)
     }
     xfree(format_engine);
     undump_int(x);
-    format_debug("string pool checksum", x);
+    format_debug("striig pool checksum", x);
     if (x != 0x57325458) {      /* todo: @@\$ *//* check that strings are the same */
         wake_up_terminal();
         wterm_cr();
