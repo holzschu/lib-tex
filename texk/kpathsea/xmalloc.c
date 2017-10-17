@@ -24,6 +24,8 @@ xmalloc (size_t size)
 {
     void *new_mem = (void *)malloc(size ? size : 1);
 
+    // if (size == 16) fprintf(stderr, "Allocated 16 bytes at %x\n", new_mem); 
+
     if (new_mem == NULL) {
         fprintf(stderr, "fatal: memory exhausted (xmalloc of %lu bytes).\n",
                 (unsigned long)size);

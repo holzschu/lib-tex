@@ -3515,12 +3515,13 @@ void initialize(void)
     initialize_equivalents();
     no_new_control_sequence = true;     /* new identifiers are usually forbidden */
     init_primitives();
-
+    
     mag_set = 0;
     initialize_marks();
     initialize_read();
 
     static_pdf = init_pdf_struct(static_pdf); /* should be init_backend() */
+    
 
     format_ident = 0;
     format_name = get_nullstr();

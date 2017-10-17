@@ -180,9 +180,11 @@ PDF init_pdf_struct(PDF pdf)
     pdf->pstruct = NULL;
 
     pdf->posstruct = xtalloc(1, posstructure);
+    
     pdf->posstruct->pos.h = 0;
     pdf->posstruct->pos.v = 0;
     pdf->posstruct->dir = dir_TLT;
+
 
     /* allocated size of |obj_tab| array */
     pdf->obj_tab_size = (unsigned) inf_obj_tab_size;

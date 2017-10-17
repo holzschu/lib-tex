@@ -34,5 +34,5 @@ dllluatexmain(3, "lualatex", "--interactionmode=nonstopmode", "myFile.tex");
 
 The TeX commands are in a library, not shell commands. On exit, variables are reset to their default values and memory is freed. This way, you can call the commands several times in a row. 
 
-There may still be some side effects, but I can run several instances of pdftex and luatex. 
+There are still memory leaks, but I'm tracking them down. At least, you can run the tools multiple times. 
 

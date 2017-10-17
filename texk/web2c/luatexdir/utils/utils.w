@@ -60,6 +60,15 @@ define_array(char);
 
 @ @c
 #define SUBSET_TAG_LENGTH 6
+
+static void destroy_string_entry(void *pa, void *pb) 
+{
+  string *p; 
+  p = (string *) pa;
+  // xfree(p);
+}
+
+
 void make_subset_tag(fd_entry * fd)
 {
     int i, j = 0, a[SUBSET_TAG_LENGTH];
@@ -70,6 +79,16 @@ void make_subset_tag(fd_entry * fd)
     md5_byte_t digest[16];
     void **aa;
     static struct avl_table *st_tree = NULL;
+#ifdef __IPHONE__
+	if (fd == NULL) {
+		// We are ending the program, erase st_tree: 
+		if (st_tree != NULL) {
+			avl_destroy(st_tree, NULL); 
+			st_tree = NULL; 
+		}
+		return; 
+	}
+#endif
     if (st_tree == NULL)
         st_tree = avl_create(comp_string_entry, NULL, &avl_xallocator);
     assert(fd != NULL);

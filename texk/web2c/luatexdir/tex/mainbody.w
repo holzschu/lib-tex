@@ -405,7 +405,6 @@ void main_body(void)
         goto FINAL_END;
     }
     print_banner(luatex_version_string);
-
     /* Get the first line of input and prepare to start */
     /* When we begin the following code, \TeX's tables may still contain garbage;
        the strings might not even be present. Thus we must proceed cautiously to get
@@ -428,7 +427,7 @@ void main_body(void)
             zwclose(fmt_file);
             goto FINAL_END;
         }
-        zwclose(fmt_file);
+        zwclose(fmt_file); 
         while ((iloc < ilimit) && (buffer[iloc] == ' ')) {
             incr(iloc);
             }
