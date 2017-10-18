@@ -84,6 +84,11 @@ extern void* sourcefilenamestack;
 extern void* fullsourcefilenamestack;
 extern void* paramstack;
 extern void* dvibuf;
+
+extern void* fixmem; 
+extern void* hash;
+extern void* eqtb; 
+
 extern void* hyphword;
 extern void* hyphlist;
 extern void* hyphlink;

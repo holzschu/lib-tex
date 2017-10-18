@@ -891,6 +891,14 @@ static void destroy_ff_entry(void *pa, void *pb)
     delete_ff_entry(ff);
 }
 
+static void destroy_encname_entry(void *pa, void *pb)
+{
+    string *encname; 
+    encname = (string *) pa;
+    xfree(encname); 
+}
+
+
 void fm_free(void)
 {
     if (tfm_tree != NULL) {
@@ -904,6 +912,10 @@ void fm_free(void)
     if (ff_tree != NULL) {
         avl_destroy(ff_tree, destroy_ff_entry);
         ff_tree = NULL;
+    }
+	if (encname_tree != NULL) {
+		avl_destroy(encname_tree, destroy_encname_entry); 
+		encname_tree = NULL; 
     }
 }
 

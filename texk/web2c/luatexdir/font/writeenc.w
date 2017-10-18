@@ -143,11 +143,12 @@ static void destroy_fe_entry(void *pa, void *pb)
     int i;
     (void) pb;
     p = (fe_entry *) pa;
-    xfree(p->name);
+    // xfree(p->name); // Was released with fm: fo->fe = get_fe_entry(fo->fm->encname);
     if (p->glyph_names != NULL)
-        for (i = 0; i < 256; i++)
+        for (i = 0; i < 256; i++) {
             if (p->glyph_names[i] != notdef)
                 xfree(p->glyph_names[i]);
+		}
     xfree(p->glyph_names);
     if (p->tx_tree != NULL)
         avl_destroy(p->tx_tree,NULL);

@@ -267,10 +267,10 @@ void libpdffinish(PDF pdf)
 {
     strbuf_free(pdf->fb);
     xfree(pdf->job_id_string);
-    fm_free();
+    fm_free();     // releases fm
     t1_free();
-    enc_free(); // release enc_tree
-	font_free(); // release fd_tree
+    enc_free();    // release enc_tree
+	font_free();   // release fd_tree
 	dictionary_free(); // release fo_tree
     epdf_free();
     ttf_free();
