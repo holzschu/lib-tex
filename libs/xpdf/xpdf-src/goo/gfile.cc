@@ -576,7 +576,8 @@ GBool executeCommand(char *cmd) {
 #ifndef __IPHONE__
   return system(cmd) ? gFalse : gTrue;
 #else // __IPHONE__
-  fprintf(stderr, "xpdf, gfile.cc, asked to execute command: %s\n", cmd);
+  fprintf(stderr, "xpdf/xpdf-src/goo/gfile.cc, asked to execute command: %s\n", cmd);
+  fflush(stderr); 
   return gTrue;
 #endif
 #endif

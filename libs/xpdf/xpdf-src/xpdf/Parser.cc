@@ -81,18 +81,18 @@ Object *Parser::getObj(Object *obj, GBool simpleOnly,
 	error(errSyntaxError, getPos(),
 	      "Dictionary key must be a name object");
 	shift();
-      } else {
-	key = copyString(buf1.getName());
-	shift();
-	if (buf1.isEOF() || buf1.isError()) {
-	  gfree(key);
-	  break;
+	  } else {
+		  key = copyString(buf1.getName());
+		  shift();
+		  if (buf1.isEOF() || buf1.isError()) {
+			  gfree(key);
+			  break;
+		  }
+		  obj->dictAdd(key, getObj(&obj2, gFalse,
+					  fileKey, encAlgorithm, keyLength,
+					  objNum, objGen, recursion + 1));
+	  }
 	}
-	obj->dictAdd(key, getObj(&obj2, gFalse,
-				 fileKey, encAlgorithm, keyLength,
-				 objNum, objGen, recursion + 1));
-      }
-    }
     if (buf1.isEOF())
       error(errSyntaxError, getPos(), "End of file inside dictionary");
     // stream objects are not allowed inside content streams or

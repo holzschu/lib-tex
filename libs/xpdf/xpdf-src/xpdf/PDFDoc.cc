@@ -92,18 +92,18 @@ PDFDoc::PDFDoc(GString *fileNameA, GString *ownerPassword,
   }
 #else
   if (!(file = fopen(fileName1->getCString(), "rb"))) {
-    fileName2 = fileName->copy();
-    fileName2->lowerCase();
-    if (!(file = fopen(fileName2->getCString(), "rb"))) {
-      fileName2->upperCase();
-      if (!(file = fopen(fileName2->getCString(), "rb"))) {
-	error(errIO, -1, "Couldn't open file '{0:t}'", fileName);
-	delete fileName2;
-	errCode = errOpenFile;
-	return;
-      }
-    }
-    delete fileName2;
+	  fileName2 = fileName->copy();
+	  fileName2->lowerCase();
+	  if (!(file = fopen(fileName2->getCString(), "rb"))) {
+		  fileName2->upperCase();
+		  if (!(file = fopen(fileName2->getCString(), "rb"))) {
+			  error(errIO, -1, "Couldn't open file '{0:t}'", fileName);
+			  delete fileName2;
+			  errCode = errOpenFile;
+			  return;
+		  }
+	  }
+	  delete fileName2;
   }
 #endif
 
@@ -204,36 +204,36 @@ PDFDoc::PDFDoc(BaseStream *strA, GString *ownerPassword,
 }
 
 GBool PDFDoc::setup(GString *ownerPassword, GString *userPassword) {
-  str->reset();
+	str->reset();
 
-  // check header
-  checkHeader();
+	// check header
+	checkHeader();
 
-  // read the xref and catalog
-  if (!PDFDoc::setup2(ownerPassword, userPassword, gFalse)) {
-    if (errCode == errDamaged || errCode == errBadCatalog) {
-      // try repairing the xref table
-      error(errSyntaxWarning, -1,
-	    "PDF file is damaged - attempting to reconstruct xref table...");
-      if (!PDFDoc::setup2(ownerPassword, userPassword, gTrue)) {
-	return gFalse;
-      }
-    } else {
-      return gFalse;
-    }
-  }
+	// read the xref and catalog
+	if (!PDFDoc::setup2(ownerPassword, userPassword, gFalse)) {
+		if (errCode == errDamaged || errCode == errBadCatalog) {
+			// try repairing the xref table
+			error(errSyntaxWarning, -1,
+					"PDF file is damaged - attempting to reconstruct xref table...");
+			if (!PDFDoc::setup2(ownerPassword, userPassword, gTrue)) {
+				return gFalse;
+			}
+		} else {
+			return gFalse;
+		}
+	}
 
 #ifndef DISABLE_OUTLINE
-  // read outline
-  outline = new Outline(catalog->getOutline(), xref);
+	// read outline
+	outline = new Outline(catalog->getOutline(), xref);
 #endif
 
-  // read the optional content info
-  optContent = new OptionalContent(this);
+	// read the optional content info
+	optContent = new OptionalContent(this);
 
 
-  // done
-  return gTrue;
+	// done
+	return gTrue;
 }
 
 GBool PDFDoc::setup2(GString *ownerPassword, GString *userPassword,

@@ -311,7 +311,7 @@ Stream *Stream::makeFilter(char *name, Stream *str, Object *params,
 //------------------------------------------------------------------------
 
 BaseStream::BaseStream(Object *dictA) {
-  dict = *dictA;
+  dict = *dictA; 
 }
 
 BaseStream::~BaseStream() {
