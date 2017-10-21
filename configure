@@ -4639,7 +4639,8 @@ if test "${enable_pdftex_synctex+set}" = set; then :
 fi
 
 test "x$enable_web2c:$enable_pdftex" = xyes:yes && {
-  need_xpdf=yes
+  need_poppler=yes
+  # need_xpdf=yes
   need_libpng=yes
 }
 # Check whether --enable-luatex was given.

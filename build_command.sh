@@ -1,5 +1,6 @@
 #!/bin/sh
 # -D __IPHONE__ for specific changes in the code
+# -D NDEBUG to deactivate assert
 
  ./Build  --host=arm-apple-darwin --build=x86_64-apple-darwin \
  --disable-native-texlive-build \
@@ -46,8 +47,8 @@
  CC=clang \
  CXX=clang++ \
  OBJCXX=clang++ \
- CFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -D\ __IPHONE__" \
- CXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -D\ __IPHONE__" \
- OBJCXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -D\ __IPHONE__" \
+ CFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+ CXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+ OBJCXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
  > & build_cross.log
 
