@@ -18744,7 +18744,8 @@ if test "${enable_pdftex_synctex+set}" = set; then :
 fi
 
 test "x$enable_web2c:$enable_pdftex" = xyes:yes && {
-  need_xpdf=yes
+  need_poppler=yes
+  # need_xpdf=yes
   need_libpng=yes
 }
 # Check whether --enable-luatex was given.
@@ -24193,14 +24194,19 @@ fi
 POPPLER_VERSION='-DPOPPLER_VERSION=\"'`$PKG_CONFIG poppler --modversion`'\"'
 XPDF_INCLUDES="$POPPLER_VERSION $XPDF_INCLUDES"
 else
-  XPDF_INCLUDES="-DPDF_PARSER_ONLY -I$kpse_BLD/libs/xpdf -I$kpse_BLD/libs/xpdf/goo -I$kpse_BLD/libs/xpdf/xpdf"
-  XPDF_LIBS="$kpse_BLD/libs/xpdf/libxpdf.a"
-  XPDF_DEPEND='${top_builddir}/../../libs/xpdf/libxpdf.a'
-  XPDF_RULE='# Rebuild libxpdf
-$(XPDF_DEPEND): ${top_builddir}/../../libs/xpdf/xpdf/Stream.h
-	cd ${top_builddir}/../../libs/xpdf && $(MAKE) $(AM_MAKEFLAGS) rebuild
-${top_builddir}/../../libs/xpdf/xpdf/Stream.h:
-	cd ${top_builddir}/../../libs/xpdf && $(MAKE) $(AM_MAKEFLAGS) rebuild'
+	POPPLER_VERSION='-DPOPPLER_VERSION=\"0.52.0\"'
+	XPDF_INCLUDES="$POPPLER_VERSION $POPPLER_INCLUDES"
+	XPDF_LIBS="$POPPLER_LIBS"
+	XPDF_DEPEND="$POPPLER_DEPEND"
+	XPDF_RULE="$POPPLER_RULE"
+#   XPDF_INCLUDES="-DPDF_PARSER_ONLY -I$kpse_BLD/libs/xpdf -I$kpse_BLD/libs/xpdf/goo -I$kpse_BLD/libs/xpdf/xpdf"
+#   XPDF_LIBS="$kpse_BLD/libs/xpdf/libxpdf.a"
+#   XPDF_DEPEND='${top_builddir}/../../libs/xpdf/libxpdf.a'
+#   XPDF_RULE='# Rebuild libxpdf
+# $(XPDF_DEPEND): ${top_builddir}/../../libs/xpdf/xpdf/Stream.h
+# 	cd ${top_builddir}/../../libs/xpdf && $(MAKE) $(AM_MAKEFLAGS) rebuild
+# ${top_builddir}/../../libs/xpdf/xpdf/Stream.h:
+# 	cd ${top_builddir}/../../libs/xpdf && $(MAKE) $(AM_MAKEFLAGS) rebuild'
 fi
 test "x$kpse_cv_have_win32" = xno || XPDF_LIBS="$XPDF_LIBS -lgdi32"
 

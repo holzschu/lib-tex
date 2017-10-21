@@ -166,13 +166,13 @@ static XRef *xref = 0;
 static PdfDocument *find_add_document(char *file_name)
 {
     PdfDocument *p = pdfDocuments;
-    while (p && strcmp(p->file_name, file_name) != 0)
-        p = p->next;
-    if (p) {
-        xref = p->xref;
-        (p->occurences)++;
-        return p;
-    }
+	while (p && strcmp(p->file_name, file_name) != 0)
+		p = p->next;
+	if (p) {
+		xref = p->xref;
+		(p->occurences)++;
+		return p;
+	}
     p = new PdfDocument;
     p->file_name = xstrdup(file_name);
     p->xref = xref = 0;
@@ -1104,7 +1104,10 @@ void epdf_check_mem()
             n = p->next;
             delete_document(p);
         }
+        pdfDocuments = NULL; 
         // see above for globalParams
         delete globalParams;
+        globalParams = NULL; 
     }
+    isInit = gFalse;
 }
