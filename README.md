@@ -27,14 +27,14 @@ dllluatexmain(2, "lualatex", "myFile.tex");
 
 If you do not have access to the standard input, you will need to disable interactive mode: 
 ```
-dllluatexmain(3, "lualatex", "--interactionmode=nonstopmode", "myFile.tex");
+dllluatexmain(3, "lualatex", "--interaction=nonstopmode", "myFile.tex");
 ```
 
 # Limitations 
 
-The TeX commands are in a library, not shell commands. On exit, variables are reset to their default values and memory is freed. This way, you can call the commands several times in a row. There are still memory leaks, but I'm tracking them down. At least, you can run the tools multiple times. The PDF produced by luatex is corrupted on the second run (I'm working on it).
+The TeX commands are in a library, not shell commands. On exit, variables are reset to their default values and memory is freed. This way, you can call the commands several times in a row, without having to restart the application. There are still memory leaks, but I'm tracking them down. 
 
-Update, October 21: No more limitations on graphics figure inclusion for both pdftex and luatex. I had to replace xpdf with poppler in pdftex. 
+To allow inclusion of PDF figures in pdftex, I had to replace xpdf with poppler.
 
 
 

@@ -127,7 +127,8 @@ PdfDocument *refPdfDocument(const char *file_path, file_error_mode fe)
     path_copy = xstrdup(file_path);
     if ((pdf_doc = findPdfDocument(path_copy)) == NULL) {
         new_flag = 1;
-        pdf_doc = new PdfDocument;
+        // pdf_doc = new PdfDocument;
+        pdf_doc = (PdfDocument *) malloc(sizeof(PdfDocument)); 
         pdf_doc->file_path = path_copy;
         pdf_doc->checksum = checksum;
         pdf_doc->doc = NULL;
@@ -207,7 +208,8 @@ PdfDocument *refMemStreamPdfDocument(char *docstream, unsigned long long streams
     file_path[cnt+STREAM_URI_LEN+STRSTREAM_CHECKSUM_SIZE]='\0';
     if ((pdf_doc = findPdfDocument(file_path)) == NULL) {
         /*new_flag = 1;*/
-        pdf_doc = new PdfDocument;
+        // pdf_doc = new PdfDocument;
+        pdf_doc = (PdfDocument *) malloc(sizeof(PdfDocument)); 
         pdf_doc->file_path = file_path;
         pdf_doc->checksum = checksum;
         pdf_doc->doc = NULL;
@@ -911,22 +913,34 @@ void write_epdf(PDF pdf, image_dict * idict, int suppress_optional_info)
 
 static void deletePdfDocumentPdfDoc(PdfDocument * pdf_doc)
 {
+    // Called both by unrefPdfDocument and destroyPdfDocument
     InObj *r, *n;
     /* this may be probably needed for an emergency destroyPdfDocument() */
     for (r = pdf_doc->inObjList; r != NULL; r = n) {
         n = r->next;
         delete r;
     }
-    delete pdf_doc->doc;
+    if (pdf_doc->doc != NULL) delete pdf_doc->doc;
     pdf_doc->doc = NULL;
-    pdf_doc->pc++;
+	pdf_doc->pc++;
 }
 
+#  define xfree(a)            do { free(a); a = NULL; } while (0)
 static void destroyPdfDocument(void *pa, void * /*pb */ )
 {
     PdfDocument *pdf_doc = (PdfDocument *) pa;
     deletePdfDocumentPdfDoc(pdf_doc);
     /* TODO: delete rest of pdf_doc */
+	// Let's do that: 
+	if (pdf_doc->file_path != NULL) xfree(pdf_doc->file_path);
+	if (pdf_doc->checksum != NULL) xfree(pdf_doc->checksum);
+	pdf_doc->occurences = 0; 
+	if (pdf_doc->ObjMapTree != NULL) {
+	 	avl_destroy(pdf_doc->ObjMapTree, NULL); 
+		pdf_doc->ObjMapTree = NULL; 
+	}
+	xfree(pdf_doc); 
+	pdf_doc = NULL;
 }
 
 /*
@@ -974,5 +988,6 @@ void epdf_free()
     PdfDocumentTree = NULL;
     if (isInit == gTrue)
         delete globalParams;
+    globalParams = NULL; 
     isInit = gFalse;
 }

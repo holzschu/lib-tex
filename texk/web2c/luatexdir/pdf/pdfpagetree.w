@@ -228,3 +228,17 @@ int output_pages_tree(PDF pdf)
     d = get_divert_list(0);     /* get diversion 0 */
     return output_pages_list(pdf, d->first);
 }
+
+static void destroy_divert_entry(void *pa, void *pb)
+{
+  divert_list_entry* dle = (divert_list_entry *) pa;
+  if (dle->first) xfree(dle->first); 
+  xfree(dle);
+}
+
+void destroy_divert_list_tree()
+{
+  if (divert_list_tree != NULL)
+    avl_destroy(divert_list_tree, destroy_divert_entry); 
+  divert_list_tree = NULL; 
+}

@@ -35,9 +35,10 @@ uexit_lua (int unix_code)
 	// or exit after error. 
 	// We need to deallocate everything
 	// Allocated in luainit.c
-	xfree(output_comment); 
-	xfree(startup_filename); 
-	xfree(luatex_banner);
+	if (output_comment != NULL) xfree(output_comment); 
+	if (startup_filename != NULL) xfree(startup_filename); 
+	if (luatex_banner != NULL) xfree(luatex_banner);
+	// Keep going kid. But only at the end. 
 	xfree(input_name); 
 	kpse_init = -1; 
 	lua_only = 0;
@@ -82,9 +83,24 @@ uexit_lua (int unix_code)
 	xfree(param_stack);
 	xfree(dvi_buf);
 	xfree(fixmem); 
+	fix_mem_min = 0; 
+	fix_mem_max = 0; 
 	xfree(hash); 
+	hash_used = 0;
+	hash_top = 0;
+	hash_high = 0;
 	xfree(eqtb); 
+	eqtb_top = 0;
 	reset_cur_string();
+	cur_chr = 0;
+	cur_cs = 0;
+	cur_tok = 0; 
+	last_cs_name = 0;
+	biggest_used_mark = 0;
+	write_loc = 0; 
+	pseudo_files = 0;
+	just_box = 0;
+	last_line_fill = 0;
 	ini_version = false;            /* are we \.{INITEX}? */
 	dump_option = false;            /* was the dump name option used? */
 	dump_line = false;              /* was a \.{\%\AM format} line seen? */
@@ -112,6 +128,8 @@ uexit_lua (int unix_code)
 	parsefirstlinep = 0;            /* parse the first line for options */
 	filelineerrorstylep = 0;        /* format messages as file:line:error */
 	haltonerrorp = 0;               /* stop at first error */
+	// utils.w
+	make_subset_tag(NULL); // Clears st_stree
 	// set in inputstack.w:
 	input_ptr = 0; 
 	max_in_stack = 0; 
@@ -130,25 +148,24 @@ uexit_lua (int unix_code)
     pdf_catalog_openaction = 0;
     pdf_names_toks = 0;                             /* additional keys of Names dictionary */
     pdf_trailer_toks = 0;                           /* additional keys of Trailer dictionary */
+    xfree(static_pdf); 
+    static_pdf = NULL; 
     global_shipping_mode = NOT_SHIPPING; /* set to |shipping_mode| when |ship_out| starts */
     // 
-    xfree(static_pdf->obj_tab); 
-    xfree(static_pdf->posstruct); 
-    xfree(static_pdf->pstruct); 
-    xfree(static_pdf->mem); 
-    xfree(static_pdf->os->buf[PDFOUT_BUF]->data); 
-    xfree(static_pdf->os->buf[PDFOUT_BUF]); 
-    xfree(static_pdf->os->buf[OBJSTM_BUF]->data); 
-    xfree(static_pdf->os->buf[OBJSTM_BUF]); 
-    xfree(static_pdf->os->obj); 
-    xfree(static_pdf->os); 
-    xfree(static_pdf->vfstruct); 
-    xfree(static_pdf->dest_names); 
-    // xfree(static_pdf); 
+    // buildpage.h
+    // TODO: check the initial value for all these.
+    page_tail = 0;
+    best_page_break = 0;
+    last_glue = 0; 
+	cond_ptr = 0; 
+	dir_ptr = 0;
+	text_dir_ptr = 0;
 	// Clearing databases:
 	clear_font_data();
 	clear_string_pool(); 
-	clear_node_mem();
+	clear_node_mem(); // frees varmem
+	var_mem_max = 0;
+	attr_list_cache = 0;
 	clear_math_data();
 	clear_tex_languages();
 	// lua_close was called in luatexdir/tex/errors.w
@@ -160,10 +177,31 @@ uexit_lua (int unix_code)
 	// All variables in luainit.w
 	kpse_init = -1; 
 	xfree(input_name);
-	// utils.w
-	make_subset_tag(NULL); // Clears st_stree
 	// dvigen.h
+	down_ptr = 0;
+	right_ptr = 0;
 	total_pages = 0; 
+	// writeimg.h
+	idict_ptr = NULL; 
+	xfree(idict_array);
+	idict_array = NULL;
+	cur_box = 0;
+	after_token = 0;
+	save_tail = 0;
+	adjust_tail = 0;
+	pre_adjust_tail = 0;
+	last_leftmost_char = 0;
+	last_rightmost_char = 0;
+	next_char_p = 0;
+	prev_char_p = 0;
+	garbage = 0;
+	temp_token_head = 0;
+	hold_token_head = 0;
+	omit_template = 0;
+	backup_head = 0;
+	avail = 0;
+	par_loc = 0;
+	par_token = 0;
 	pthread_exit(NULL); 
 #else 
 	exit (final_code);

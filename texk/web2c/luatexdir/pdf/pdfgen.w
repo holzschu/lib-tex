@@ -870,7 +870,8 @@ static void destroy_pg_res_tree(void *pa, void *param)
 }
 
 @ @c
-static void destroy_page_resources_tree(PDF pdf)
+// static void destroy_page_resources_tree(PDF pdf)
+void destroy_page_resources_tree(PDF pdf)
 {
     pdf_resource_struct *re = pdf->page_resources;
     reset_page_resources(pdf);
@@ -1836,6 +1837,8 @@ void pdf_end_page(PDF pdf)
     int page_resources, page_attributes;
     int procset = PROCSET_PDF;
     /* Finish stream of page/form contents */
+
+
     pdf_goto_pagemode(pdf);
     if (pos_stack_used > 0) {
         formatted_error("pdf backend","%u unmatched 'save' after %s shipout", (unsigned int) pos_stack_used,
@@ -2047,16 +2050,18 @@ void pdf_end_page(PDF pdf)
         while (ol != NULL) {
             p = s;
             p += snprintf(p, 20, "Fm%i", obj_info(pdf, ol->info));
-            if (pdf->resname_prefix != NULL)
+            if (pdf->resname_prefix != NULL) {
                 p += snprintf(p, 20, "%s", pdf->resname_prefix);
+			}             
             pdf_dict_add_ref(pdf, s, ol->info);
             ol = ol->link;
         }
         while (ol1 != null) {
             p = s;
             p += snprintf(p, 20, "Im%i", obj_info(pdf, ol1->info));
-            if (pdf->resname_prefix != NULL)
+            if (pdf->resname_prefix != NULL) {
                 p += snprintf(p, 20, "%s", pdf->resname_prefix);
+			}             
             pdf_dict_add_ref(pdf, s, ol1->info);
             procset |= img_procset(idict_array[obj_data_ptr(pdf, ol1->info)]);
             ol1 = ol1->link;
@@ -2490,6 +2495,22 @@ void finish_pdf_file(PDF pdf, int luatexversion, str_number luatexrevision)
                 (int) sup_pdf_mem_size);
         }
     }
+    // Now erase aux data:
+    xfree(pdf->obj_tab); 
+    xfree(pdf->posstruct); 
+    xfree(pdf->pstruct); 
+    xfree(pdf->mem); 
+    xfree(pdf->os->buf[PDFOUT_BUF]->data); 
+    xfree(pdf->os->buf[PDFOUT_BUF]); 
+    xfree(pdf->os->buf[OBJSTM_BUF]->data); 
+    xfree(pdf->os->buf[OBJSTM_BUF]); 
+    xfree(pdf->os->obj); 
+    xfree(pdf->os); 
+    xfree(pdf->vfstruct); 
+    xfree(pdf->dest_names); 
+    destroy_page_resources_tree(pdf); 
+    xfree(pdf->page_resources); 
+    destroy_divert_list_tree();
 }
 
 @ @c

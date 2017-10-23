@@ -27,6 +27,7 @@
 
 typedef image_dict *idict_entry;
 idict_entry *idict_array;
+idict_entry *idict_ptr;
 
 void new_img_pdfstream_struct(image_dict *);
 image *new_image(void);
