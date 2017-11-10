@@ -481,8 +481,9 @@ Exit_Program_Label:
             break;
     END
 
-    exit (exit_status);
-    return (exit_status);
+	pthread_exit(NULL); // iOS version
+    // exit (exit_status);
+    return (exit_status); // this line is never reached
 END
 
 /*^^^^^^^^^^^^^^^^^^^^^^^^^^ END OF SECTION  10 ^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
