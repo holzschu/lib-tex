@@ -339,7 +339,14 @@ kpathsea_selfdir (kpathsea kpse, const_string argv0)
   // The binaries don't exist for real, but this is the directory where they should be:
   // Use of texlive/YYYY/architecture/bin/argv0 ensures most config files are happy.
   // TODO: change 2017 to 2018 next year
+  // TODO: make this user configureable. 
   name = xstrdup(getenv("HOME"));
+  // if ($HOME) ends with "/Documents", remove "/Documents" before adding "/Library"
+  // (different iOS apps use different settings for $HOME)
+  string nameDocuments = strstr(name, "/Documents"); 
+  if (nameDocuments) {
+  	  nameDocuments[0] = 0x0; // end the string here.
+  }
   name = concat3 (name, DIR_SEP_STRING, "Library/texlive/2017/bin/arm-darwin") ; 
   name = concat3 (name, DIR_SEP_STRING, argv0) ; 
 #else   
