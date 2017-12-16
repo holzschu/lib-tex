@@ -625,7 +625,6 @@ void topenin(void)
     for (--last; last >= first
          && ISBLANK(buffer[last]) && buffer[last] != '\r'; --last);
     last++;
-
     /* One more time, this time converting to TeX's internal character
        representation.  */
 }

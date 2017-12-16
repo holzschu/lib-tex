@@ -500,6 +500,13 @@ void
 kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
                            const_string progname)
 {
+	// Library / iOS version: if kpse was already started, we need to reinitialize:
+	if (kpse->program_name && progname) {
+		// kpathsea is already initialized 
+		kpathsea_reset_program_name(kpse, progname); 
+		// if progname & kpse->program_name are identical, does nothing, which is good
+		return;
+	}
   const_string ext;
   string sdir, sdir_parent, sdir_grandparent, sdir_greatgrandparent;
   string s = getenv ("KPATHSEA_DEBUG");
@@ -716,6 +723,7 @@ kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
       kpse->program_name = xstrdup (kpse->invocation_short_name);
     }
   }
+    
 
   /* Runtime check that snprintf always writes a trailing NUL byte.  */
   {

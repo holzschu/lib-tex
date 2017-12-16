@@ -34,7 +34,7 @@ kpathsea_new (void)
 
 #if KPATHSEA_CAN_FREE
 
-#define string_free(a) if ((a) != NULL) free((char *)(a))
+#define string_free(a) do { if (a != NULL) free((char*) a); a = NULL; } while (0)
 
 static void
 str_llist_free (str_llist_type p)
@@ -79,6 +79,8 @@ kpathsea_finish (kpathsea kpse)
     str_list_free (&kpse->db_dir_list);
     hash_free (kpse->link_table);
     cache_free (kpse->the_cache, kpse->cache_length);
+    kpse->the_cache = NULL;
+    kpse->cache_length = 0;
     hash_free (kpse->map);
     string_free (kpse->map_path);
     string_free (kpse->elt);
@@ -88,16 +90,16 @@ kpathsea_finish (kpathsea kpse)
     string_free (kpse->invocation_name);
     string_free (kpse->invocation_short_name);
     string_free (kpse->program_name);
+    fprintf("Freeing kpse->program_name = ‰s\n", kpse->program_name);
     string_free (kpse->fallback_font);
     string_free (kpse->fallback_resolutions_string);
     if(kpse->fallback_resolutions != NULL)
         free(kpse->fallback_resolutions);
     for (i = 0; i != kpse_last_format; ++i) {
-        f = kpse->format_info[i];
-        string_free (f.path);
-        string_free (f.override_path);
-        string_free (f.client_path);
-        /*string_free (f.cnf_path);*/
+        string_free (kpse->format_info[i].path);
+        string_free (kpse->format_info[i].override_path);
+        string_free (kpse->format_info[i].client_path);
+        /* string_free (kpse->format_info[i].cnf_path); */
     }
 
     if (kpse->missfont != (FILE *)NULL)
@@ -107,11 +109,25 @@ kpathsea_finish (kpathsea kpse)
         string_free (kpse->expansions[i].var);
     }
     free (kpse->expansions);
+    kpse->expansions = 0;
+    kpse->expansion_len = 0;
+    // Do not erase the environment, do not erase the hash tables...
+    // maybe just erase the format list, and keep the rest?
+    // See reset_format? 
+    // Remove all comments, and don't call this one
+    /* We can't alter the environment inside a library / iOS
     if (kpse->saved_env != NULL) {
-        for (i = 0; i != kpse->saved_count; ++i)
+        for (i = 0; i != kpse->saved_count; ++i) {
+        	char* variable = kpse->saved_env[i];
+        	char* endVariable = strstr(variable, "="); 
+        	if (endVariable) *endVariable = 0;
             string_free (kpse->saved_env[i]);
+		}
         free (kpse->saved_env);
+        kpse->saved_env = NULL; 
+        kpse->saved_count = 0;
     }
+    */
 #endif /* KPATHSEA_CAN_FREE */
 #if defined(WIN32) || defined(__CYGWIN__)
     if (kpse->suffixlist != NULL) {
@@ -127,6 +143,7 @@ kpathsea_finish (kpathsea kpse)
         return;
 #endif
     free (kpse);
+    kpse = NULL; 
 }
 
 

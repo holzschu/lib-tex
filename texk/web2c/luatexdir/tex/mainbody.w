@@ -421,8 +421,9 @@ void main_body(void)
         if (format_ident != 0 && !ini_version)
             initialize();       /* erase preloaded format */
         // Most likely: open_fmt_file breaks things. 
-        if ((fname = open_fmt_file()) == NULL)
+        if ((fname = open_fmt_file()) == NULL) {
             goto FINAL_END;
+        }
         if (!load_fmt_file(fname)) {
             zwclose(fmt_file);
             goto FINAL_END;

@@ -7,102 +7,14 @@
 #include <w2c/config.h>
 #ifdef __IPHONE__
 #include <pthread.h>
+#include "pdftexdir/ptexlib.h"
 #ifndef xfree
 #  define xfree(p)            do { if (p != NULL) free(p); p = NULL; } while (0)
 #endif
-//
-// from pdftexini.c
-extern void* yhash; 
-extern void* zeqtb; 
-extern void* yzmem; 
-extern void* strstart; 
-extern void* strpool; 
-extern void* fontinfo; 
-extern void* fontcheck;
-extern void* fontsize ;
-extern void* fontdsize ;
-extern void* fontparams;
-extern void* fontname;
-extern void* fontarea;
-extern void* fontbc;
-extern void* fontec;
-extern void* fontglue;
-extern void* hyphenchar;
-extern void* skewchar;
-extern void* bcharlabel;
-extern void* fontbchar;
-extern void* fontfalsebchar;
-extern void* charbase;
-extern void* widthbase;
-extern void* heightbase;
-extern void* depthbase;
-extern void* italicbase;
-extern void* ligkernbase;
-extern void* kernbase;
-extern void* extenbase;
-extern void* parambase;
-extern void* pdfcharused;
-extern void* pdffontsize ;
-extern void* pdffontnum;
-extern void* pdffontmap;
-extern void* pdffonttype;
-extern void* pdffontattr;
-extern void* pdffontblink;
-extern void* pdffontelink;
-extern void* pdffontstretch;
-extern void* pdffontshrink;
-extern void* pdffontstep;
-extern void* pdffontexpandratio;
-extern void* pdffontautoexpand;
-extern void* pdffontlpbase;
-extern void* pdffontrpbase;
-extern void* pdffontefbase;
-extern void* pdffontknbsbase;
-extern void* pdffontstbsbase;
-extern void* pdffontshbsbase;
-extern void* pdffontknbcbase;
-extern void* pdffontknacbase;
-extern void* vfpacketbase;
-extern void* vfdefaultfont;
-extern void* vflocalfontnum;
-extern void* vfefnts;
-extern void* vfifnts;
-extern void* pdffontnobuiltintounicode;
-extern void* trietrl;
-extern void* trietro;
-extern void* trietrc;
-extern void* buffer;
-extern void* nest;
-extern void* savestack;
-extern void* inputstack;
-extern void* inputfile;
-extern void* linestack;
-extern void* eofseen;
-extern void* grpstack;
-extern void* ifstack;
-extern void* sourcefilenamestack;
-extern void* fullsourcefilenamestack;
-extern void* paramstack;
-extern void* dvibuf;
 
 extern void* fixmem; 
-extern void* hash;
 extern void* eqtb; 
 
-extern void* hyphword;
-extern void* hyphlist;
-extern void* hyphlink;
-extern void* objtab;
-extern void* pdfmem;
-extern int pdfmemsize; 
-extern int pdfmemptr; 
-extern void* destnames;
-extern void* pdfopbuf;
-extern void* pdfosbuf;
-extern void* pdfosobjnum;
-extern void* pdfosobjoff;
-extern void* fontused; 
-extern void* nameoffile; 
 // Could include the header file, but not worth it
 extern void PdfObjTree_free(void);
 #endif
@@ -210,6 +122,9 @@ uexitandclear (int unix_code)
   xfree(pdfosobjoff);
   xfree(fontused);
   xfree(nameoffile);
+  dump_name = NULL; // dump_name needs to be reset, but not freed
+  // it's a pointer to an area that has already been freed. 
+
   pthread_exit(NULL); 
 #else 
   exit (final_code);

@@ -15,7 +15,6 @@ extern void clear_math_data();
 extern void clear_tex_languages(); 
 extern void* mitem; 
 extern void* jump_table; 
-extern char* input_name; 
 extern int lua_offset;
 #endif
 
@@ -38,9 +37,6 @@ uexit_lua (int unix_code)
 	if (output_comment != NULL) xfree(output_comment); 
 	if (startup_filename != NULL) xfree(startup_filename); 
 	if (luatex_banner != NULL) xfree(luatex_banner);
-	// Keep going kid. But only at the end. 
-	xfree(input_name); 
-	kpse_init = -1; 
 	lua_only = 0;
 	lua_offset = 0;
 	show_luahashchars = 0;
@@ -177,6 +173,8 @@ uexit_lua (int unix_code)
 	// All variables in luainit.w
 	kpse_init = -1; 
 	xfree(input_name);
+	dump_name = NULL; // dump_name needs to be reset, but not freed
+	// it's a pointer to an area that has already been freed. 
 	// dvigen.h
 	down_ptr = 0;
 	right_ptr = 0;

@@ -89,6 +89,7 @@ kpathsea_xputenv(kpathsea kpse, const char *var, const char *value)
       XRETALLOC(kpse->saved_env, kpse->saved_count, char *);
     } else {
       /* We owned the old string. */
+      	// on iOS/OSX, this might be a mistake
       free(kpse->saved_env[cur_loc]);
     }
     kpse->saved_env[cur_loc] = cur_item;

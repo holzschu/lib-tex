@@ -47,8 +47,8 @@
  CC=clang \
  CXX=clang++ \
  OBJCXX=clang++ \
- CFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
- CXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
- OBJCXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.0.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+ CFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+ CXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+ OBJCXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
  > & build_cross.log
 

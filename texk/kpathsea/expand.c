@@ -160,6 +160,7 @@ kpathsea_brace_expand (kpathsea kpse, const_string path)
   string kpse_dot_expansion;
   string elt;
   unsigned len;
+
   /* Must do variable expansion first because if we have
        foo = .:~
        TEXINPUTS = $foo

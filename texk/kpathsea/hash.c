@@ -265,5 +265,6 @@ hash_free (hash_table_type table)
         free (p);
         p = q;
     }
+    table.size = 0;
 }
 #endif
