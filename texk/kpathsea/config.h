@@ -197,6 +197,29 @@ kpse_snprintf (char *str, size_t size, const char *format, ...)
 #include <kpathsea/types.h>    /* <sys/types.h>, boolean, string, etc. */
 #include <kpathsea/progname.h> /* for kpse_invocation_*name */
 
+#ifdef __IPHONE__
+// ios_system uses these for separate output streams on each thread:
+extern __thread FILE* thread_stdin;
+extern __thread FILE* thread_stdout;
+extern __thread FILE* thread_stderr;
+extern int global_errno;
+#undef stdin
+#undef stdout
+#undef stderr
+#define stdin thread_stdin
+#define stdout thread_stdout
+#define stderr thread_stderr
+#define putchar(a) fputc(a, thread_stdout)
+#define getchar() fgetc(thread_stdin)
+#define getwchar() fgetwc(thread_stdin)
+#define errx compileError
+#define err compileError
+#define warn compileError
+#define warnx compileError
+#ifndef printf
+#define printf(...) fprintf (stdout, ##__VA_ARGS__) 
+#endif
+#endif
 
 /* If you want to find subdirectories in a directory with non-Unix
    semantics (specifically, if a directory with no subdirectories does

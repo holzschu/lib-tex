@@ -203,7 +203,7 @@ expand_symlinks (kpathsea kpse, char *s)
 
       if (!strncmp (sym, "/", 1)) {
         if (kpse->ll_verbose)
-          printf ("[%s]%s%s -> [%s]%s%s\n", pre, EXPOS, post, sym, EXPOS,post);
+          fprintf (stdout, "[%s]%s%s -> [%s]%s%s\n", pre, EXPOS, post, sym, EXPOS,post);
         strcpy (pre, "");
 
       } else {
@@ -214,7 +214,7 @@ expand_symlinks (kpathsea kpse, char *s)
 
         if (kpse->ll_verbose) {
           sprintf (before, "%s%s[%s]%s%s", pre, EXPRE, tmp, EXPOS, post);
-          printf ("%s -> %s%s[%s]%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
+          fprintf (stdout, "%s -> %s%s[%s]%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
         }
 
         /* Strip "../" path elements from the front of sym; print
@@ -237,9 +237,9 @@ expand_symlinks (kpathsea kpse, char *s)
           for (cp = before; *cp;)
             *cp++ = ' ';
           if (strlen (sym))
-            printf ("%s == %s%s%s%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
+            fprintf (stdout, "%s == %s%s%s%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
           else
-            printf ("%s == %s%s%s\n", before, pre, EXPOS, post);
+            fprintf (stdout, "%s == %s%s%s\n", before, pre, EXPOS, post);
         }
         if (!strlen (pre) && a == '/')
           strcpy (pre, "/");

@@ -490,7 +490,7 @@ to also use -engine, or nothing will be returned; in particular,\n\
 static void
 help_message (kpathsea kpse, string *argv)
 {
-  printf ("Usage: %s [OPTION]... [FILENAME]...\n", argv[0]);
+  fprintf (stdout, "Usage: %s [OPTION]... [FILENAME]...\n", argv[0]);
   fputs (USAGE, stdout);
   putchar ('\n');
   fputs (kpathsea_bug_address, stdout);
@@ -513,7 +513,7 @@ help_formats (kpathsea kpse, string *argv)
 
     const_string envvar_list = 
       kpathsea_init_format_return_varlist (kpse, (kpse_file_format_type) f);
-    printf ("%s", kpse->format_info[f].type);
+    fprintf (stdout, "%s", kpse->format_info[f].type);
 
     /* Show abbreviation if we accept one.  We repeatedly go through the
        abbr list here, but it's so short, it doesn't matter.  */
@@ -521,7 +521,7 @@ help_formats (kpathsea kpse, string *argv)
        unsigned a = 0;
        while (format_abbrs[a].abbr != NULL) {
          if (f == format_abbrs[a].format) {
-           printf (" (%s)", format_abbrs[a].abbr);
+           fprintf (stdout, " (%s)", format_abbrs[a].abbr);
            break;
          }
          a++;
@@ -552,9 +552,9 @@ help_formats (kpathsea kpse, string *argv)
 #endif
     }
 
-    printf ("  [variables: %s]\n", envvar_list);
+    fprintf (stdout, "  [variables: %s]\n", envvar_list);
     
-    printf ("  [original path (from %s) = %s]\n",
+    fprintf (stdout, "  [original path (from %s) = %s]\n",
             kpse->format_info[f].path_source, kpse->format_info[f].raw_path);
   }
 

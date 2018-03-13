@@ -90,7 +90,6 @@ kpathsea_finish (kpathsea kpse)
     string_free (kpse->invocation_name);
     string_free (kpse->invocation_short_name);
     string_free (kpse->program_name);
-    fprintf("Freeing kpse->program_name = ‰s\n", kpse->program_name);
     string_free (kpse->fallback_font);
     string_free (kpse->fallback_resolutions_string);
     if(kpse->fallback_resolutions != NULL)

@@ -33,6 +33,7 @@ extern "C" {
 #  include <stdio.h>
 #  include <string.h>
 #  include <kpathsea/c-ctype.h>
+#undef getwchar
 #  include <sys/stat.h>
 #  include <dirent.h>
 #  include <poppler-config.h>

@@ -31,6 +31,12 @@
 #include <sys/wait.h>
 #endif
 
+#ifdef __IPHONE__
+// ios_system uses these for separate output streams on each thread:
+extern __thread FILE* thread_stderr;
+#define stderr thread_stderr
+#endif
+
 
 /* We set the envvar MAKETEX_MAG, which is part of the default spec for
    MakeTeXPK above, based on KPATHSEA_DPI and MAKETEX_BASE_DPI.  */

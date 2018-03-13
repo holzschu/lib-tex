@@ -475,7 +475,7 @@ section_text[0]= ' ';
 common_init();
 #line 75 "cwebdir/ctang-w2c.ch"
 if(show_banner){
-printf("%s%s\n",banner,versionstring);
+fprintf(stdout,"%s%s\n",banner,versionstring);
 }
 #line 101 "cwebdir/ctangle.w"
 phase_one();

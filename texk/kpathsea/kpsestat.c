@@ -35,7 +35,7 @@ main (int argc, char **argv)
     struct stat f;
 
     if (argc > 1 && strcmp (argv[1], "--help") == 0) {
-        printf ("Usage: %s MODE FILE\n\
+        fprintf (stdout, "Usage: %s MODE FILE\n\
   Print octal permissions of FILE as modified by MODE on standard output.\n\
   MODE is a subset of the symbolic permissions accepted by chmod.\n\
   Use MODE = to obtain the unchanged permissions.\n\
@@ -45,7 +45,7 @@ main (int argc, char **argv)
         fputs ("Email bug reports to tex-k@tug.org.\n", stdout);
         exit(0);
     } else if (argc > 1 && strcmp (argv[1], "--version") == 0) {
-        printf ("%s (%s)\n\
+        fprintf (stdout, "%s (%s)\n\
 Copyright (C) 1997 Olaf Weber.\n\
 There is NO warranty.  You may redistribute this software\n\
 under the terms of the GNU General Public License.\n\
@@ -120,7 +120,7 @@ Try `%s --help' for more information.\n", argv[0], argv[0]);
     result |= to_keep & result;
     result &= ~to_clear;
 
-    printf("%o\n", result);
+    fprintf(stdout, "%o\n", result);
 
     return 0;
 }

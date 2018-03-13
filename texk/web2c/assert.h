@@ -69,7 +69,7 @@ __END_DECLS
 #define assert(e)  \
     ((void) ((e) ? ((void)0) : __assert (#e, __FILE__, __LINE__)))
 #define __assert(e, file, line) \
-    ((void)printf ("%s:%u: failed assertion `%s'\n", file, line, e), pthread_exit(NULL))
+    ((void)fprintf (thread_stderr, "%s:%u: failed assertion `%s'\n", file, line, e), pthread_exit(NULL))
 
 #else /* __GNUC__ */
 

@@ -35,7 +35,7 @@ main (int argc, char **argv)
     char * i;
 
     if (argc > 1 && strcmp (argv[1], "--help") == 0) {
-        printf("Usage: %s -MODE FILE\n\
+        fprintf(stdout, "Usage: %s -MODE FILE\n\
   MODE is one or more of rwx.  Exit successfully if FILE exists and is\n\
   readable (r), writable (w), or executable (x).\n\
 \n\
@@ -44,7 +44,7 @@ main (int argc, char **argv)
         fputs ("Email bug reports to tex-k@tug.org.\n", stdout);
         exit(0);
     } else if (argc > 1 && strcmp (argv[1], "--version") == 0) {
-        printf ("%s (%s)\n\
+        fprintf (stdout, "%s (%s)\n\
 Copyright (C) 2009 Olaf Weber & Karl Berry.\n\
 There is NO warranty.  You may redistribute this software\n\
 under the terms of the GNU General Public License\n\

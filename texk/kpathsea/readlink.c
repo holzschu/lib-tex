@@ -40,7 +40,7 @@ main (int argc, char **argv)
 #endif
 
     if (argc > 1 && strcmp (argv[1], "--help") == 0) {
-        printf("Usage: %s FILE\n\
+        fprintf(stdout, "Usage: %s FILE\n\
   If FILE exists and is a symlink, print the contents of the link and\n\
   exit successfully.  Otherwise print nothing and fail.\n\
 \n\
@@ -49,7 +49,7 @@ main (int argc, char **argv)
         fputs ("Email bug reports to tex-k@tug.org.\n", stdout);
         exit(0);
     } else if (argc > 1 && strcmp (argv[1], "--version") == 0) {
-        printf ("%s (%s)\n\
+        fprintf (stdout, "%s (%s)\n\
 Copyright (C) 2009 Olaf Weber & Karl Berry.\n\
 There is NO warranty.  You may redistribute this software\n\
 under the terms of the GNU General Public License\n\
@@ -69,7 +69,7 @@ Try `%s --help' for more information.\n", argv[0], argv[0]);
 #ifdef S_ISLNK
     status = readlink(argv[1], path, PATH_MAX);
     if (status != -1) {
-        printf("%.*s\n", status, path);
+        fprintf(stdout, "%.*s\n", status, path);
         return 0;
     }
 #endif

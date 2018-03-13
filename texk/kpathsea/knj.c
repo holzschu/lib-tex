@@ -20,6 +20,12 @@
 #include <kpathsea/debug.h>
 #include <wchar.h>
 
+#ifdef __IPHONE__
+// ios_system uses these for separate output streams on each thread:
+extern __thread FILE* thread_stderr;
+#define stderr thread_stderr
+#endif
+
 static int
 is_include_space(const char *s)
 {

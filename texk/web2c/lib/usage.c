@@ -27,9 +27,9 @@ usagehelp (const_string *message, const_string bug_email)
     if (!bug_email)
         bug_email = "tex-k@tug.org";
     while (*message) {
-        printf("%s\n", *message);
+        fprintf(stdout, "%s\n", *message);
         ++message;
     }
-    printf("\nEmail bug reports to %s.\n", bug_email);
+    fprintf(stdout, "\nEmail bug reports to %s.\n", bug_email);
     uexit(0);
 }

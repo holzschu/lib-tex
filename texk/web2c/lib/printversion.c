@@ -40,10 +40,10 @@ printversionandexit (const_string banner,
 
   /* The Web2c version string starts with a space.  */
 #ifdef PTEX
-  printf ("%s %s (%s)%s\n", prog_name, prog_version, get_enc_string(),
+  fprintf (stdout, "%s %s (%s)%s\n", prog_name, prog_version, get_enc_string(),
           versionstring);
 #else
-  printf ("%s %s%s\n", prog_name, prog_version, versionstring);
+  fprintf (stdout, "%s %s%s\n", prog_name, prog_version, versionstring);
 #endif
   puts (kpathsea_version_string);
 #ifdef PTEX
@@ -51,18 +51,18 @@ printversionandexit (const_string banner,
 #endif
 
   if (copyright_holder) {
-    printf ("Copyright 2017 %s.\n", copyright_holder);
+    fprintf (stdout, "Copyright 2017 %s.\n", copyright_holder);
     if (!author)
       author = copyright_holder;
   }
 
   puts ("There is NO warranty.  Redistribution of this software is");
   fputs ("covered by the terms of ", stdout);
-  printf ("both the %s copyright and\n", prog_name);
+  fprintf (stdout, "both the %s copyright and\n", prog_name);
   puts ("the Lesser GNU General Public License.");
   puts ("For more information about these matters, see the file");
-  printf ("named COPYING and the %s source.\n", prog_name);
-  printf ("Primary author of %s: %s.\n", prog_name, author);
+  fprintf (stdout, "named COPYING and the %s source.\n", prog_name);
+  fprintf (stdout, "Primary author of %s: %s.\n", prog_name, author);
 
   if (extra_info)
     fputs (extra_info, stdout);

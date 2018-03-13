@@ -2,7 +2,7 @@
 # -D __IPHONE__ for specific changes in the code
 # -D NDEBUG to deactivate assert
 
- ./Build  --host=arm-apple-darwin --build=x86_64-apple-darwin \
+ ./Build --host=arm-apple-darwin --build=x86_64-apple-darwin \
  --disable-native-texlive-build \
  --enable-shared \
  --disable-static \
@@ -48,6 +48,7 @@
  CXX=clang++ \
  OBJCXX=clang++ \
  CFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+ LDFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk\ -fembed-bitcode\ -F${PWD}/Frameworks\ -framework\ ios_system\ " \
  CXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
  OBJCXXFLAGS="-arch\ arm64\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
  > & build_cross.log

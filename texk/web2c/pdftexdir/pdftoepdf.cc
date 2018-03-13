@@ -32,6 +32,7 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <ctype.h>
 
 #ifdef POPPLER_VERSION
+#undef getwchar
 #include <dirent.h>
 #include <poppler-config.h>
 #include <goo/GooString.h>

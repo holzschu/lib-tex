@@ -25,6 +25,7 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <ctype.h>
 
 #ifdef POPPLER_VERSION
+#undef getwchar
 #define GString GooString
 #define xpdfVersion POPPLER_VERSION
 #include <dirent.h>

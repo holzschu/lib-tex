@@ -73,7 +73,7 @@ int main (int ac, char **av)
   if (show_banner) printf(banner); /* print a ``banner line'' */
 @y
   if (show_banner) {
-    printf("%s%s\n", banner, versionstring); /* print a ``banner line'' */
+    fprintf(stdout,"%s%s\n", banner, versionstring); /* print a ``banner line'' */
   }
 @z
 

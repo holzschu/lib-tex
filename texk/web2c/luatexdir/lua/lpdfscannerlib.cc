@@ -30,6 +30,7 @@ extern "C" {
 #  include <lualib.h>
 }
 
+#undef getwchar
 #  include <poppler-config.h>
 #  include <goo/GooString.h>
 #  include <goo/gmem.h>
