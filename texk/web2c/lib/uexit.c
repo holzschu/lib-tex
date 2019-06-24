@@ -4,7 +4,8 @@
 
 #include <w2c/config.h>
 #ifdef __IPHONE__
-#include <pthread.h>
+extern void ios_exit(int errorCode) __dead2; // set error code and exits from the thread.
+#define exit ios_exit
 #endif
 
 void
@@ -18,12 +19,5 @@ uexit (int unix_code)
     final_code = EXIT_FAILURE;
   else
     final_code = unix_code;
-#ifdef __IPHONE__
-  // This function is called for each exit, either regular exit 
-  // or exit after error. 
-  // We need to deallocate everything
-  pthread_exit(NULL); 
-#else 
   exit (final_code);
-#endif 
 }

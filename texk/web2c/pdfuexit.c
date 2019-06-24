@@ -6,7 +6,8 @@
 
 #include <w2c/config.h>
 #ifdef __IPHONE__
-#include <pthread.h>
+extern void ios_exit(int errorCode) __dead2; // set error code and exits from the thread.
+#define exit ios_exit
 #include "pdftexdir/ptexlib.h"
 #ifndef xfree
 #  define xfree(p)            do { if (p != NULL) free(p); p = NULL; } while (0)
@@ -124,9 +125,6 @@ uexitandclear (int unix_code)
   xfree(nameoffile);
   dump_name = NULL; // dump_name needs to be reset, but not freed
   // it's a pointer to an area that has already been freed. 
-
-  pthread_exit(NULL); 
-#else 
+#endif /* __IPHONE__ */
   exit (final_code);
-#endif 
 }

@@ -5,7 +5,8 @@
 
 #include <w2c/config.h>
 #ifdef __IPHONE__
-#include <pthread.h>
+extern void ios_exit(int errorCode) __dead2; // set error code and exits from the thread.
+#define exit ios_exit
 #include "ptexlib.h"
 extern string input_name;
 extern void clear_string_pool();
@@ -200,8 +201,6 @@ uexit_lua (int unix_code)
 	avail = 0;
 	par_loc = 0;
 	par_token = 0;
-	pthread_exit(NULL); 
-#else 
+#endif
 	exit (final_code);
-#endif 
 }
