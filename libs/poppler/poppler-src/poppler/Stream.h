@@ -45,6 +45,10 @@
 #include "Object.h"
 #include "goo/GooMutex.h"
 
+#ifdef __IPHONE__
+#undef printf
+#endif
+
 class GooFile;
 class BaseStream;
 class CachedFile;
