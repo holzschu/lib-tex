@@ -202,7 +202,6 @@ kpse_snprintf (char *str, size_t size, const char *format, ...)
 extern __thread FILE* thread_stdin;
 extern __thread FILE* thread_stdout;
 extern __thread FILE* thread_stderr;
-extern int global_errno;
 #undef stdin
 #undef stdout
 #undef stderr
