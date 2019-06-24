@@ -112,6 +112,28 @@
 # define PROGNAME "bibtex8"
 #endif
 
+#ifdef __IPHONE__
+// ios_system uses these for separate output streams on each thread:
+extern __thread FILE* thread_stdin;
+extern __thread FILE* thread_stdout;
+extern __thread FILE* thread_stderr;
+#undef stdin
+#undef stdout
+#undef stderr
+#define stdin thread_stdin
+#define stdout thread_stdout
+#define stderr thread_stderr
+#define putchar(a) fputc(a, thread_stdout)
+#define getchar() fgetc(thread_stdin)
+#define getwchar() fgetwc(thread_stdin)
+#define errx compileError
+#define err compileError
+#define warn compileError
+#define warnx compileError
+#ifndef printf
+#define printf(...) fprintf (stdout, ##__VA_ARGS__) 
+#endif
+#endif
 
 /***************************************************************************
  * WEB section number:   2
