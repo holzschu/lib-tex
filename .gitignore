@@ -2,3 +2,4 @@ Work/
 .DS_Store
 *.log
 *.swp
+*.dylib
