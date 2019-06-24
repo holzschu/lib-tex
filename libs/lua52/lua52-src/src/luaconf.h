@@ -11,6 +11,20 @@
 #include <limits.h>
 #include <stddef.h>
 
+#ifdef __IPHONE__
+#include <stdio.h>
+// ios_system uses these for separate output streams on each thread:
+extern __thread FILE* thread_stdin;
+extern __thread FILE* thread_stdout;
+extern __thread FILE* thread_stderr;
+#undef stdout
+#undef stderr
+#define stdout thread_stdout
+#define stderr thread_stderr
+#define putchar(a) fputc(a, thread_stdout)
+#define getchar() fgetc(thread_stdin)
+#define getwchar() fgetwc(thread_stdin)
+#endif
 
 /*
 ** ==================================================================
