@@ -355,7 +355,11 @@ static int db_debug (lua_State *L) {
   for (;;) {
     char buffer[250];
     luai_writestringerror("%s", "lua_debug> ");
+#ifdef __IPHONE__
+    if (fgets(buffer, sizeof(buffer), thread_stdin) == 0 ||
+#else
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
+#endif
         strcmp(buffer, "cont\n") == 0)
       return 0;
     if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||

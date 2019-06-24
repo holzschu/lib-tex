@@ -75,16 +75,14 @@
 
 #endif
 
-
+#ifdef __IPHONE__
+extern int ios_system(const char* inputCmd); // execute this command (executable file or builtin command)
+#define system ios_system
+#endif
 
 static int os_execute (lua_State *L) {
   const char *cmd = luaL_optstring(L, 1, NULL);
-#ifndef  __IPHONE__
   int stat = system(cmd);
-#else 
-  fprintf(stderr, "We tried to call the command: %s from the Lua TeX module\n", cmd);
-  int stat = 1;
-#endif
   if (cmd != NULL)
     return luaL_execresult(L, stat);
   else {

@@ -635,7 +635,11 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
   int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
   if (filename == NULL) {
     lua_pushliteral(L, "=stdin");
+#ifdef __IPHONE__
+    lf.f = thread_stdin;
+#else
     lf.f = stdin;
+#endif
   }
   else {
     lua_pushfstring(L, "@%s", filename);

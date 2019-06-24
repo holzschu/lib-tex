@@ -31,7 +31,6 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
-
 #if !defined(lua_checkmode)
 
 /*
@@ -661,7 +660,11 @@ LUAMOD_API int luaopen_io (lua_State *L) {
   luaL_newlib(L, iolib);  /* new module */
   createmeta(L);
   /* create (and set) default files */
+#ifdef __IPHONE__
+  createstdfile(L, thread_stdin, IO_INPUT, "stdin");
+#else
   createstdfile(L, stdin, IO_INPUT, "stdin");
+#endif
   createstdfile(L, stdout, IO_OUTPUT, "stdout");
   createstdfile(L, stderr, NULL, "stderr");
   return 1;
