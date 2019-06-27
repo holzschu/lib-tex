@@ -414,10 +414,9 @@ kpathsea_selfdir (kpathsea kpse, const_string argv0)
   free (self);
 #endif
 #endif  // __IPHONE__ 
+
   ret = xdirname (name);
-
   free (name);
-
   return ret;
 }
 
@@ -500,6 +499,7 @@ void
 kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
                            const_string progname)
 {
+#ifdef __IPHONE__
 	// Library / iOS version: if kpse was already started, we need to reinitialize:
 	if (kpse->program_name && progname) {
 		// kpathsea is already initialized 
@@ -507,6 +507,7 @@ kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
 		// if progname & kpse->program_name are identical, does nothing, which is good
 		return;
 	}
+#endif /* __IPHONE__ */
   const_string ext;
   string sdir, sdir_parent, sdir_grandparent, sdir_greatgrandparent;
   string s = getenv ("KPATHSEA_DEBUG");

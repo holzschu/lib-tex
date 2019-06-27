@@ -70,9 +70,6 @@ endif !XETEX_IPHONE
 
 else !XETEX_MACOSX
 
-
-
-
 xetex_cppflags += $(FONTCONFIG_INCLUDES)
 xetex_ldadd += $(FONTCONFIG_LIBS)
 

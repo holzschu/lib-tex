@@ -9376,7 +9376,6 @@ esac
 LIBTOOL_DEPS=$ltmain
 
 # Always use our own libtool.
-# iOS modification
 LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
@@ -18744,6 +18743,7 @@ if test "${enable_pdftex_synctex+set}" = set; then :
 fi
 
 test "x$enable_web2c:$enable_pdftex" = xyes:yes && {
+  # __IPHONE__ 
   need_poppler=yes
   # need_xpdf=yes
   need_libpng=yes
@@ -18760,6 +18760,7 @@ case $enable_luatex in #(
 esac
 
 test "x$enable_web2c:$enable_luatex" = xyes:yes && {
+  # __IPHONE__ 
   need_poppler=yes
   need_mpfr=yes
   need_libpng=yes
@@ -18778,6 +18779,7 @@ case $enable_luajittex in #(
 esac
 
 test "x$enable_web2c:$enable_luajittex" = xyes:yes && {
+  # __IPHONE__ 
   need_poppler=yes
   need_mpfr=yes
   need_libpng=yes
@@ -24194,6 +24196,7 @@ fi
 POPPLER_VERSION='-DPOPPLER_VERSION=\"'`$PKG_CONFIG poppler --modversion`'\"'
 XPDF_INCLUDES="$POPPLER_VERSION $XPDF_INCLUDES"
 else
+	# __IPHONE__
 	POPPLER_VERSION='-DPOPPLER_VERSION=\"0.52.0\"'
 	XPDF_INCLUDES="$POPPLER_VERSION $POPPLER_INCLUDES"
 	XPDF_LIBS="$POPPLER_LIBS"
