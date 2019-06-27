@@ -46,10 +46,10 @@
 #if defined(LUA_USE_ISATTY)
 #include <unistd.h>
 #ifdef __IPHONE__
-#define lua_stdin_is_tty()    ((fileno(thread_stdin) == fileno(stdin)))
+  #define lua_stdin_is_tty()    ((fileno(thread_stdin) == fileno(stdin)))
 #else
-#define lua_stdin_is_tty()	isatty(0)
-#endif
+  #define lua_stdin_is_tty()	isatty(0)
+#endif /* __IPHONE__ */
 #elif defined(LUA_WIN)
 #include <io.h>
 #include <stdio.h>
