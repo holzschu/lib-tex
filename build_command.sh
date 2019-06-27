@@ -47,25 +47,25 @@
 CC=clang \
 CXX=clang++ \
 OBJCXX=clang++ \
-CFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
-CPPFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+CFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\  " \
+CPPFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ " \
 LDFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -F${PWD}/Frameworks\ -framework\ ios_system\ " \
-CXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
-OBJCXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ -D\ POPPLER_VERSION\ " \
+CXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -std=c++11\ -D\ __IPHONE__\ " \
+OBJCXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -std=c++11\ -D\ __IPHONE__\ " \
 >& build_cross.log
 
 echo "Compilation done, generating frameworks"
 
-TEXINSTDIR=/Users/holzschu/src/Xcode_iPad/texlive/inst/lib
+TEXINSTDIR=${PWD}/inst/lib/
  
-rm -rf Frameworks/texlua52.framework
-mkdir Frameworks/texlua52.framework 
-cp Work/libs/lua52/.libs/libtexlua52.5.dylib Frameworks/texlua52.framework/texlua52
-cp basic_Info.plist Frameworks/texlua52.framework/Info.plist
-plutil -replace CFBundleExecutable -string texlua52 Frameworks/texlua52.framework/Info.plist
-plutil -replace CFBundleName -string texlua52 Frameworks/texlua52.framework/Info.plist
-plutil -replace CFBundleIdentifier -string Nicolas-Holzschuch.texlua52 Frameworks/texlua52.framework/Info.plist
-install_name_tool -id @rpath/texlua52.framework/texlua52   Frameworks/texlua52.framework/texlua52
+rm -rf Frameworks/texlua53.framework
+mkdir Frameworks/texlua53.framework 
+cp Work/libs/lua53/.libs/libtexlua53.5.dylib Frameworks/texlua53.framework/texlua53
+cp basic_Info.plist Frameworks/texlua53.framework/Info.plist
+plutil -replace CFBundleExecutable -string texlua53 Frameworks/texlua53.framework/Info.plist
+plutil -replace CFBundleName -string texlua53 Frameworks/texlua53.framework/Info.plist
+plutil -replace CFBundleIdentifier -string Nicolas-Holzschuch.texlua53 Frameworks/texlua53.framework/Info.plist
+install_name_tool -id @rpath/texlua53.framework/texlua53   Frameworks/texlua53.framework/texlua53
 
 rm -rf Frameworks/kpathsea.framework
 mkdir Frameworks/kpathsea.framework 
@@ -84,7 +84,7 @@ plutil -replace CFBundleExecutable -string luatex Frameworks/luatex.framework/In
 plutil -replace CFBundleName -string luatex Frameworks/luatex.framework/Info.plist
 plutil -replace CFBundleIdentifier -string Nicolas-Holzschuch.luatex Frameworks/luatex.framework/Info.plist
 install_name_tool -id @rpath/luatex.framework/luatex   Frameworks/luatex.framework/luatex
-install_name_tool -change $TEXINSTDIR/libtexlua52.5.dylib @rpath/texlua52.framework/texlua52  Frameworks/luatex.framework/luatex
+install_name_tool -change $TEXINSTDIR/libtexlua53.5.dylib @rpath/texlua53.framework/texlua53  Frameworks/luatex.framework/luatex
 install_name_tool -change @rpath/libkpathsea.6.dylib  @rpath/kpathsea.framework/kpathsea Frameworks/luatex.framework/luatex
 
 
