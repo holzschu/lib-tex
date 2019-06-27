@@ -53,12 +53,8 @@ world: all
 	@echo "top-level make $@: running install-strip..."
 	$(MAKE) $(AM_MAKEFLAGS) install-strip
 ##
-if cross
-@echo "top-level make $@: skipping texlinks phase in $(texlinks_dir) ..."
-else !cross
-@echo "top-level make $@: running texlinks in $(texlinks_dir) ..."
-cd $(texlinks_dir) && $(MAKE) $(AM_MAKEFLAGS) run-texlinks
-endif !cross
+	@echo "top-level make $@: running texlinks in $(texlinks_dir) ..."
+	cd $(texlinks_dir) && $(MAKE) $(AM_MAKEFLAGS) run-texlinks
 ##
 	@echo "top-level make $@: running $(check_target)..."
 	$(MAKE) $(AM_MAKEFLAGS) $(check_target)

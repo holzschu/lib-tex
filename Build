@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: Build 40051 2016-03-17 01:20:14Z mojca $
+# $Id: Build 48808 2018-10-02 01:55:09Z karl $
 # Public domain.  Originally written many years ago by Sebastian Rahtz.
 # The basic idea is to run configure && make, but with a multitude of
 # environment variables to allow overriding everything.
@@ -43,6 +43,7 @@ export MAKE
 
 # make flags
 : ${TL_MAKE_FLAGS=}
+: ${TL_MAKE_VERBOSE=VERBOSE=1}
 
 # allow override of make target.
 : ${TL_TARGET=world}
@@ -61,10 +62,12 @@ if test "x$1" = x--debug || test "x$1" = x-g; then
   # The idea is that with Build -g, you can set TL_COMPILER_GFLAGS in
   # the environment with options common to all compilers --
   # not necessarily anything to do with debugging, e.g., -mcpu=sparvc9.
+  # Or you can set TL_{C,CXX,OBJCXX}FLAGS for per-language flags,
+  # notably TL_CFLAGS=-Wdeclaration-after-statement.
   : ${TL_COMPILER_GFLAGS=-g}
-  c="CFLAGS='$TL_COMPILER_GFLAGS'"
-  cxx="CXXFLAGS='$TL_COMPILER_GFLAGS'"
-  objcxx="OBJCXXFLAGS='$TL_COMPILER_GFLAGS'"  # needed only on macs
+  c="CFLAGS='$TL_COMPILER_GFLAGS $TL_CFLAGS'"
+  cxx="CXXFLAGS='$TL_COMPILER_GFLAGS $TL_CXXFLAGS'"
+  objcxx="OBJCXXFLAGS='$TL_COMPILER_GFLAGS $TL_OBJCXXFLAGS'" # only for macs
   TL_BUILD_ENV="$c $cxx $objcxx $TL_BUILD_ENV"
 fi
 
@@ -125,7 +128,7 @@ cd $TL_WORKDIR || exit 1
         $TL_CONFIGURE_ARGS \
         "$@" \
   && eval $TL_POSTCONFIGURE \
-  && eval $TL_BUILD_ENV $TL_MAKE $TL_MAKE_FLAGS $TL_TARGET
+  && eval $TL_BUILD_ENV $TL_MAKE $TL_MAKE_FLAGS $TL_MAKE_VERBOSE $TL_TARGET
   
   # Too arcane to try to propagate the exit status through a pipeline.
   # Just use a temp file.
