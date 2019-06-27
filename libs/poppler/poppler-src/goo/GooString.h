@@ -17,11 +17,13 @@
 //
 // Copyright (C) 2006 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2006 Krzysztof Kowalczyk <kkowalczyk@gmail.com>
-// Copyright (C) 2008-2010, 2012, 2014 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2008-2010, 2012, 2014, 2017 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2012-2014 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Jason Crain <jason@aquaticape.us>
-// Copyright (C) 2015 Adam Reichold <adam.reichold@t-online.de>
+// Copyright (C) 2015, 2018 Adam Reichold <adam.reichold@t-online.de>
 // Copyright (C) 2016 Jakub Alba <jakubalba@gmail.com>
+// Copyright (C) 2017 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -35,24 +37,9 @@
 #pragma interface
 #endif
 
-#include <limits.h> // for LLONG_MAX and ULLONG_MAX
-
-/* <limits.h> and/or the compiler may or may not define these.  */
-/* Minimum and maximum values a `signed long long int' can hold.  */
-#ifndef LLONG_MAX
-# define LLONG_MAX	9223372036854775807LL
-#endif
-#ifndef LLONG_MIN
-# define LLONG_MIN	(-LLONG_MAX - 1LL)
-#endif
-
-/* Maximum value an `unsigned long long int' can hold.  (Minimum is 0.)  */
-#ifndef ULLONG_MAX
-# define ULLONG_MAX	18446744073709551615ULL
-#endif
-
 #include <stdarg.h>
 #include <stdlib.h> // for NULL
+#include <string>
 #include "gtypes.h"
 
 #ifdef __clang__
@@ -79,7 +66,7 @@ public:
   GooString(const char *sA, int lengthA);
 
   // Create a string from <lengthA> chars at <idx> in <str>.
-  GooString(GooString *str, int idx, int lengthA);
+  GooString(const GooString *str, int idx, int lengthA);
 
   // Set content of a string to <newStr>. If <newLen> is CALC_STRING_LEN, then
   // length of the string will be calculated with strlen(). Otherwise we assume
@@ -147,7 +134,7 @@ public:
 
   // Append a character or string.
   GooString *append(char c);
-  GooString *append(GooString *str);
+  GooString *append(const GooString *str);
   GooString *append(const char *str, int lengthA=CALC_STRING_LEN);
 
   // Append a formatted string.
@@ -156,7 +143,7 @@ public:
 
   // Insert a character or string.
   GooString *insert(int i, char c);
-  GooString *insert(int i, GooString *str);
+  GooString *insert(int i, const GooString *str);
   GooString *insert(int i, const char *str, int lengthA=CALC_STRING_LEN);
 
   // Delete a character or range of characters.
@@ -167,7 +154,7 @@ public:
   GooString *lowerCase();
 
   // Compare two strings:  -1:<  0:=  +1:>
-  int cmp(GooString *str) const;
+  int cmp(const GooString *str) const;
   int cmpN(GooString *str, int n) const;
   int cmp(const char *sA) const;
   int cmpN(const char *sA, int n) const;
@@ -176,13 +163,18 @@ public:
   GBool endsWith(const char *suffix) const;
 
   GBool hasUnicodeMarker(void) const;
+  void prependUnicodeMarker();
   GBool hasJustUnicodeMarker(void) const { return length == 2 && hasUnicodeMarker(); }
 
   // Sanitizes the string so that it does
   // not contain any ( ) < > [ ] { } / %
   // The postscript mode also has some more strict checks
   // The caller owns the return value
-  GooString *sanitizedName(GBool psmode);
+  GooString *sanitizedName(GBool psmode) const;
+
+  // Conversion from and to std::string
+  explicit GooString(const std::string& str) : GooString(str.data(), str.size()) {}
+  std::string toStr() const { return std::string(getCString(), getLength()); }
 
 private:
   GooString(const GooString &other);
@@ -201,24 +193,12 @@ private:
   char *s;
 
   void resize(int newLength);
-#ifdef LLONG_MAX
   static void formatInt(long long x, char *buf, int bufSize,
 			GBool zeroFill, int width, int base,
 			char **p, int *len, GBool upperCase = gFalse);
-#else
-  static void formatInt(long x, char *buf, int bufSize,
-			GBool zeroFill, int width, int base,
-			char **p, int *len, GBool upperCase = gFalse);
-#endif
-#ifdef ULLONG_MAX
   static void formatUInt(unsigned long long x, char *buf, int bufSize,
 			 GBool zeroFill, int width, int base,
 			 char **p, int *len, GBool upperCase = gFalse);
-#else
-  static void formatUInt(Gulong x, char *buf, int bufSize,
-			 GBool zeroFill, int width, int base,
-			 char **p, int *len, GBool upperCase = gFalse);
-#endif
   static void formatDouble(double x, char *buf, int bufSize, int prec,
 			   GBool trim, char **p, int *len);
   static void formatDoubleSmallAware(double x, char *buf, int bufSize, int prec,

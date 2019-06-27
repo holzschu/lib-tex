@@ -1,3 +1,48 @@
+2019-02-14  Johannes Hielscher  <jhielscher@posteo.de>
+
+	* Makefile.am (nodist_libpng_a_SOURCES) [PNG_ARM_NEON]: add
+	@LIBPNG_TREE@/arm/palette_neon_intrinsics.c.
+	tlbuild 12 Feb 2019 00:07:11.
+
+2018-12-02 Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	Import libpng-1.6.36.
+	* version.ac: Adjust.
+
+2018-07-17 Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	Import libpng-1.6.35.
+	* version.ac: Adjust.
+
+2018-01-14  Karl Berry  <karl@freefriends.org>
+
+	* configure.ac (-std=c89): reinstate check, now copying configure
+	block from upstream; reautoconf.
+
+2017-12-02  Karl Berry  <karl@freefriends.org>
+
+	Import ARM support from upstream to TL configure.
+	* Makefile.am (nodist_libpng_a_SOURCES): add arm/*.[cS] files
+	per upstream Makefile.am.
+	* configure.ac (AM_PROG_AS),
+	(AC_ARG_ENABLE([arm-neon]): add.
+	Report from Johannes Hielscher, tlbuild mail 1 Nov 2017 02:39:55.
+
+2017-09-29 Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	Import libpng-1.6.34.
+	* version.ac: Adjust.
+
+2017-08-24 Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	Import libpng-1.6.32.
+	* version.ac: Adjust.
+
+2017-07-27 Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	Import libpng-1.6.31.
+	* version.ac: Adjust.
+
 2017-06-28 Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
 
 	Import libpng-1.6.30.

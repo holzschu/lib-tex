@@ -17,11 +17,12 @@
 // Copyright (C) 2007 Iñigo Martínez <inigomartinez@gmail.com>
 // Copyright (C) 2008 Brad Hards <bradh@kde.org>
 // Copyright (C) 2008, 2010 Carlos Garcia Campos <carlosgc@gnome.org>
-// Copyright (C) 2009-2013 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2009-2013, 2017, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2009, 2010, 2012, 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2010 David Benjamin <davidben@mit.edu>
 // Copyright (C) 2010 Christian Feuersänger <cfeuersaenger@googlemail.com>
 // Copyright (C) 2013 Fabio D'Urso <fabiodurso@hotmail.it>
+// Copyright (C) 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -112,19 +113,24 @@ public:
   GfxResources(XRef *xref, Dict *resDict, GfxResources *nextA);
   ~GfxResources();
 
-  GfxFont *lookupFont(char *name);
-  GBool lookupXObject(char *name, Object *obj);
-  GBool lookupXObjectNF(char *name, Object *obj);
-  GBool lookupMarkedContentNF(char *name, Object *obj);
-  void lookupColorSpace(const char *name, Object *obj);
-  GfxPattern *lookupPattern(char *name, OutputDev *out, GfxState *state);
-  GfxShading *lookupShading(char *name, OutputDev *out, GfxState *state);
-  GBool lookupGState(char *name, Object *obj);
-  GBool lookupGStateNF(char *name, Object *obj);
+  GfxResources(const GfxResources &) = delete;
+  GfxResources& operator=(const GfxResources &other) = delete;
+
+  GfxFont *lookupFont(const char *name);
+  const GfxFont *lookupFont(const char *name) const;
+  Object lookupXObject(const char *name);
+  Object lookupXObjectNF(const char *name);
+  Object lookupMarkedContentNF(const char *name);
+  Object lookupColorSpace(const char *name);
+  GfxPattern *lookupPattern(const char *name, OutputDev *out, GfxState *state);
+  GfxShading *lookupShading(const char *name, OutputDev *out, GfxState *state);
+  Object lookupGState(const char *name);
+  Object lookupGStateNF(const char *name);
 
   GfxResources *getNext() { return next; }
 
 private:
+  GfxFont *doLookupFont(const char *name) const;
 
   GfxFontDict *fonts;
   Object xObjDict;
@@ -155,11 +161,14 @@ public:
   Gfx(PDFDoc *docA, OutputDev *outA, Dict *resDict,
       PDFRectangle *box, PDFRectangle *cropBox,
       GBool (*abortCheckCbkA)(void *data) = NULL,
-      void *abortCheckCbkDataA = NULL, XRef *xrefA = NULL);
+      void *abortCheckCbkDataA = NULL, Gfx *gfxA = NULL);
 #ifdef USE_CMS
   void initDisplayProfile();
 #endif
   ~Gfx();
+
+  Gfx(const Gfx &) = delete;
+  Gfx& operator=(const Gfx &other) = delete;
 
   XRef *getXRef() { return xref; }
 
@@ -227,7 +236,8 @@ private:
 
   Parser *parser;		// parser for page content stream(s)
   
-  std::set<int> formsDrawing;	// the forms that are being drawn
+  std::set<int> formsDrawing;	// the forms/patterns that are being drawn
+  std::set<int> charProcDrawing;	// the charProc that are being drawn
 
   GBool				// callback to check for an abort
     (*abortCheckCbk)(void *data);
@@ -351,8 +361,8 @@ private:
   void opMoveShowText(Object args[], int numArgs);
   void opMoveSetShowText(Object args[], int numArgs);
   void opShowSpaceText(Object args[], int numArgs);
-  void doShowText(GooString *s);
-  void doIncCharCount(GooString *s);
+  void doShowText(const GooString *s);
+  void doIncCharCount(const GooString *s);
 
   // XObject operators
   void opXObject(Object args[], int numArgs);

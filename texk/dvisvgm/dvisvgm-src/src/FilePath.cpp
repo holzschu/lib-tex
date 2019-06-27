@@ -2,7 +2,7 @@
 ** FilePath.cpp                                                         **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -18,7 +18,6 @@
 ** along with this program; if not, see <http://www.gnu.org/licenses/>. **
 *************************************************************************/
 
-#include <config.h>
 #include <cctype>
 #include "FilePath.hpp"
 #include "FileSystem.hpp"
@@ -70,22 +69,12 @@ static char adapt_current_path (string &path, char target_drive) {
 
 
 bool FilePath::Directory::operator == (const Directory &dir) const {
-	string dirstr1 = _dirstr;
-	string dirstr2 = dir._dirstr;
 #ifdef _WIN32
 	// letter case is not significant on Windows systems
-	util::tolower(dirstr1);
-	util::tolower(dirstr2);
+	return util::tolower(_dirstr) == util::tolower(dir._dirstr);
+#else
+	return _dirstr == dir._dirstr;
 #endif
-	return dirstr1 == dirstr2;
-}
-
-
-/** Constructs a FilePath object from a given path. Relative paths are
- *  relative to the current working directory.
- *  @param[in] path absolute or relative path to a file or directory */
-FilePath::FilePath (const string &path) {
-	init(path, !FileSystem::isDirectory(path.c_str()), FileSystem::getcwd());
 }
 
 
@@ -98,11 +87,20 @@ FilePath::FilePath (const string &path, bool isfile, const string &current_dir) 
 }
 
 
+/** Assigns a new path. Relative paths are relative to the current working directory.
+ *  @param[in] path absolute or relative path to a file or directory */
+void FilePath::set(const string &path) {
+	init(path, !FileSystem::isDirectory(path), FileSystem::getcwd());
+}
+
+
 /** Initializes a FilePath object. This method should be called by the constructors only.
  *  @param[in] path absolute or relative path to a file or directory
  *  @param[in] isfile true if 'path' references a file, false if a directory is referenced
  *  @param[in] current_dir if 'path' is a relative path expression it will be related to 'current_dir' */
 void FilePath::init (string path, bool isfile, string current_dir) {
+	_dirs.clear();
+	_fname.clear();
 	single_slashes(path);
 	single_slashes(current_dir);
 #ifdef _WIN32

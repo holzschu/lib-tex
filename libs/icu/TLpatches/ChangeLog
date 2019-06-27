@@ -1,3 +1,25 @@
+2019-02-10  Karl Berry  <karl@tug.org>
+
+	* patch-12-mingw: also patch numberrangeformatter.h
+	for NumberRangeFormatterImpl* on mingw.
+
+2019-01-08  Karl Berry  <karl@freefriends.org>
+
+	* update for icu-63.1; no substantive changes.
+
+2018-01-16  Karl Berry  <karl@freefriends.org>
+
+	* patch-19-netbsd [__NetBSD__]: new patch, defining _ISOC99_SOURCE.
+
+2018-01-16  Karl Berry  <karl@tug.org>
+
+	* patch-02-configure-solaris: add.
+
+2018-01-12  Karl Berry  <karl@freefriends.org>
+
+	* patch-16-putil,
+	* patch-17-cygwin-no-w32api: no longer needed per kbrown.
+
 2017-03-17  Karl Berry  <karl@tug.org>
 
 	* patch-19-netbsd: add per Marc Baudoin, tlbuild 17 Mar 2017 10:03:03.

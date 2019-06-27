@@ -2,7 +2,7 @@
 ** PsSpecialHandler.cpp                                                 **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -18,13 +18,14 @@
 ** along with this program; if not, see <http://www.gnu.org/licenses/>. **
 *************************************************************************/
 
-#include <config.h>
+#include <array>
 #include <cmath>
 #include <fstream>
 #include <memory>
 #include <sstream>
 #include "EPSFile.hpp"
 #include "FileFinder.hpp"
+#include "FileSystem.hpp"
 #include "Message.hpp"
 #include "PathClipper.hpp"
 #include "PSPattern.hpp"
@@ -35,16 +36,7 @@
 #include "TensorProductPatch.hpp"
 #include "TriangularPatch.hpp"
 
-
 using namespace std;
-
-
-static inline double str2double (const string &str) {
-	double ret;
-	istringstream iss(str);
-	iss >> ret;
-	return ret;
-}
 
 
 bool PsSpecialHandler::COMPUTE_CLIPPATHS_INTERSECTIONS = false;
@@ -53,15 +45,13 @@ int PsSpecialHandler::SHADING_SEGMENT_SIZE = 20;
 double PsSpecialHandler::SHADING_SIMPLIFY_DELTA = 0.01;
 
 
-PsSpecialHandler::PsSpecialHandler () : _psi(this), _actions(0), _previewFilter(_psi), _psSection(PS_NONE), _xmlnode(0)
+PsSpecialHandler::PsSpecialHandler () : _psi(this), _actions(), _previewFilter(_psi), _xmlnode(), _savenode()
 {
 }
 
 
 PsSpecialHandler::~PsSpecialHandler () {
-	_psi.setActions(0);     // ensure no further PS actions are performed
-	for (auto &entry : _patterns)
-		delete entry.second;
+	_psi.setActions(nullptr);     // ensure no further PS actions are performed
 }
 
 
@@ -72,9 +62,8 @@ void PsSpecialHandler::initialize () {
 	if (_psSection == PS_NONE) {
 		initgraphics();
 		// execute dvips prologue/header files
-		const char *headers[] = {"tex.pro", "texps.pro", "special.pro", /*"color.pro",*/ 0};
-		for (const char **p=headers; *p; ++p)
-			processHeaderFile(*p);
+		for (const char *fname : {"tex.pro", "texps.pro", "special.pro", "color.pro"})
+			processHeaderFile(fname);
 		// disable bop/eop operators to prevent side-effects by
 		// unexpected bops/eops present in PS specials
 		_psi.execute("\nTeXDict begin /bop{pop pop}def /eop{}def end ");
@@ -88,10 +77,11 @@ void PsSpecialHandler::initgraphics () {
 	_linewidth = 1;
 	_linecap = _linejoin = 0;  // butt end caps and miter joins
 	_miterlimit = 4;
-	_xmlnode = _savenode = 0;
-	_opacityalpha = 1;  // fully opaque
+	_xmlnode = _savenode = nullptr;
+	_opacityalpha = _shapealpha = 1;  // fully opaque
+	_blendmode = 0; // "normal" mode (no blending)
 	_sx = _sy = _cos = 1.0;
-	_pattern = 0;
+	_pattern = nullptr;
 	_currentcolor = Color::BLACK;
 	_dashoffset = 0;
 	_dashpattern.clear();
@@ -174,17 +164,17 @@ void PsSpecialHandler::executeAndSync (istream &is, bool updatePos) {
 }
 
 
-void PsSpecialHandler::preprocess (const char *prefix, istream &is, SpecialActions &actions) {
+void PsSpecialHandler::preprocess (const string &prefix, istream &is, SpecialActions &actions) {
 	initialize();
 	if (_psSection != PS_HEADERS)
 		return;
 
 	_actions = &actions;
-	if (*prefix == '!') {
+	if (prefix == "!") {
 		_headerCode += "\n";
 		_headerCode += string(istreambuf_iterator<char>(is), istreambuf_iterator<char>());
 	}
-	else if (strcmp(prefix, "header=") == 0) {
+	else if (prefix == "header=") {
 		// read and execute PS header file
 		string fname;
 		is >> fname;
@@ -193,9 +183,9 @@ void PsSpecialHandler::preprocess (const char *prefix, istream &is, SpecialActio
 }
 
 
-bool PsSpecialHandler::process (const char *prefix, istream &is, SpecialActions &actions) {
+bool PsSpecialHandler::process (const string &prefix, istream &is, SpecialActions &actions) {
 	// process PS headers only once (in prescan)
-	if (*prefix == '!' || strcmp(prefix, "header=") == 0)
+	if (prefix == "!" || prefix == "header=")
 		return true;
 
 	_actions = &actions;
@@ -203,23 +193,23 @@ bool PsSpecialHandler::process (const char *prefix, istream &is, SpecialActions 
 	if (_psSection != PS_BODY)
 		enterBodySection();
 
-	if (*prefix == '"' || strcmp(prefix, "pst:") == 0) {
+	if (prefix == "\"" || prefix == "pst:") {
 		// read and execute literal PostScript code (isolated by a wrapping save/restore pair)
 		moveToDVIPos();
 		_psi.execute("\n@beginspecial @setspecial ");
 		executeAndSync(is, false);
 		_psi.execute("\n@endspecial ");
 	}
-	else if (strcmp(prefix, "psfile=") == 0 || strcmp(prefix, "PSfile=") == 0) {
+	else if (prefix == "psfile=" || prefix == "PSfile=" || prefix == "pdffile=") {
 		if (_actions) {
 			StreamInputReader in(is);
-			string fname = in.getQuotedString(in.peek() == '"' ? '"' : 0);
+			const string fname = in.getQuotedString(in.peek() == '"' ? "\"" : nullptr);
 			map<string,string> attr;
 			in.parseAttributes(attr);
-			psfile(fname, attr);
+			imgfile(prefix == "pdffile=" ? FileType::PDF : FileType::EPS, fname, attr);
 		}
 	}
-	else if (strcmp(prefix, "ps::") == 0) {
+	else if (prefix == "ps::") {
 		if (_actions)
 			_actions->finishLine();  // reset DVI position on next DVI command
 		if (is.peek() == '[') {
@@ -253,7 +243,7 @@ bool PsSpecialHandler::process (const char *prefix, istream &is, SpecialActions 
 		StreamInputReader in(is);
 		if (in.check(" plotfile ")) { // ps: plotfile fname
 			string fname = in.getString();
-			ifstream ifs(fname.c_str());
+			ifstream ifs(fname);
 			if (ifs)
 				_psi.execute(ifs);
 			else
@@ -270,90 +260,115 @@ bool PsSpecialHandler::process (const char *prefix, istream &is, SpecialActions 
 }
 
 
-/** Handles psfile special.
- *  @param[in] fname EPS file to be included
- *  @param[in] attr attributes given with \\special psfile */
-void PsSpecialHandler::psfile (const string &fname, const map<string,string> &attr) {
-	EPSFile epsfile(fname);
-	istream &is = epsfile.istream();
-	if (!is)
-		Message::wstream(true) << "file '" << fname << "' not found in special 'psfile'\n";
-	else {
-		map<string,string>::const_iterator it;
+/** Handles a psfile/pdffile special which places an external EPS/PDF graphic
+ *  at the current DVI position. The lower left corner (llx,lly) of the
+ *  given bounding box is placed at the DVI position.
+ *  @param[in] filetype type of file to process (EPS or PDF)
+ *  @param[in] fname EPS/PDF file to be included
+ *  @param[in] attr attributes given with psfile/pdffile special */
+void PsSpecialHandler::imgfile (FileType filetype, const string &fname, const map<string,string> &attr) {
+	// prevent warning about missing image file "/dev/null" which is
+	// added by option "psfixbb" of the preview package
+	if (fname == "/dev/null")
+		return;
 
-		// bounding box of EPS figure
-		double llx = (it = attr.find("llx")) != attr.end() ? str2double(it->second) : 0;
-		double lly = (it = attr.find("lly")) != attr.end() ? str2double(it->second) : 0;
-		double urx = (it = attr.find("urx")) != attr.end() ? str2double(it->second) : 0;
-		double ury = (it = attr.find("ury")) != attr.end() ? str2double(it->second) : 0;
+	string filepath;
+	if (const char *path = FileFinder::instance().lookup(fname, false))
+		filepath = FileSystem::adaptPathSeperators(path);
+	if ((filepath.empty() || !FileSystem::exists(filepath)) && FileSystem::exists(fname))
+		filepath = fname;
+	if (filepath.empty()) {
+		Message::wstream(true) << "file '" << fname << "' not found\n";
+		return;
+	}
+	map<string,string>::const_iterator it;
 
-		// desired width/height of resulting figure
-		double rwi = (it = attr.find("rwi")) != attr.end() ? str2double(it->second)/10.0 : -1;
-		double rhi = (it = attr.find("rhi")) != attr.end() ? str2double(it->second)/10.0 : -1;
-		if (rwi == 0 || rhi == 0 || urx-llx == 0 || ury-lly == 0)
-			return;
+	// bounding box of EPS figure in PS point units (lower left and upper right corner)
+	double llx = (it = attr.find("llx")) != attr.end() ? stod(it->second) : 0;
+	double lly = (it = attr.find("lly")) != attr.end() ? stod(it->second) : 0;
+	double urx = (it = attr.find("urx")) != attr.end() ? stod(it->second) : 0;
+	double ury = (it = attr.find("ury")) != attr.end() ? stod(it->second) : 0;
+	int pageno = (it = attr.find("page")) != attr.end() ? stoi(it->second, nullptr, 10) : 1;
 
-		// user transformations (default values chosen according to dvips manual)
-		double hoffset = (it = attr.find("hoffset")) != attr.end() ? str2double(it->second) : 0;
-		double voffset = (it = attr.find("voffset")) != attr.end() ? str2double(it->second) : 0;
-//		double hsize   = (it = attr.find("hsize")) != attr.end() ? str2double(it->second) : 612;
-//		double vsize   = (it = attr.find("vsize")) != attr.end() ? str2double(it->second) : 792;
-		double hscale  = (it = attr.find("hscale")) != attr.end() ? str2double(it->second) : 100;
-		double vscale  = (it = attr.find("vscale")) != attr.end() ? str2double(it->second) : 100;
-		double angle   = (it = attr.find("angle")) != attr.end() ? str2double(it->second) : 0;
-
-		Matrix m(1);
-		m.rotate(angle).scale(hscale/100, vscale/100).translate(hoffset, voffset);
-		BoundingBox bbox(llx, lly, urx, ury);
-		bbox.transform(m);
-
-		double sx = rwi/bbox.width();
-		double sy = rhi/bbox.height();
-		if (sx < 0)	sx = sy;
-		if (sy < 0)	sy = sx;
-		if (sx < 0) sx = sy = 1.0;
-
-		// save current DVI position (in pt units)
-		const double x = _actions->getX();
-		const double y = _actions->getY();
-
-		// all following drawings are relative to (0,0)
-		_actions->setX(0);
-		_actions->setY(0);
-		moveToDVIPos();
-
-		_xmlnode = new XMLElementNode("g");  // append following elements to this group
-		_psi.execute("\n@beginspecial @setspecial "); // enter \special environment
-		_psi.limit(epsfile.pslength()); // limit the number of bytes to be processed
-		_psi.execute(is);               // process EPS file
-		_psi.limit(0);                  // disable limitation
-		_psi.execute("\n@endspecial "); // leave special environment
-		if (_xmlnode->empty())          // nothing been drawn?
-			delete _xmlnode;             // => don't need to add empty group node
-		else {                          // has anything been drawn?
-			Matrix matrix(1);
-			matrix.rotate(angle).scale(hscale/100, vscale/100).translate(hoffset, voffset);
-			matrix.translate(-llx, lly);
-			matrix.scale(sx, sy);      // resize image to width "rwi" and height "rhi"
-			matrix.translate(x, y);    // move image to current DVI position
-			if (!matrix.isIdentity())
-				_xmlnode->addAttribute("transform", matrix.getSVG());
-			_actions->appendToPage(_xmlnode);
+	if (filetype == FileType::PDF && llx == 0 && lly == 0 && urx == 0 && ury == 0) {
+		BoundingBox pagebox = _psi.pdfPageBox(fname, pageno);
+		if (pagebox.valid()) {
+			llx = pagebox.minX();
+			lly = pagebox.minY();
+			urx = pagebox.maxX();
+			ury = pagebox.maxY();
 		}
-		_xmlnode = 0;   // append following elements to page group again
+	}
 
-		// restore DVI position
-		_actions->setX(x);
-		_actions->setY(y);
-		moveToDVIPos();
+	// desired width and height of the untransformed figure in PS point units
+	double rwi = (it = attr.find("rwi")) != attr.end() ? stod(it->second)/10.0 : -1;
+	double rhi = (it = attr.find("rhi")) != attr.end() ? stod(it->second)/10.0 : -1;
+	if (rwi == 0 || rhi == 0 || urx-llx == 0 || ury-lly == 0)
+		return;
+
+	// user transformations (default values chosen according to dvips manual)
+	// order of transformations: rotate, scale, translate/offset
+	double hoffset = (it = attr.find("hoffset")) != attr.end() ? stod(it->second) : 0;
+	double voffset = (it = attr.find("voffset")) != attr.end() ? stod(it->second) : 0;
+//	double hsize   = (it = attr.find("hsize")) != attr.end() ? stod(it->second) : 612;
+//	double vsize   = (it = attr.find("vsize")) != attr.end() ? stod(it->second) : 792;
+	double hscale  = (it = attr.find("hscale")) != attr.end() ? stod(it->second) : 100;
+	double vscale  = (it = attr.find("vscale")) != attr.end() ? stod(it->second) : 100;
+	double angle   = (it = attr.find("angle")) != attr.end() ? stod(it->second) : 0;
+
+	// compute factors to scale the bounding box to width rwi and height rhi
+	double sx = rwi/abs(llx-urx);
+	double sy = rhi/abs(lly-ury);
+	if (sx == 0 || sy == 0)
+		return;
+
+	if (sx < 0) sx = sy;         // rwi attribute not set
+	if (sy < 0) sy = sx;         // rhi attribute not set
+	if (sx < 0) sx = sy = 1.0;   // neither rwi nor rhi set
+
+	// save current DVI position
+	double x = _actions->getX();
+	double y = _actions->getY();
+
+	// all following drawings are relative to (0,0)
+	_actions->setX(0);
+	_actions->setY(0);
+	moveToDVIPos();
+
+	auto groupNode = util::make_unique<XMLElementNode>("g"); // put SVG nodes created from the EPS/PDF file in this group
+	_xmlnode = groupNode.get();
+	_psi.execute(
+		"\n@beginspecial @setspecial"          // enter special environment
+		"/setpagedevice{@setpagedevice}def "   // activate processing of operator "setpagedevice"
+		"matrix setmatrix"                     // don't apply outer PS transformations
+		"/FirstPage "+to_string(pageno)+" def" // set number of fisrt page to convert (PDF only)
+		"/LastPage "+to_string(pageno)+" def"  // set number of last page to convert (PDF only)
+		"("+ filepath + ")run "                // execute file content
+		"@endspecial "                         // leave special environment
+	);
+	if (!groupNode->empty()) {  // has anything been drawn?
+		Matrix matrix(1);
+		matrix.scale(sx, -sy).rotate(-angle).scale(hscale/100, vscale/100);  // apply transformation attributes
+		matrix.translate(x+hoffset, y-voffset);     // move image to current DVI position
+		matrix.rmultiply(_actions->getMatrix());
 
 		// update bounding box
-		m.scale(sx, -sy);
-		m.translate(x, y);
-		bbox = BoundingBox(0, 0, fabs(urx-llx), fabs(ury-lly));
-		bbox.transform(m);
+		BoundingBox bbox(0, 0, urx-llx, ury-lly);
+		bbox.transform(matrix);
 		_actions->embed(bbox);
+
+		// insert group containing SVG nodes created from image
+		matrix.lmultiply(TranslationMatrix(-llx, -lly));  // move lower left corner of image to origin
+		if (!matrix.isIdentity())
+			groupNode->addAttribute("transform", matrix.getSVG());
+		_actions->appendToPage(std::move(groupNode));
 	}
+	_xmlnode = nullptr;   // append following elements to page group again
+
+	// restore DVI position
+	_actions->setX(x);
+	_actions->setY(y);
+	moveToDVIPos();
 }
 
 
@@ -388,38 +403,25 @@ static bool transform_box_extents (const Matrix &matrix, double &w, double &h, d
 void PsSpecialHandler::dviEndPage (unsigned, SpecialActions &actions) {
 	BoundingBox bbox;
 	if (_previewFilter.getBoundingBox(bbox)) {  // is there any data written by preview package?
-		double w = max(0.0, _previewFilter.width());
-		double h = max(0.0, _previewFilter.height());
-		double d = max(0.0, _previewFilter.depth());
+		double w=0, h=0, d=0;
 		if (actions.getBBoxFormatString() == "preview" || actions.getBBoxFormatString() == "min") {
 			if (actions.getBBoxFormatString() == "preview") {
+				w = max(0.0, _previewFilter.width());
+				h = max(0.0, _previewFilter.height());
+				d = max(0.0, _previewFilter.depth());
 				actions.bbox() = bbox;
 				Message::mstream() << "\napplying bounding box set by";
 			}
 			else {
-				// compute height, depth and width depending on the
-				// tight bounding box derived from the objects on the page
-				double y0 = bbox.maxY()-h;      // y coordinate of the baseline
-				h = actions.bbox().maxY()-y0;
-				if (h < 0) {
-					h = 0;
-					d = actions.bbox().height();
-				}
-				else {
-					d = y0-actions.bbox().minY();
-					if (d < 0) {
-						h = actions.bbox().height();
-						d = 0;
-					}
-				}
 				w = actions.bbox().width();
+				h = max(0.0, -actions.bbox().minY());
+				d = max(0.0, actions.bbox().maxY());
 				Message::mstream() << "\ncomputing extents based on data set by";
 			}
 			Message::mstream() << " preview package (version " << _previewFilter.version() << ")\n";
 
 			// apply page transformations to box extents
-			Matrix pagetrans;
-			actions.getPageTransform(pagetrans);
+			Matrix pagetrans = actions.getPageTransformation();
 			bool isBaselineHorizontal = transform_box_extents(pagetrans, w, h, d);
 			actions.bbox().lock();
 
@@ -432,28 +434,28 @@ void PsSpecialHandler::dviEndPage (unsigned, SpecialActions &actions) {
 					"height=" << XMLString(h*bp2pt) << "pt, "
 					"depth=" << XMLString(d*bp2pt) << "pt\n";
 			}
-		}
 #if 0
-		XMLElementNode *rect = new XMLElementNode("rect");
-		rect->addAttribute("x", actions.bbox().minX());
-		rect->addAttribute("y", actions.bbox().minY());
-		rect->addAttribute("width", w);
-		rect->addAttribute("height", h+d);
-		rect->addAttribute("fill", "none");
-		rect->addAttribute("stroke", "red");
-		rect->addAttribute("stroke-width", "0.5");
-		actions.appendToPage(rect);
-		if (d > 0) {
-			XMLElementNode *line = new XMLElementNode("line");
-			line->addAttribute("x1", actions.bbox().minX());
-			line->addAttribute("y1", actions.bbox().minY()+h);
-			line->addAttribute("x2", actions.bbox().maxX());
-			line->addAttribute("y2", actions.bbox().minY()+h);
-			line->addAttribute("stroke", "blue");
-			line->addAttribute("stroke-width", "0.5");
-			actions.appendToPage(line);
-		}
+			auto rect = util::make_unique<XMLElementNode>("rect");
+			rect->addAttribute("x", actions.bbox().minX());
+			rect->addAttribute("y", actions.bbox().minY());
+			rect->addAttribute("width", w);
+			rect->addAttribute("height", h+d);
+			rect->addAttribute("fill", "none");
+			rect->addAttribute("stroke", "red");
+			rect->addAttribute("stroke-width", "0.1");
+			actions.appendToPage(std::move(rect));
+			if (d > 0) {
+				auto line = util::make_unique<XMLElementNode>("line");
+				line->addAttribute("x1", actions.bbox().minX());
+				line->addAttribute("y1", actions.bbox().minY()+h);
+				line->addAttribute("x2", actions.bbox().maxX());
+				line->addAttribute("y2", actions.bbox().minY()+h);
+				line->addAttribute("stroke", "blue");
+				line->addAttribute("stroke-width", "0.1");
+				actions.appendToPage(std::move(line));
+			}
 #endif
+		}
 	}
 	// close dictionary TeXDict and execute end-hook if defined
 	if (_psSection == PS_BODY) {
@@ -464,6 +466,21 @@ void PsSpecialHandler::dviEndPage (unsigned, SpecialActions &actions) {
 }
 
 ///////////////////////////////////////////////////////
+
+void PsSpecialHandler::setpagedevice (std::vector<double> &p) {
+	_linewidth = 1;
+	_linecap = _linejoin = 0;  // butt end caps and miter joins
+	_miterlimit = 4;
+	_opacityalpha = _shapealpha = 1;  // fully opaque
+	_blendmode = 0; // "normal" mode (no blending)
+	_sx = _sy = _cos = 1.0;
+	_pattern = nullptr;
+	_currentcolor = Color::BLACK;
+	_dashoffset = 0;
+	_dashpattern.clear();
+	_path.clear();
+}
+
 
 void PsSpecialHandler::gsave (vector<double>&) {
 	_clipStack.dup();
@@ -510,11 +527,22 @@ void PsSpecialHandler::closepath (vector<double>&) {
 }
 
 
+static string css_blendmode_name (int mode) {
+	static const array<const char*,16> modenames = {{
+	  "normal",  "multiply",  "screen", "overlay", "soft-light", "hard-light", "color-dodge", "color-burn",
+	  "darken", "lighten", "difference", "exclusion", "hue", "saturation", "color", "luminosity"
+	}};
+	if (mode < 0 || mode > 15)
+		return "";
+	return modenames[mode];
+}
+
+
 /** Draws the current path recorded by previously executed path commands (moveto, lineto,...).
  *  @param[in] p not used */
 void PsSpecialHandler::stroke (vector<double> &p) {
 	_path.removeRedundantCommands();
-	if ((_path.empty() && !_clipStack.clippathLoaded()) || !_actions)
+	if ((_path.empty() && !_clipStack.prependedPath()) || !_actions)
 		return;
 
 	BoundingBox bbox;
@@ -523,16 +551,16 @@ void PsSpecialHandler::stroke (vector<double> &p) {
 		if (!_xmlnode)
 			bbox.transform(_actions->getMatrix());
 	}
-	if (_clipStack.clippathLoaded() && _clipStack.top())
-		_path.prepend(*_clipStack.top());
-	XMLElementNode *path=0;
+	if (_clipStack.prependedPath())
+		_path.prepend(*_clipStack.prependedPath());
+	unique_ptr<XMLElementNode> path;
 	Pair<double> point;
 	if (_path.isDot(point)) {  // zero-length path?
 		if (_linecap == 1) {    // round line ends?  => draw dot
 			double x = point.x();
 			double y = point.y();
 			double r = _linewidth/2.0;
-			path = new XMLElementNode("circle");
+			path = util::make_unique<XMLElementNode>("circle");
 			path->addAttribute("cx", x);
 			path->addAttribute("cy", y);
 			path->addAttribute("r", r);
@@ -547,7 +575,7 @@ void PsSpecialHandler::stroke (vector<double> &p) {
 
 		ostringstream oss;
 		_path.writeSVG(oss, SVGTree::RELATIVE_PATH_CMDS);
-		path = new XMLElementNode("path");
+		path = util::make_unique<XMLElementNode>("path");
 		path->addAttribute("d", oss.str());
 		path->addAttribute("stroke", _actions->getColor().svgColorString());
 		path->addAttribute("fill", "none");
@@ -559,8 +587,10 @@ void PsSpecialHandler::stroke (vector<double> &p) {
 			path->addAttribute("stroke-linecap", _linecap == 1 ? "round" : "square");
 		if (_linejoin > 0)    // default value is "miter", no need to set it explicitly
 			path->addAttribute("stroke-linejoin", _linecap == 1 ? "round" : "bevel");
-		if (_opacityalpha < 1)
-			path->addAttribute("stroke-opacity", _opacityalpha);
+		if (_opacityalpha < 1 || _shapealpha < 1)
+			path->addAttribute("stroke-opacity", _opacityalpha*_shapealpha);
+		if (_blendmode > 0 && _blendmode < 16)
+			path->addAttribute("style", "mix-blend-mode:"+css_blendmode_name(_blendmode));
 		if (!_dashpattern.empty()) {
 			ostringstream oss;
 			for (size_t i=0; i < _dashpattern.size(); i++) {
@@ -573,18 +603,18 @@ void PsSpecialHandler::stroke (vector<double> &p) {
 				path->addAttribute("stroke-dashoffset", _dashoffset);
 		}
 	}
-	if (path && _clipStack.top()) {
+	if (path && _clipStack.path()) {
 		// assign clipping path and clip bounding box
 		path->addAttribute("clip-path", XMLString("url(#clip")+XMLString(_clipStack.topID())+")");
 		BoundingBox clipbox;
-		_clipStack.top()->computeBBox(clipbox);
+		_clipStack.path()->computeBBox(clipbox);
 		bbox.intersect(clipbox);
-		_clipStack.setClippathLoaded(false);
+		_clipStack.removePrependedPath();
 	}
 	if (_xmlnode)
-		_xmlnode->append(path);
+		_xmlnode->append(std::move(path));
 	else {
-		_actions->appendToPage(path);
+		_actions->appendToPage(std::move(path));
 		_actions->embed(bbox);
 	}
 	_path.clear();
@@ -596,7 +626,7 @@ void PsSpecialHandler::stroke (vector<double> &p) {
  *  @param[in] evenodd true: use even-odd fill algorithm, false: use nonzero fill algorithm */
 void PsSpecialHandler::fill (vector<double> &p, bool evenodd) {
 	_path.removeRedundantCommands();
-	if ((_path.empty() && !_clipStack.clippathLoaded()) || !_actions)
+	if ((_path.empty() && !_clipStack.prependedPath()) || !_actions)
 		return;
 
 	// compute bounding box
@@ -607,40 +637,42 @@ void PsSpecialHandler::fill (vector<double> &p, bool evenodd) {
 		if (!_xmlnode)
 			bbox.transform(_actions->getMatrix());
 	}
-	if (_clipStack.clippathLoaded() && _clipStack.top())
-		_path.prepend(*_clipStack.top());
+	if (_clipStack.prependedPath())
+		_path.prepend(*_clipStack.prependedPath());
 
 	ostringstream oss;
 	_path.writeSVG(oss, SVGTree::RELATIVE_PATH_CMDS);
-	XMLElementNode *path = new XMLElementNode("path");
+	unique_ptr<XMLElementNode> path = util::make_unique<XMLElementNode>("path");
 	path->addAttribute("d", oss.str());
 	if (_pattern)
 		path->addAttribute("fill", XMLString("url(#")+_pattern->svgID()+")");
 	else if (_actions->getColor() != Color::BLACK || _savenode)
 		path->addAttribute("fill", _actions->getColor().svgColorString());
-	if (_clipStack.top()) {
+	if (_clipStack.path()) {
 		// assign clipping path and clip bounding box
 		path->addAttribute("clip-path", XMLString("url(#clip")+XMLString(_clipStack.topID())+")");
 		BoundingBox clipbox;
-		_clipStack.top()->computeBBox(clipbox);
+		_clipStack.path()->computeBBox(clipbox);
 		bbox.intersect(clipbox);
-		_clipStack.setClippathLoaded(false);
+		_clipStack.removePrependedPath();
 	}
 	if (evenodd)  // SVG default fill rule is "nonzero" algorithm
 		path->addAttribute("fill-rule", "evenodd");
-	if (_opacityalpha < 1)
-		path->addAttribute("fill-opacity", _opacityalpha);
+	if (_opacityalpha < 1 || _shapealpha < 1)
+		path->addAttribute("fill-opacity", _opacityalpha*_shapealpha);
+	if (_blendmode > 0 && _blendmode < 16)
+		path->addAttribute("style", "mix-blend-mode:"+css_blendmode_name(_blendmode));
 	if (_xmlnode)
-		_xmlnode->append(path);
+		_xmlnode->append(std::move(path));
 	else {
-		_actions->appendToPage(path);
+		_actions->appendToPage(std::move(path));
 		_actions->embed(bbox);
 	}
 	_path.clear();
 }
 
 
-/** Creates a Matrix object out of a given sequence of 6 double values.
+/** Creates a Matrix object from a given sequence of 6 double values.
  *  The given values must be arranged in PostScript matrix order.
  *  @param[in] v vector containing the matrix values
  *  @param[in] startindex vector index of first component
@@ -682,7 +714,7 @@ void PsSpecialHandler::makepattern (vector<double> &p) {
 			// pattern definition completed
 			if (_savenode) {
 				_xmlnode = _savenode;
-				_savenode = 0;
+				_savenode = nullptr;
 			}
 			break;
 		case 1: {  // tiling pattern
@@ -694,14 +726,14 @@ void PsSpecialHandler::makepattern (vector<double> &p) {
 			create_matrix(p, 9, matrix);
 			matrix.rmultiply(_actions->getMatrix());
 
-			PSTilingPattern *pattern=0;
+			unique_ptr<PSTilingPattern> pattern;
 			if (paint_type == 1)
-				pattern = new PSColoredTilingPattern(id, bbox, matrix, xstep, ystep);
+				pattern = util::make_unique<PSColoredTilingPattern>(id, bbox, matrix, xstep, ystep);
 			else
-				pattern = new PSUncoloredTilingPattern(id, bbox, matrix, xstep, ystep);
-			_patterns[id] = pattern;
+				pattern = util::make_unique<PSUncoloredTilingPattern>(id, bbox, matrix, xstep, ystep);
 			_savenode = _xmlnode;
 			_xmlnode = pattern->getContainerNode();  // insert the following SVG elements into this node
+			_patterns[id] = std::move(pattern);
 			break;
 		}
 		case 2: {
@@ -716,21 +748,21 @@ void PsSpecialHandler::makepattern (vector<double> &p) {
  *  1-3: (optional) RGB values for uncolored tiling patterns
  *  further parameters depend on the pattern type */
 void PsSpecialHandler::setpattern (vector<double> &p) {
-	int pattern_id = static_cast<int>(p[0]);
+	int patternID = static_cast<int>(p[0]);
 	Color color;
 	if (p.size() == 4)
 		color.setRGB(p[1], p[2], p[3]);
-	map<int,PSPattern*>::iterator it = _patterns.find(pattern_id);
+	auto it = _patterns.find(patternID);
 	if (it == _patterns.end())
-		_pattern = 0;
+		_pattern = nullptr;
 	else {
-		if (PSUncoloredTilingPattern *pattern = dynamic_cast<PSUncoloredTilingPattern*>(it->second))
+		if (auto *pattern = dynamic_cast<PSUncoloredTilingPattern*>(it->second.get()))
 			pattern->setColor(color);
 		it->second->apply(*_actions);
-		if (PSTilingPattern *pattern = dynamic_cast<PSTilingPattern*>(it->second))
+		if (auto *pattern = dynamic_cast<PSTilingPattern*>(it->second.get()))
 			_pattern = pattern;
 		else
-			_pattern = 0;
+			_pattern = nullptr;
 	}
 }
 
@@ -744,10 +776,8 @@ void PsSpecialHandler::initclip (vector<double> &) {
 
 /** Assigns the current clipping path to the graphics path. */
 void PsSpecialHandler::clippath (std::vector<double>&) {
-	if (!_clipStack.empty()) {
-		_clipStack.setClippathLoaded(true);
-		_path.clear();
-	}
+	if (!_clipStack.empty())
+		_clipStack.setPrependedPath();
 }
 
 
@@ -767,7 +797,7 @@ void PsSpecialHandler::clip (vector<double>&, bool evenodd) {
  *  computed by intersecting the current one with the given path.
  *  @param[in] path path used to restrict the clipping region
  *  @param[in] evenodd true: use even-odd fill algorithm, false: use nonzero fill algorithm */
-void PsSpecialHandler::clip (Path &path, bool evenodd) {
+void PsSpecialHandler::clip (Path path, bool evenodd) {
 	// when this method is called, _path contains the clipping path
 	if (path.empty() || !_actions)
 		return;
@@ -777,37 +807,41 @@ void PsSpecialHandler::clip (Path &path, bool evenodd) {
 
 	if (!_actions->getMatrix().isIdentity())
 		path.transform(_actions->getMatrix());
+	if (_clipStack.prependedPath())
+		path.prepend(*_clipStack.prependedPath());
 
 	int oldID = _clipStack.topID();
 
 	ostringstream oss;
+	bool pathReplaced;
 	if (!COMPUTE_CLIPPATHS_INTERSECTIONS || oldID < 1) {
-		_clipStack.replace(path);
+		pathReplaced = _clipStack.replace(path);
 		path.writeSVG(oss, SVGTree::RELATIVE_PATH_CMDS);
 	}
 	else {
 		// compute the intersection of the current clipping path with the current graphics path
-		Path *oldPath = _clipStack.getPath(oldID);
+		const Path *oldPath = _clipStack.path();
 		Path intersectedPath(windingRule);
 		PathClipper clipper;
 		clipper.intersect(*oldPath, path, intersectedPath);
-		_clipStack.replace(intersectedPath);
+		pathReplaced = _clipStack.replace(intersectedPath);
 		intersectedPath.writeSVG(oss, SVGTree::RELATIVE_PATH_CMDS);
 	}
+	if (pathReplaced) {
+		auto pathElem = util::make_unique<XMLElementNode>("path");
+		pathElem->addAttribute("d", oss.str());
+		if (evenodd)
+			pathElem->addAttribute("clip-rule", "evenodd");
 
-	XMLElementNode *pathElem = new XMLElementNode("path");
-	pathElem->addAttribute("d", oss.str());
-	if (evenodd)
-		pathElem->addAttribute("clip-rule", "evenodd");
+		int newID = _clipStack.topID();
+		auto clipElem = util::make_unique<XMLElementNode>("clipPath");
+		clipElem->addAttribute("id", XMLString("clip")+XMLString(newID));
+		if (!COMPUTE_CLIPPATHS_INTERSECTIONS && oldID)
+			clipElem->addAttribute("clip-path", XMLString("url(#clip")+XMLString(oldID)+")");
 
-	int newID = _clipStack.topID();
-	XMLElementNode *clipElem = new XMLElementNode("clipPath");
-	clipElem->addAttribute("id", XMLString("clip")+XMLString(newID));
-	if (!COMPUTE_CLIPPATHS_INTERSECTIONS && oldID)
-		clipElem->addAttribute("clip-path", XMLString("url(#clip")+XMLString(oldID)+")");
-
-	clipElem->append(pathElem);
-	_actions->appendToDefs(clipElem);
+		clipElem->append(std::move(pathElem));
+		_actions->appendToDefs(std::move(clipElem));
+	}
 }
 
 
@@ -918,12 +952,14 @@ static void read_patch_data (ShadingPatch &patch, int edgeflag,
 class ShadingCallback : public ShadingPatch::Callback {
 	public:
 		ShadingCallback (SpecialActions &actions, XMLElementNode *parent, int clippathID)
-			: _actions(actions), _group(new XMLElementNode("g"))
+			: _actions(actions)
 		{
+			auto group = util::make_unique<XMLElementNode>("g");
+			_group = group.get();
 			if (parent)
-				parent->append(_group);
+				parent->append(std::move(group));
 			else
-				actions.appendToPage(_group);
+				actions.appendToPage(std::move(group));
 			if (clippathID > 0)
 				_group->addAttribute("clip-path", XMLString("url(#clip")+XMLString(clippathID)+")");
 		}
@@ -935,10 +971,10 @@ class ShadingCallback : public ShadingPatch::Callback {
 			// draw a single patch segment
 			ostringstream oss;
 			path.writeSVG(oss, SVGTree::RELATIVE_PATH_CMDS);
-			XMLElementNode *pathElem = new XMLElementNode("path");
+			auto pathElem = util::make_unique<XMLElementNode>("path");
 			pathElem->addAttribute("d", oss.str());
 			pathElem->addAttribute("fill", color.svgColorString());
-			_group->append(pathElem);
+			_group->append(std::move(pathElem));
 		}
 
 	private:
@@ -955,9 +991,7 @@ void PsSpecialHandler::processSequentialPatchMesh (int shadingTypeID, ColorSpace
 		int edgeflag = static_cast<int>(*it++);
 		vector<DPair> points;
 		vector<Color> colors;
-		unique_ptr<ShadingPatch> patch;
-
-		patch = unique_ptr<ShadingPatch>(ShadingPatch::create(shadingTypeID, colorSpace));
+		unique_ptr<ShadingPatch> patch = ShadingPatch::create(shadingTypeID, colorSpace);
 		read_patch_data(*patch, edgeflag, it, points, colors);
 		patch->setPoints(points, edgeflag, previousPatch.get());
 		patch->setColors(colors, edgeflag, previousPatch.get());
@@ -983,16 +1017,15 @@ void PsSpecialHandler::processSequentialPatchMesh (int shadingTypeID, ColorSpace
 }
 
 
-struct PatchVertex {
-	DPair point;
-	Color color;
-};
-
-
 void PsSpecialHandler::processLatticeTriangularPatchMesh (ColorSpace colorSpace, VectorIterator<double> &it) {
 	int verticesPerRow = static_cast<int>(*it++);
 	if (verticesPerRow < 2)
 		return;
+
+	struct PatchVertex {
+		DPair point;
+		Color color;
+	};
 
 	// hold two adjacent rows of vertices and colors
 	vector<PatchVertex> row1(verticesPerRow);
@@ -1033,13 +1066,12 @@ void PsSpecialHandler::processLatticeTriangularPatchMesh (ColorSpace colorSpace,
 }
 
 
-/** Clears current path */
+/** Clears current path. */
 void PsSpecialHandler::newpath (vector<double> &p) {
-	bool drawing = (p[0] > 0);
-	if (!drawing || !_clipStack.clippathLoaded()) {
-		_path.clear();
-		_clipStack.setClippathLoaded(false);
-	}
+	bool calledByNewpathOp = (p[0] > 0);
+	if (calledByNewpathOp)  // function triggered by PS operator 'newpath'?
+		_clipStack.removePrependedPath();
+	_path.clear();
 }
 
 
@@ -1088,7 +1120,7 @@ void PsSpecialHandler::rotate (vector<double> &p) {
 
 
 void PsSpecialHandler::setgray (vector<double> &p) {
-	_pattern = 0;
+	_pattern = nullptr;
 	_currentcolor.setGray(p[0]);
 	if (_actions)
 		_actions->setColor(_currentcolor);
@@ -1096,7 +1128,7 @@ void PsSpecialHandler::setgray (vector<double> &p) {
 
 
 void PsSpecialHandler::setrgbcolor (vector<double> &p) {
-	_pattern= 0;
+	_pattern= nullptr;
 	_currentcolor.setRGB(p[0], p[1], p[2]);
 	if (_actions)
 		_actions->setColor(_currentcolor);
@@ -1104,7 +1136,7 @@ void PsSpecialHandler::setrgbcolor (vector<double> &p) {
 
 
 void PsSpecialHandler::setcmykcolor (vector<double> &p) {
-	_pattern = 0;
+	_pattern = nullptr;
 	_currentcolor.setCMYK(p[0], p[1], p[2], p[3]);
 	if (_actions)
 		_actions->setColor(_currentcolor);
@@ -1112,7 +1144,7 @@ void PsSpecialHandler::setcmykcolor (vector<double> &p) {
 
 
 void PsSpecialHandler::sethsbcolor (vector<double> &p) {
-	_pattern = 0;
+	_pattern = nullptr;
 	_currentcolor.setHSB(p[0], p[1], p[2]);
 	if (_actions)
 		_actions->setColor(_currentcolor);
@@ -1139,22 +1171,24 @@ void PsSpecialHandler::executed () {
 
 void PsSpecialHandler::ClippingStack::pushEmptyPath () {
 	if (!_stack.empty())
-		_stack.push(Entry(0, -1));
+		_stack.emplace(Entry());
 }
 
 
 void PsSpecialHandler::ClippingStack::push (const Path &path, int saveID) {
+	shared_ptr<Path> prependedPath;
+	if (!_stack.empty())
+		prependedPath = _stack.top().prependedPath;
 	if (path.empty())
-		_stack.push(Entry(0, saveID));
-	else {
-		_paths.push_back(path);
-		_stack.push(Entry(_paths.size(), saveID));
-	}
+		_stack.emplace(Entry(saveID));
+	else
+		_stack.emplace(Entry(path, ++_maxID, saveID));
+	_stack.top().prependedPath = prependedPath;
 }
 
 
 /** Pops a single or several elements from the clipping stack.
- *  The method distingushes between the following cases:
+ *  The method distinguishes between the following cases:
  *  1) saveID < 0 and grestoreall == false:
  *     pop top element if it was pushed by gsave (its saveID is < 0 as well)
  *  2) saveID < 0 and grestoreall == true
@@ -1163,82 +1197,85 @@ void PsSpecialHandler::ClippingStack::push (const Path &path, int saveID) {
  *  3) saveID >= 0:
  *     pop all elements until the saveID of the top element equals parameter saveID */
 void PsSpecialHandler::ClippingStack::pop (int saveID, bool grestoreall) {
-	if (!_stack.empty()) {
-		if (saveID < 0) {                // grestore?
-			if (_stack.top().saveID < 0)  // pushed by 'gsave'?
-				_stack.pop();
-			// pop all further elements pushed by 'gsave' if grestoreall == true
-			while (grestoreall && !_stack.empty() && _stack.top().saveID < 0)
-				_stack.pop();
-		}
-		else {
-			// pop elements pushed by 'gsave'
-			while (!_stack.empty() && _stack.top().saveID != saveID)
-				_stack.pop();
-			// pop element pushed by 'save'
-			if (!_stack.empty())
-				_stack.pop();
-		}
+	if (_stack.empty())
+		return;
+
+	if (saveID < 0) {                // grestore?
+		if (_stack.top().saveID < 0)  // pushed by 'gsave'?
+			_stack.pop();
+		// pop all further elements pushed by 'gsave' if grestoreall == true
+		while (grestoreall && !_stack.empty() && _stack.top().saveID < 0)
+			_stack.pop();
+	}
+	else {
+		// pop elements pushed by 'gsave'
+		while (!_stack.empty() && _stack.top().saveID != saveID)
+			_stack.pop();
+		// pop element pushed by 'save'
+		if (!_stack.empty())
+			_stack.pop();
 	}
 }
 
 
 /** Returns a pointer to the path on top of the stack, or 0 if the stack is empty. */
-const PsSpecialHandler::Path* PsSpecialHandler::ClippingStack::top () const {
-	return (!_stack.empty() && _stack.top().pathID)
-		? &_paths[_stack.top().pathID-1]
-		: 0;
+const PsSpecialHandler::Path* PsSpecialHandler::ClippingStack::path () const {
+	return _stack.empty() ? nullptr : _stack.top().path.get();
 }
 
 
-PsSpecialHandler::Path* PsSpecialHandler::ClippingStack::getPath (size_t id) {
-	return (id > 0 && id <= _paths.size()) ? &_paths[id-1] : 0;
+/** Returns a pointer to the path on top of the stack, or 0 if the stack is empty. */
+const PsSpecialHandler::Path* PsSpecialHandler::ClippingStack::prependedPath () const {
+	return _stack.empty() ? nullptr : _stack.top().prependedPath.get();
 }
 
 
-/** Returns true if the clipping path was loaded into the graphics path (via PS operator 'clippath') */
-bool PsSpecialHandler::ClippingStack::clippathLoaded () const {
-	return !_stack.empty() && _stack.top().cpathLoaded;
-}
-
-
-void PsSpecialHandler::ClippingStack::setClippathLoaded (bool loaded) {
-	if (_stack.empty())
-		return;
-	_stack.top().cpathLoaded = loaded;
+void PsSpecialHandler::ClippingStack::removePrependedPath () {
+	if (!_stack.empty())
+		_stack.top().prependedPath = nullptr;
 }
 
 
 /** Pops all elements from the stack. */
 void PsSpecialHandler::ClippingStack::clear() {
-	_paths.clear();
 	while (!_stack.empty())
 		_stack.pop();
 }
 
 
-/** Replaces the top element by a new one.
- *  @param[in] path new path to be on top of the stack */
-void PsSpecialHandler::ClippingStack::replace (const Path &path) {
+/** Replaces the top path by a new one.
+ *  @param[in] path new path to put on the stack
+ *  @return true if the new path differs from the previous one */
+bool PsSpecialHandler::ClippingStack::replace (const Path &path) {
 	if (_stack.empty())
 		push(path, -1);
+	else if (_stack.top().path && path == *_stack.top().path)
+		return false;
 	else {
-		_paths.push_back(path);
-		_stack.top().pathID = _paths.size();
+		_stack.top().path = make_shared<Path>(path);
+		_stack.top().pathID = ++_maxID;
 	}
+	return true;
 }
 
 
 /** Duplicates the top element, i.e. the top element is pushed again. */
 void PsSpecialHandler::ClippingStack::dup (int saveID) {
-	_stack.push(_stack.empty() ? Entry(0, -1) : _stack.top());
+	_stack.emplace(_stack.empty() ? Entry() : _stack.top());
 	_stack.top().saveID = saveID;
 }
 
 
-const char** PsSpecialHandler::prefixes () const {
-	static const char *pfx[] = {
+void PsSpecialHandler::ClippingStack::setPrependedPath () {
+	if (!_stack.empty())
+		_stack.top().prependedPath = _stack.top().path;
+}
+
+
+vector<const char*> PsSpecialHandler::prefixes() const {
+	vector<const char*> pfx {
 		"header=",    // read and execute PS header file prior to the following PS statements
+		"pdffile=",   // process PDF file
 		"psfile=",    // read and execute PS file
 		"PSfile=",    // dito
 		"ps:",        // execute literal PS code wrapped by @beginspecial and @endspecial
@@ -1247,6 +1284,6 @@ const char** PsSpecialHandler::prefixes () const {
 		"\"",         // execute literal PS code following this prefix
 		"pst:",       // dito
 		"PST:",       // same as "ps:"
-		0};
+	};
 	return pfx;
 }

@@ -7,6 +7,7 @@
 #include <kpathsea/variable.h>
 #include <kpathsea/readable.h>
 #include <kpathsea/c-limits.h>
+#include <kpathsea/c-pathmx.h>
 
 #include <ptexenc/c-auto.h>
 #include <ptexenc/ptexenc.h>
@@ -38,7 +39,6 @@ static boolean prior_file_enc = false;
 
 const char *ptexenc_version_string = PTEXENCVERSION;
 #if defined(WIN32)
-int sjisterminal;
 FILE *Poptr;
 int infile_enc_auto;
 #else
@@ -49,7 +49,7 @@ static int     file_enc = ENC_UNKNOWN;
 static int internal_enc = ENC_UNKNOWN;
 static int terminal_enc = ENC_UNKNOWN;
 
-static const_string enc_to_string(int enc)
+const_string enc_to_string(int enc)
 {
     switch (enc) {
     case ENC_JIS:  return "jis";
@@ -114,7 +114,7 @@ static int get_file_enc(void)
     return file_enc;
 }
 
-static int get_internal_enc(void)
+int get_internal_enc(void)
 {
     if (internal_enc == ENC_UNKNOWN) set_internal_enc(get_default_enc());
     return internal_enc;
@@ -154,7 +154,7 @@ void enable_UPTEX (boolean enable)
         internal_enc = ENC_UPTEX;
     } else {
 #ifdef WIN32
-        default_kanji_enc = ENC_SJIS;
+        default_kanji_enc = ENC_UTF8;
         internal_enc = ENC_SJIS;
 #else
         default_kanji_enc = ENC_UTF8;
@@ -418,44 +418,38 @@ static long toENC(long kcode, int enc)
 
 static int put_multibyte(long c, FILE *fp) {
 #ifdef WIN32
-    if (sjisterminal) {
-        const int fd = fileno(fp);
+    const int fd = fileno(fp);
 
-        if ((fd == fileno(stdout) || fd == fileno(stderr)) && _isatty(fd)) {
-            HANDLE hStdout;
-            DWORD ret, wclen;
-            UINT cp;
-            wchar_t buff[2];
-            char str[4];
-            int mblen;
+    if ((fd == fileno(stdout) || fd == fileno(stderr)) && _isatty(fd)) {
+       HANDLE hStdout;
+       DWORD ret, wclen;
+       UINT cp;
+       wchar_t buff[2];
+       char str[4];
+       int mblen;
 
-            if (fd == fileno(stdout))
-                hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-            else
-                hStdout = GetStdHandle(STD_ERROR_HANDLE);
+       if (fd == fileno(stdout))
+           hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+       else
+           hStdout = GetStdHandle(STD_ERROR_HANDLE);
 
-            mblen=0;
-            if (BYTE1(c) != 0) str[mblen++]=BYTE1(c);
-            if (BYTE2(c) != 0) str[mblen++]=BYTE2(c);
-            if (BYTE3(c) != 0) str[mblen++]=BYTE3(c);
-            /* always */       str[mblen++]=BYTE4(c);
+       mblen=0;
+       if (BYTE1(c) != 0) str[mblen++]=BYTE1(c);
+       if (BYTE2(c) != 0) str[mblen++]=BYTE2(c);
+       if (BYTE3(c) != 0) str[mblen++]=BYTE3(c);
+       /* always */       str[mblen++]=BYTE4(c);
 
-#define CP_932     932
 #define CP_UTF8    65001
 
-            if (is_internalUPTEX())
-                cp = CP_UTF8;
-            else
-                cp = CP_932;
-            if (MultiByteToWideChar(cp, 0, str, mblen, buff, 2) == 0)
-                return EOF;
+       cp = CP_UTF8;
+       if (MultiByteToWideChar(cp, 0, str, mblen, buff, 2) == 0)
+           return EOF;
 
-            wclen = mblen > 3 ? 2 : 1;
-            if (WriteConsoleW(hStdout, buff, wclen, &ret, NULL) == 0)
-                return EOF;
+       wclen = mblen > 3 ? 2 : 1;
+       if (WriteConsoleW(hStdout, buff, wclen, &ret, NULL) == 0)
+           return EOF;
 
-            return BYTE4(c);
-        }
+       return BYTE4(c);
     }
 #endif
 
@@ -490,20 +484,15 @@ int putc2(int c, FILE *fp)
 
 #ifdef WIN32
     if ((fp == stdout || fp == stderr) && (_isatty(fd) || !prior_file_enc)) {
-        if (sjisterminal) {
-            if (is_internalUPTEX())
-                output_enc = ENC_UTF8;
-            else
-                output_enc = ENC_SJIS;
-        } else
+        output_enc = ENC_UTF8;
+     } else
+        output_enc = get_file_enc();
 #else
     if ((fp == stdout || fp == stderr) && !prior_file_enc) {
-#endif
-
         output_enc = get_terminal_enc();
     } else
         output_enc = get_file_enc();
-
+#endif
     if (num[fd] > 0) {        /* multi-byte char */
         if (is_internalUPTEX() && iskanji1(c)) { /* error */
             ret = flush(store[fd], num[fd], fp);
@@ -759,7 +748,7 @@ static int infile_enc[NOFILE]; /* ENC_UNKNOWN (=0): not determined
 long input_line2(FILE *fp, unsigned char *buff, long pos,
                  const long buffsize, int *lastchar)
 {
-    long i;
+    long i = 0;
     static boolean injis = false;
     const int fd = fileno(fp);
 
@@ -840,12 +829,22 @@ long input_line2(FILE *fp, unsigned char *buff, long pos,
     return last;
 }
 
+/* set encode of stdin if fp = NULL */
 boolean setinfileenc(FILE *fp, const char *str)
 {
     int enc;
     enc = string_to_enc(str);
     if (enc < 0) return false;
     infile_enc[fileno(fp)] = enc;
+    return true;
+}
+
+boolean setstdinenc(const char *str)
+{
+    int enc;
+    enc = string_to_enc(str);
+    if (enc < 0) return false;
+    infile_enc[fileno(stdin)] = enc;
     return true;
 }
 
@@ -924,4 +923,138 @@ int nkf_close(FILE *fp) {
     }
     return fclose(fp);
 }
+
+
+unsigned char *ptenc_from_utf8_string_to_internal_enc(const unsigned char *is)
+{
+    int i;
+    long u = 0, j, len;
+    int i1 = EOF, i2 = EOF, i3 = EOF, i4 = EOF;
+    unsigned char *buf, *buf_bak;
+    long first_bak, last_bak;
+
+    if (terminal_enc != ENC_UTF8 || is_internalUPTEX()) return NULL;
+    buf_bak = buffer;
+    first_bak = first;
+    last_bak = last;
+
+    len = strlen(is)+1;
+    buffer = buf = xmalloc(len);
+    first = last = 0;
+
+    for (i=0; i<strlen(is); i++) {
+        i1 = is[i];
+        switch (UTF8length(i1)) {
+        case 1:
+            buffer[last++] = i1; /* ASCII */
+            if (i1 == '\0') goto end;
+            continue;
+        case 2:
+            i2 = is[++i]; if (i2 == '\0') break;
+            u = UTF8BtoUCS(i1, i2);
+            break;
+        case 3:
+            i2 = is[++i]; if (i2 == '\0') break;
+            i3 = is[++i]; if (i3 == '\0') break;
+            u = UTF8CtoUCS(i1, i2, i3);
+            if (u == U_BOM) continue; /* just ignore */
+            if (u == U_VOICED      && combin_voiced_sound(false)) continue;
+            if (u == U_SEMI_VOICED && combin_voiced_sound(true))  continue;
+            break;
+        case 4:
+            i2 = is[++i]; if (i2 == '\0') break;
+            i3 = is[++i]; if (i3 == '\0') break;
+            i4 = is[++i]; if (i4 == '\0') break;
+            u = UTF8DtoUCS(i1, i2, i3, i4);
+            break;
+        default:
+            u = U_REPLACEMENT_CHARACTER;
+            break;
+        }
+
+        j = toBUFF(fromUCS(u));
+        if (j == 0) { /* can't represent in EUC/SJIS */
+            if (last+4>=len) buffer = xrealloc(buffer, len=last+64);
+            write_hex(i1);
+            if (i2 != '\0') write_hex(i2);
+            if (i3 != '\0') write_hex(i3);
+            if (i4 != '\0') write_hex(i4);
+        } else {
+            write_multibyte(j);
+        }
+        i2 = i3 = i4 = '\0';
+    }
+    buffer[last] = '\0';
+ end:
+    buffer = buf_bak;
+    first = first_bak;
+    last = last_bak;
+    return buf;
+}
+
+unsigned char *ptenc_from_internal_enc_string_to_utf8(const unsigned char *is)
+{
+    int i;
+    long u = 0, len;
+    int i1 = EOF, i2 = EOF;
+    unsigned char *buf, *buf_bak;
+    long first_bak, last_bak;
+
+    if (terminal_enc != ENC_UTF8 || is_internalUPTEX()) return NULL;
+    buf_bak = buffer;
+    first_bak = first;
+    last_bak = last;
+
+    len = strlen(is)+1;
+    buffer = buf = xmalloc(len*1.5);
+    first = last = 0;
+
+    for (i=0; i<strlen(is); i++) {
+        i1 = is[i];
+        switch (multibytelen(i1)) {
+        case 1:
+            buffer[last++] = i1; /* ASCII */
+            if (i1 == '\0') goto end;
+            continue;
+        case 2:
+            i2 = is[++i]; if (i2 == '\0') break;
+            u = JIStoUCS2(toJIS(HILO(i1,i2)));
+            break;
+        default:
+            u = U_REPLACEMENT_CHARACTER;
+            break;
+        }
+
+        write_multibyte(UCStoUTF8(u));
+    }
+    buffer[last] = '\0';
+ end:
+    buffer = buf_bak;
+    first = first_bak;
+    last = last_bak;
+    return buf;
+}
+
+int ptenc_get_command_line_args(int *p_ac, char ***p_av)
+{
+    int i, argc;
+    char **argv;
+
+    get_terminal_enc();
+    if (terminal_enc == ENC_UTF8 && !is_internalUPTEX()) {
+        argc = *p_ac;
+        argv = xmalloc(sizeof(char *)*(argc+1));
+        for (i=0; i<argc; i++) {
+            argv[i] = ptenc_from_utf8_string_to_internal_enc((*p_av)[i]);
+#ifdef DEBUG
+            fprintf(stderr, "Commandline arguments %d:(%s)\n", i, argv[i]);
+#endif /* DEBUG */
+        }
+        argv[argc] = NULL;
+        *p_av = argv;
+         return terminal_enc;
+    }
+    return 0;
+}
+
 #endif /* !WIN32 */

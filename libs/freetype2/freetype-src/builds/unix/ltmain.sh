@@ -10213,8 +10213,8 @@ EOF
 	if test CXX = "$tagname"; then
 	  case ${MACOSX_DEPLOYMENT_TARGET-10.0} in
 	    10.[0123])
-#	      func_append compile_command " $wl-bind_at_load"
-#	      func_append finalize_command " $wl-bind_at_load"
+	      func_append compile_command " $wl-bind_at_load"
+	      func_append finalize_command " $wl-bind_at_load"
 	    ;;
 	  esac
 	fi

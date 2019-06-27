@@ -1,14 +1,16 @@
+## $Id: Makefile.am 50656 2019-03-30 10:13:17Z hironobu $
 ## Makefile.am for the TeX Live subdirectory texk/web2c/man/
-##
-## Copyright (C) 2009-2015 Peter Breitenlohner <tex-live@tug.org>
+## Copyright 2018 Karl Berry <tex-live@tug.org>
+## Copyright 2009-2015 Peter Breitenlohner <tex-live@tug.org>
 ## You may freely use, modify and/or distribute this file.
 ##
 man_sources = $(bootstrap_man_sources)
 EXTRA_DIST = $(bootstrap_man_sources)
-bootstrap_man_sources = ctie.man cweb.man tangle.man tie.man
+bootstrap_man_sources = ctie.man cweb.man ctwill.man tangle.man tie.man
 
 # Symlinks within $(man1dir): FILE:LINK indicates LINK.1->FILE.1
 man1_links = cweb:ctangle cweb:cweave
+man1_links += ctwill:ctwill-refsort ctwill:ctwill-twinx
 
 if WEB
 man_sources += $(web_man_sources)
@@ -47,8 +49,16 @@ if PDFTEX
 man_sources += $(pdftex_man_sources)
 man1_links += pdftex:pdflatex
 endif PDFTEX
-EXTRA_DIST += $(pdftex_man_sources)
 pdftex_man_sources = pdftex.man pdftosrc.man ttf2afm.man
+EXTRA_DIST += $(pdftex_man_sources)
+
+if PTEX
+man_sources += ptex.man
+man1_links += ptex:eptex ptex:euptex ptex:uptex
+man_sources += ppltotf.man ptftopl.man
+man1_links += ppltotf:uppltotf ptftopl:uptftopl
+endif PTEX
+EXTRA_DIST += ptex.man ppltotf.man ptftopl.man
 
 if LUATEX
 man_sources += luatex.man
@@ -57,9 +67,9 @@ endif LUATEX
 EXTRA_DIST += luatex.man
 
 if XETEX
-man_sources += # xetex.man
+man_sources += xetex.man
 endif XETEX
-EXTRA_DIST += # xetex.man
+EXTRA_DIST += xetex.man
 
 if OTANGLE
 man_sources += $(otangle_man_sources)

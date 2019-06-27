@@ -14,14 +14,14 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005 Brad Hards <bradh@frogmouth.net>
-// Copyright (C) 2006, 2008, 2010-2013 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006, 2008, 2010-2013, 2017, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2007-2008 Julien Rebetez <julienr@svn.gnome.org>
 // Copyright (C) 2007 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2010 Ilya Gorenbein <igorenbein@finjan.com>
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2012, 2013, 2016 Thomas Freitag <Thomas.Freitag@kabelmail.de>
 // Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
-// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013, 2017 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2016 Jakub Alba <jakubalba@gmail.com>
 //
 // To see a description of the changes please see the Changelog file that
@@ -76,7 +76,7 @@ struct XRefEntry {
     DontRewrite  // Entry must not be written back in case of full rewrite
   };
 
-  inline GBool getFlag(Flag flag) {
+  inline GBool getFlag(Flag flag) const {
     const int mask = (1 << (int)flag);
     return (flags & mask) != 0;
   }
@@ -97,28 +97,31 @@ public:
   // Constructor, create an empty XRef, used for PDF writing
   XRef();
   // Constructor, create an empty XRef but with info dict, used for PDF writing
-  XRef(Object *trailerDictA);
+  XRef(const Object *trailerDictA);
   // Constructor.  Read xref table from stream.
   XRef(BaseStream *strA, Goffset pos, Goffset mainXRefEntriesOffsetA = 0, GBool *wasReconstructed = NULL, GBool reconstruct = false);
 
   // Destructor.
   ~XRef();
 
+  XRef(const XRef &) = delete;
+  XRef& operator=(const XRef &) = delete;
+
   // Copy xref but with new base stream!
-  XRef *copy();
+  XRef *copy() const;
 
   // Is xref table valid?
-  GBool isOk() { return ok; }
+  GBool isOk() const { return ok; }
 
   // Is the last XRef section a stream or a table?
-  GBool isXRefStream() { return xRefStream; }
+  GBool isXRefStream() const { return xRefStream; }
 
   // Get the error code (if isOk() returns false).
-  int getErrorCode() { return errCode; }
+  int getErrorCode() const { return errCode; }
 
   // Set the encryption parameters.
   void setEncryption(int permFlagsA, GBool ownerPasswordOkA,
-		     Guchar *fileKeyA, int keyLengthA,
+		     const Guchar *fileKeyA, int keyLengthA,
 		     int encVersionA, int encRevisionA,
 		     CryptAlgorithm encAlgorithmA);
   // Mark Encrypt entry as Unencrypted
@@ -127,42 +130,42 @@ public:
   void getEncryptionParameters(Guchar **fileKeyA, CryptAlgorithm *encAlgorithmA, int *keyLengthA);
 
   // Is the file encrypted?
-  GBool isEncrypted() { return encrypted; }
+  GBool isEncrypted() const { return encrypted; }
 
   // Check various permissions.
-  GBool okToPrint(GBool ignoreOwnerPW = gFalse);
-  GBool okToPrintHighRes(GBool ignoreOwnerPW = gFalse);
-  GBool okToChange(GBool ignoreOwnerPW = gFalse);
-  GBool okToCopy(GBool ignoreOwnerPW = gFalse);
-  GBool okToAddNotes(GBool ignoreOwnerPW = gFalse);
-  GBool okToFillForm(GBool ignoreOwnerPW = gFalse);
-  GBool okToAccessibility(GBool ignoreOwnerPW = gFalse);
-  GBool okToAssemble(GBool ignoreOwnerPW = gFalse);
-  int getPermFlags() { return permFlags; }
+  GBool okToPrint(GBool ignoreOwnerPW = gFalse) const;
+  GBool okToPrintHighRes(GBool ignoreOwnerPW = gFalse) const;
+  GBool okToChange(GBool ignoreOwnerPW = gFalse) const;
+  GBool okToCopy(GBool ignoreOwnerPW = gFalse) const;
+  GBool okToAddNotes(GBool ignoreOwnerPW = gFalse) const;
+  GBool okToFillForm(GBool ignoreOwnerPW = gFalse) const;
+  GBool okToAccessibility(GBool ignoreOwnerPW = gFalse) const;
+  GBool okToAssemble(GBool ignoreOwnerPW = gFalse) const;
+  int getPermFlags() const { return permFlags; }
 
   // Get catalog object.
-  Object *getCatalog(Object *obj);
+  Object getCatalog();
 
   // Fetch an indirect reference.
-  Object *fetch(int num, int gen, Object *obj, int recursion = 0);
+  Object fetch(int num, int gen, int recursion = 0);
 
   // Return the document's Info dictionary (if any).
-  Object *getDocInfo(Object *obj);
-  Object *getDocInfoNF(Object *obj);
+  Object getDocInfo();
+  Object getDocInfoNF();
 
   // Create and return the document's Info dictionary if none exists.
   // Otherwise return the existing one.
-  Object *createDocInfoIfNoneExists(Object *obj);
+  Object createDocInfoIfNoneExists();
 
   // Remove the document's Info dictionary and update the trailer dictionary.
   void removeDocInfo();
 
   // Return the number of objects in the xref table.
-  int getNumObjects() { return size; }
+  int getNumObjects() const { return size; }
 
   // Return the catalog object reference.
-  int getRootNum() { return rootNum; }
-  int getRootGen() { return rootGen; }
+  int getRootNum() const { return rootNum; }
+  int getRootGen() const { return rootGen; }
 
   // Get end position for a stream in a damaged file.
   // Returns false if unknown or file is not damaged.
@@ -184,13 +187,13 @@ public:
   Object *getTrailerDict() { return &trailerDict; }
 
   // Was the XRef modified?
-  GBool isModified() { return modified; }
+  GBool isModified() const { return modified; }
   // Set the modification flag for XRef to true.
   void setModified() { modified = gTrue; }
 
   // Write access
-  void setModifiedObject(Object* o, Ref r);
-  Ref addIndirectObject (Object* o);
+  void setModifiedObject(const Object* o, Ref r);
+  Ref addIndirectObject (const Object* o);
   void removeIndirectObject(Ref r);
   void add(int num, int gen,  Goffset offs, GBool used);
 
@@ -235,7 +238,7 @@ private:
   Goffset mainXRefOffset;	// position of the main XRef table/stream
   GBool scannedSpecialFlags;	// true if scanSpecialFlags has been called
   GBool strOwner;     // true if str is owned by the instance
-#if MULTITHREADED
+#ifdef MULTITHREADED
   GooMutex mutex;
 #endif
 
@@ -253,17 +256,21 @@ private:
 
   class XRefWriter {
   public:
+    XRefWriter() = default;
     virtual void startSection(int first, int count) = 0;
     virtual void writeEntry(Goffset offset, int gen, XRefEntryType type) = 0;
     virtual ~XRefWriter() {};
+
+    XRefWriter(const XRefWriter &) = delete;
+    XRefWriter& operator=(const XRefWriter &other) = delete;
   };
 
   // XRefWriter subclass that writes a XRef table
   class XRefTableWriter: public XRefWriter {
   public:
     XRefTableWriter(OutStream* outStrA);
-    void startSection(int first, int count);
-    void writeEntry(Goffset offset, int gen, XRefEntryType type);
+    void startSection(int first, int count) override;
+    void writeEntry(Goffset offset, int gen, XRefEntryType type) override;
   private:
     OutStream* outStr;
   };
@@ -271,11 +278,11 @@ private:
   // XRefWriter subclass that writes a XRef stream
   class XRefStreamWriter: public XRefWriter {
   public:
-    XRefStreamWriter(Object *index, GooString *stmBuf, int offsetSize);
-    void startSection(int first, int count);
-    void writeEntry(Goffset offset, int gen, XRefEntryType type);
+    XRefStreamWriter(Array *index, GooString *stmBuf, int offsetSize);
+    void startSection(int first, int count) override;
+    void writeEntry(Goffset offset, int gen, XRefEntryType type) override;
   private:
-    Object *index;
+    Array *index;
     GooString *stmBuf;
     int offsetSize;
   };
@@ -284,8 +291,8 @@ private:
   class XRefPreScanWriter: public XRefWriter {
   public:
     XRefPreScanWriter();
-    void startSection(int first, int count);
-    void writeEntry(Goffset offset, int gen, XRefEntryType type);
+    void startSection(int first, int count) override;
+    void writeEntry(Goffset offset, int gen, XRefEntryType type) override;
 
     GBool hasOffsetsBeyond4GB;
   };

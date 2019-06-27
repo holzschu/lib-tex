@@ -19,7 +19,7 @@ char *styfile,*idxfile[256],*indfile,*dicfile,*logfile;
 #endif
 KpathseaSupportInfo kp_ist,kp_dict;
 
-#define VERSION "version 2.6f [14-Aug-2009]"
+#define VERSION "version 3.1 [17-Feb-2019]"
 
 int main(int argc, char **argv)
 {
@@ -31,11 +31,8 @@ int main(int argc, char **argv)
 
 #ifdef WIN32
 	_setmaxstdio(2048);
-        set_enc_string("sjis", "euc");
-        sjisterminal = 0;
-#else
-        set_enc_string(NULL, "euc");
 #endif
+	set_enc_string(NULL, "uptex");
 	kpse_set_program_name(argv[0], "mendex");
 
 	p = getenv ("PTEX_KANJI_ENC");
@@ -169,14 +166,8 @@ int main(int argc, char **argv)
 				set_enc_string("SJIS", NULL);
 				break;
 
-#ifdef WIN32
-			case 'T':
-				sjisterminal = 1;
-				break;
-#endif
-
 			case 'U':
-				set_enc_string("UTF8", "uptex");
+				set_enc_string("UTF8", NULL);
 				break;
 
 
@@ -198,7 +189,7 @@ int main(int argc, char **argv)
 
 			default:
 				fprintf(stderr,"mendex - Japanese index processor, %s (%s) (%s).\n",VERSION, get_enc_string(), TL_VERSION);
-				fprintf(stderr," Copyright 2009 ASCII MEDIA WORKS.\n");
+				fprintf(stderr," Copyright 2009 ASCII MEDIA WORKS, 2017-2019 Japanese TeX Development Community\n");
 				fprintf(stderr,"usage:\n");
 				fprintf(stderr,"%% mendex [-ilqrcgfEJS"
 #ifdef WIN32
@@ -222,9 +213,6 @@ int main(int argc, char **argv)
 				fprintf(stderr,"-E      EUC mode.\n");
 				fprintf(stderr,"-J      JIS mode.\n");
 				fprintf(stderr,"-S      ShiftJIS mode.\n");
-#ifdef WIN32
-				fprintf(stderr,"-T      ShiftJIS terminal.\n");
-#endif
 				fprintf(stderr,"-U      UTF-8 mode.\n");
 				fprintf(stderr,"-I enc  internal encoding for keywords (enc: euc or utf8).\n");
 				fprintf(stderr,"idx...  input files.\n");
@@ -233,10 +221,8 @@ int main(int argc, char **argv)
 			}
 		}
 		else {
-			cc=strlen(argv[i]);
-			if (cc<4) cc+=4;
-			else if (strcmp(&argv[i][cc-4],".idx")) cc+=4;
-			idxfile[j]=xmalloc(cc+1);
+			cc=strlen(argv[i])+6;
+			idxfile[j]=xmalloc(cc);
 			strcpy(idxfile[j++],argv[i]);
 		}
 	}
@@ -306,10 +292,10 @@ int main(int argc, char **argv)
 	case 0:
 	case 1:
 		if (gflg==1) {
-			strcpy(atama,akasatana);
+			strncpy(atama,akasatana,2048);
 		}
 		else {
-			strcpy(atama,aiueo);
+			strncpy(atama,aiueo,2048);
 		}
 		break;
 

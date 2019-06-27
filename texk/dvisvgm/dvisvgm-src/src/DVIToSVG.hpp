@@ -2,7 +2,7 @@
 ** DVIToSVG.hpp                                                         **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -21,29 +21,45 @@
 #ifndef DVITOSVG_HPP
 #define DVITOSVG_HPP
 
+#include <set>
 #include <string>
 #include <utility>
 #include "DVIReader.hpp"
 #include "SVGTree.hpp"
 
 struct DVIActions;
-class Matrix;
 struct SVGOutputBase;
+class HashFunction;
 
-class DVIToSVG : public DVIReader
-{
+class DVIToSVG : public DVIReader {
+	public:
+		class HashSettings {
+			public:
+				enum Parameter {P_LIST, P_REPLACE};
+				void setParameters (const std::string &paramstr);
+				void setOptionHash (const std::string &optHash) {_optHash = optHash;}
+				std::string algorithm () const {return _algo;}
+				std::string optionsHash () const {return _optHash;}
+				bool isSet (Parameter param) {return _params.find(param) != _params.end();}
+
+			private:
+				std::string _algo;
+				std::string _optHash;
+				std::set<Parameter> _params;
+		};
+
 	public:
 		explicit DVIToSVG (std::istream &is, SVGOutputBase &out);
-		~DVIToSVG ();
 		void convert (const std::string &range, std::pair<int,int> *pageinfo=0);
 		void setPageSize (const std::string &format)         {_bboxFormatString = format;}
 		void setPageTransformation (const std::string &cmds) {_transCmds = cmds;}
-		void getPageTransformation (Matrix &matrix) const override;
+		Matrix getPageTransformation () const override;
 		void translateToX (double x) override {_tx = x-dviState().h-_tx;}
 		void translateToY (double y) override {_ty = y-dviState().v-_ty;}
 		double getXPos() const override       {return dviState().h+_tx;}
 		double getYPos() const override       {return dviState().v+_ty;}
 		void finishLine () override           {_prevYPos = std::numeric_limits<double>::min();}
+		void listHashes (const std::string &rangestr, std::ostream &os);
 
 		std::string getSVGFilename (unsigned pageno) const;
 		std::string getUserBBoxString () const  {return _bboxFormatString;}
@@ -52,16 +68,17 @@ class DVIToSVG : public DVIReader
 	public:
 		static bool COMPUTE_PROGRESS;  ///< if true, an action to handle the progress ratio of a page is triggered
 		static char TRACE_MODE;
+		static HashSettings PAGE_HASH_SETTINGS;
 
 	protected:
-		DVIToSVG (const DVIToSVG&);
-		void convert (unsigned firstPage, unsigned lastPage, std::pair<int,int> *pageinfo=0);
+		DVIToSVG (const DVIToSVG&) =delete;
+		void convert (unsigned firstPage, unsigned lastPage, HashFunction *hashFunc);
 		int executeCommand () override;
 		void enterBeginPage (unsigned pageno, const std::vector<int32_t> &c);
 		void leaveEndPage (unsigned pageno);
 		void embedFonts (XMLElementNode *svgElement);
-		void moveRight (double dx) override;
-		void moveDown (double dy) override;
+		void moveRight (double dx, MoveMode mode) override;
+		void moveDown (double dy, MoveMode mode) override;
 
 		void dviPost (uint16_t stdepth, uint16_t pages, uint32_t pw, uint32_t ph, uint32_t mag, uint32_t num, uint32_t den, uint32_t lbopofs) override;
 		void dviBop (const std::vector<int32_t> &c, int32_t prevBopOffset) override;
@@ -82,7 +99,7 @@ class DVIToSVG : public DVIReader
 	private:
 		SVGTree _svg;
 		SVGOutputBase &_out;
-		DVIActions *_actions;
+		std::unique_ptr<DVIActions> _actions;
 		std::string _bboxFormatString;  ///< bounding box size/format set by the user
 		std::string _transCmds;         ///< page transformation commands set by the user
 		double _pageHeight, _pageWidth; ///< global page height and width stored in the postamble

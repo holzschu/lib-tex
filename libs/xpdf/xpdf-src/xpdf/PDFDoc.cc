@@ -19,6 +19,7 @@
 #ifdef _WIN32
 #  include <windows.h>
 #endif
+#include "gmempp.h"
 #include "GString.h"
 #include "config.h"
 #include "GlobalParams.h"
@@ -33,6 +34,7 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "SecurityHandler.h"
+#include "UTF8.h"
 #ifndef DISABLE_OUTLINE
 #include "Outline.h"
 #endif
@@ -56,19 +58,7 @@ PDFDoc::PDFDoc(GString *fileNameA, GString *ownerPassword,
   int n, i;
 #endif
 
-  ok = gFalse;
-  errCode = errNone;
-
-  core = coreA;
-
-  file = NULL;
-  str = NULL;
-  xref = NULL;
-  catalog = NULL;
-#ifndef DISABLE_OUTLINE
-  outline = NULL;
-#endif
-  optContent = NULL;
+  init(coreA);
 
   fileName = fileNameA;
 #ifdef _WIN32
@@ -92,18 +82,18 @@ PDFDoc::PDFDoc(GString *fileNameA, GString *ownerPassword,
   }
 #else
   if (!(file = fopen(fileName1->getCString(), "rb"))) {
-	  fileName2 = fileName->copy();
-	  fileName2->lowerCase();
-	  if (!(file = fopen(fileName2->getCString(), "rb"))) {
-		  fileName2->upperCase();
-		  if (!(file = fopen(fileName2->getCString(), "rb"))) {
-			  error(errIO, -1, "Couldn't open file '{0:t}'", fileName);
-			  delete fileName2;
-			  errCode = errOpenFile;
-			  return;
-		  }
-	  }
-	  delete fileName2;
+    fileName2 = fileName->copy();
+    fileName2->lowerCase();
+    if (!(file = fopen(fileName2->getCString(), "rb"))) {
+      fileName2->upperCase();
+      if (!(file = fopen(fileName2->getCString(), "rb"))) {
+	error(errIO, -1, "Couldn't open file '{0:t}'", fileName);
+	delete fileName2;
+	errCode = errOpenFile;
+	return;
+      }
+    }
+    delete fileName2;
   }
 #endif
 
@@ -121,19 +111,7 @@ PDFDoc::PDFDoc(wchar_t *fileNameA, int fileNameLen, GString *ownerPassword,
   Object obj;
   int i;
 
-  ok = gFalse;
-  errCode = errNone;
-
-  core = coreA;
-
-  file = NULL;
-  str = NULL;
-  xref = NULL;
-  catalog = NULL;
-#ifndef DISABLE_OUTLINE
-  outline = NULL;
-#endif
-  optContent = NULL;
+  init(coreA);
 
   // save both Unicode and 8-bit copies of the file name
   fileName = new GString();
@@ -167,15 +145,77 @@ PDFDoc::PDFDoc(wchar_t *fileNameA, int fileNameLen, GString *ownerPassword,
 }
 #endif
 
+PDFDoc::PDFDoc(char *fileNameA, GString *ownerPassword,
+	       GString *userPassword, PDFCore *coreA) {
+/*
+#ifdef _WIN32
+  OSVERSIONINFO version;
+#endif
+*/
+  Object obj;
+/*
+#ifdef _WIN32
+  Unicode u;
+  int n, i, j;
+#endif
+*/
+
+  init(coreA);
+
+  fileName = new GString(fileNameA);
+
+#if defined(_WIN32)
+#if 0
+  n = 0;
+  i = 0;
+  while (getUTF8(fileName, &i, &u)) {
+    ++n;
+  }
+  fileNameU = (wchar_t *)gmallocn(n + 1, sizeof(wchar_t));
+  i = j = 0;
+  while (j < n && getUTF8(fileName, &i, &u)) {
+    fileNameU[j++] = (wchar_t)u;
+  }
+  fileNameU[n] = L'\0';
+  // NB: _wfopen is only available in NT
+  version.dwOSVersionInfoSize = sizeof(version);
+  GetVersionEx(&version);
+  if (version.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+    file = _wfopen(fileNameU, L"rb");
+  } else {
+#endif /* 0 */
+    file = fopen(fileName->getCString(), "rb");
+#if 0
+  }
+#endif /* 0 */
+
+#elif defined(VMS)
+  file = fopen(fileName->getCString(), "rb", "ctx=stm");
+#else
+  file = fopen(fileName->getCString(), "rb");
+#endif
+
+  if (!file) {
+    error(errIO, -1, "Couldn't open file '{0:t}'", fileName);
+    errCode = errOpenFile;
+    return;
+  }
+
+  // create stream
+  obj.initNull();
+  str = new FileStream(file, 0, gFalse, 0, &obj);
+
+  ok = setup(ownerPassword, userPassword);
+}
+
 PDFDoc::PDFDoc(BaseStream *strA, GString *ownerPassword,
 	       GString *userPassword, PDFCore *coreA) {
 #ifdef _WIN32
   int n, i;
 #endif
 
-  ok = gFalse;
-  errCode = errNone;
-  core = coreA;
+  init(coreA);
+
   if (strA->getFileName()) {
     fileName = strA->getFileName()->copy();
 #ifdef _WIN32
@@ -192,48 +232,55 @@ PDFDoc::PDFDoc(BaseStream *strA, GString *ownerPassword,
     fileNameU = NULL;
 #endif
   }
+  ok = setup(ownerPassword, userPassword);
+}
+
+void PDFDoc::init(PDFCore *coreA) {
+  ok = gFalse;
+  errCode = errNone;
+  core = coreA;
   file = NULL;
-  str = strA;
+  str = NULL;
   xref = NULL;
   catalog = NULL;
 #ifndef DISABLE_OUTLINE
   outline = NULL;
 #endif
   optContent = NULL;
-  ok = setup(ownerPassword, userPassword);
 }
 
 GBool PDFDoc::setup(GString *ownerPassword, GString *userPassword) {
-	str->reset();
 
-	// check header
-	checkHeader();
+  str->reset();
 
-	// read the xref and catalog
-	if (!PDFDoc::setup2(ownerPassword, userPassword, gFalse)) {
-		if (errCode == errDamaged || errCode == errBadCatalog) {
-			// try repairing the xref table
-			error(errSyntaxWarning, -1,
-					"PDF file is damaged - attempting to reconstruct xref table...");
-			if (!PDFDoc::setup2(ownerPassword, userPassword, gTrue)) {
-				return gFalse;
-			}
-		} else {
-			return gFalse;
-		}
-	}
+  // check header
+  checkHeader();
+
+  // read the xref and catalog
+  if (!PDFDoc::setup2(ownerPassword, userPassword, gFalse)) {
+    if (errCode == errDamaged || errCode == errBadCatalog) {
+      // try repairing the xref table
+      error(errSyntaxWarning, -1,
+	    "PDF file is damaged - attempting to reconstruct xref table...");
+      if (!PDFDoc::setup2(ownerPassword, userPassword, gTrue)) {
+	return gFalse;
+      }
+    } else {
+      return gFalse;
+    }
+  }
 
 #ifndef DISABLE_OUTLINE
-	// read outline
-	outline = new Outline(catalog->getOutline(), xref);
+  // read outline
+  outline = new Outline(catalog->getOutline(), xref);
 #endif
 
-	// read the optional content info
-	optContent = new OptionalContent(this);
+  // read the optional content info
+  optContent = new OptionalContent(this);
 
 
-	// done
-	return gTrue;
+  // done
+  return gTrue;
 }
 
 GBool PDFDoc::setup2(GString *ownerPassword, GString *userPassword,
@@ -421,6 +468,47 @@ void PDFDoc::processLinks(OutputDev *out, int page) {
   catalog->getPage(page)->processLinks(out);
 }
 
+#ifndef DISABLE_OUTLINE
+int PDFDoc::getOutlineTargetPage(OutlineItem *outlineItem) {
+  LinkAction *action;
+  LinkActionKind kind;
+  LinkDest *dest;
+  GString *namedDest;
+  Ref pageRef;
+  int pg;
+
+  if (outlineItem->pageNum >= 0) {
+    return outlineItem->pageNum;
+  }
+  if (!(action = outlineItem->getAction())) {
+    outlineItem->pageNum = 0;
+    return 0;
+  }
+  kind = action->getKind();
+  if (kind != actionGoTo) {
+    outlineItem->pageNum = 0;
+    return 0;
+  }
+  if ((dest = ((LinkGoTo *)action)->getDest())) {
+    dest = dest->copy();
+  } else if ((namedDest = ((LinkGoTo *)action)->getNamedDest())) {
+    dest = findDest(namedDest);
+  }
+  pg = 0;
+  if (dest) {
+    if (dest->isPageRef()) {
+      pageRef = dest->getPageRef();
+      pg = findPage(pageRef.num, pageRef.gen);
+    } else {
+      pg = dest->getPageNum();
+    }
+    delete dest;
+  }
+  outlineItem->pageNum = pg;
+  return pg;
+}
+#endif
+
 GBool PDFDoc::isLinearized() {
   Parser *parser;
   Object obj1, obj2, obj3, obj4, obj5;
@@ -470,7 +558,7 @@ GBool PDFDoc::saveAs(GString *name) {
   return gTrue;
 }
 
-GBool PDFDoc::saveEmbeddedFile(int idx, char *path) {
+GBool PDFDoc::saveEmbeddedFile(int idx, const char *path) {
   FILE *f;
   GBool ret;
 
@@ -483,7 +571,7 @@ GBool PDFDoc::saveEmbeddedFile(int idx, char *path) {
 }
 
 #ifdef _WIN32
-GBool PDFDoc::saveEmbeddedFile(int idx, wchar_t *path, int pathLen) {
+GBool PDFDoc::saveEmbeddedFile(int idx, const wchar_t *path, int pathLen) {
   FILE *f;
   OSVERSIONINFO version;
   wchar_t path2w[_MAX_PATH + 1];
@@ -492,6 +580,7 @@ GBool PDFDoc::saveEmbeddedFile(int idx, wchar_t *path, int pathLen) {
   GBool ret;
 
   // NB: _wfopen is only available in NT
+/*
   version.dwOSVersionInfoSize = sizeof(version);
   GetVersionEx(&version);
   if (version.dwPlatformId == VER_PLATFORM_WIN32_NT) {
@@ -501,12 +590,15 @@ GBool PDFDoc::saveEmbeddedFile(int idx, wchar_t *path, int pathLen) {
     path2w[i] = 0;
     f = _wfopen(path2w, L"wb");
   } else {
+*/
     for (i = 0; i < pathLen && i < _MAX_PATH; ++i) {
       path2c[i] = (char)path[i];
     }
     path2c[i] = 0;
     f = fopen(path2c, "wb");
+/*
   }
+*/
   if (!f) {
     return gFalse;
   }

@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /*
  **********************************************************************
@@ -6,7 +6,7 @@
  *   Corporation and others.  All Rights Reserved.
  **********************************************************************
  *   file name:  filetst.c
- *   encoding:   US-ASCII
+ *   encoding:   UTF-8
  *   tab size:   8 (not used)
  *   indentation:4
  *
@@ -731,7 +731,7 @@ static void TestfgetsNewLineHandling(void) {
 static void TestLineCount(const char *prefixLine, const char *line, int32_t numRepititions) {
     UChar buffer[64];
     UChar expectedBuffer[64];
-    int32_t lineLen = strlen(line);
+    int32_t lineLen = (int32_t)strlen(line);
     UChar *returnedUCharBuffer;
     int32_t repetitions;
     UFILE *myFile = NULL;

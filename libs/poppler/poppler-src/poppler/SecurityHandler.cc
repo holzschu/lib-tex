@@ -13,7 +13,7 @@
 // All changes made under the Poppler project to this file are licensed
 // under GPL version 2 or later
 //
-// Copyright (C) 2010, 2012, 2015 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2010, 2012, 2015, 2017, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2014 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2016 Alok Anand <alok4nand@gmail.com>
@@ -46,13 +46,12 @@
 //------------------------------------------------------------------------
 
 SecurityHandler *SecurityHandler::make(PDFDoc *docA, Object *encryptDictA) {
-  Object filterObj;
   SecurityHandler *secHdlr;
 #ifdef ENABLE_PLUGINS
   XpdfSecurityHandler *xsh;
 #endif
 
-  encryptDictA->dictLookup("Filter", &filterObj);
+  Object filterObj = encryptDictA->dictLookup("Filter");
   if (filterObj.isName("Standard")) {
     secHdlr = new StandardSecurityHandler(docA, encryptDictA);
   } else if (filterObj.isName()) {
@@ -63,16 +62,15 @@ SecurityHandler *SecurityHandler::make(PDFDoc *docA, Object *encryptDictA) {
 #endif
       error(errSyntaxError, -1, "Couldn't find the '{0:s}' security handler",
 	    filterObj.getName());
-      secHdlr = NULL;
+      secHdlr = nullptr;
 #ifdef ENABLE_PLUGINS
     }
 #endif
   } else {
     error(errSyntaxError, -1,
 	  "Missing or invalid 'Filter' entry in encryption dictionary");
-    secHdlr = NULL;
+    secHdlr = nullptr;
   }
-  filterObj.free();
   return secHdlr;
 }
 
@@ -92,7 +90,7 @@ GBool SecurityHandler::checkEncryption(GooString *ownerPassword,
   if (ownerPassword || userPassword) {
     authData = makeAuthData(ownerPassword, userPassword);
   } else {
-    authData = NULL;
+    authData = nullptr;
   }
   ok = authorize(authData);
   if (authData) {
@@ -139,6 +137,9 @@ public:
     }
   }
 
+  StandardAuthData(const StandardAuthData &) = delete;
+  StandardAuthData& operator=(const StandardAuthData &) = delete;
+
   GooString *ownerPassword;
   GooString *userPassword;
 };
@@ -147,36 +148,28 @@ StandardSecurityHandler::StandardSecurityHandler(PDFDoc *docA,
 						 Object *encryptDictA):
   SecurityHandler(docA)
 {
-  Object versionObj, revisionObj, lengthObj;
-  Object ownerKeyObj, userKeyObj, ownerEncObj, userEncObj;
-  Object permObj, fileIDObj, fileIDObj1;
-  Object cryptFiltersObj, streamFilterObj, stringFilterObj;
-  Object cryptFilterObj, cfmObj, cfLengthObj;
-  Object encryptMetadataObj;
-
   ok = gFalse;
-  fileID = NULL;
-  ownerKey = NULL;
-  userKey = NULL;
-  ownerEnc = NULL;
-  userEnc = NULL;
+  fileID = nullptr;
+  ownerKey = nullptr;
+  userKey = nullptr;
+  ownerEnc = nullptr;
+  userEnc = nullptr;
   fileKeyLength = 0;
 
-  encryptDictA->dictLookup("V", &versionObj);
-  encryptDictA->dictLookup("R", &revisionObj);
-  encryptDictA->dictLookup("Length", &lengthObj);
-  encryptDictA->dictLookup("O", &ownerKeyObj);
-  encryptDictA->dictLookup("U", &userKeyObj);
-  encryptDictA->dictLookup("OE", &ownerEncObj);
-  encryptDictA->dictLookup("UE", &userEncObj);
-  encryptDictA->dictLookup("P", &permObj);
+  Object versionObj = encryptDictA->dictLookup("V");
+  Object revisionObj = encryptDictA->dictLookup("R");
+  Object lengthObj = encryptDictA->dictLookup("Length");
+  Object ownerKeyObj = encryptDictA->dictLookup("O");
+  Object userKeyObj = encryptDictA->dictLookup("U");
+  Object ownerEncObj = encryptDictA->dictLookup("OE");
+  Object userEncObj = encryptDictA->dictLookup("UE");
+  Object permObj = encryptDictA->dictLookup("P");
   if (permObj.isInt64()) {
       unsigned int permUint = permObj.getInt64();
       int perms = permUint - UINT_MAX - 1;
-      permObj.free();
-      permObj.initInt(perms);
+      permObj = Object(perms);
   }
-  doc->getXRef()->getTrailerDict()->dictLookup("ID", &fileIDObj);
+  Object fileIDObj = doc->getXRef()->getTrailerDict()->dictLookup("ID");
   if (versionObj.isInt() &&
       revisionObj.isInt() &&
       permObj.isInt() &&
@@ -210,9 +203,9 @@ StandardSecurityHandler::StandardSecurityHandler(PDFDoc *docA,
       //~ same)
       if ((encVersion == 4 || encVersion == 5) &&
 	  (encRevision == 4 || encRevision == 5 || encRevision == 6)) {
-	encryptDictA->dictLookup("CF", &cryptFiltersObj);
-	encryptDictA->dictLookup("StmF", &streamFilterObj);
-	encryptDictA->dictLookup("StrF", &stringFilterObj);
+	Object cryptFiltersObj = encryptDictA->dictLookup("CF");
+	Object streamFilterObj = encryptDictA->dictLookup("StmF");
+	Object stringFilterObj = encryptDictA->dictLookup("StrF");
 	if (cryptFiltersObj.isDict() &&
 	    streamFilterObj.isName() &&
 	    stringFilterObj.isName() &&
@@ -221,52 +214,43 @@ StandardSecurityHandler::StandardSecurityHandler(PDFDoc *docA,
 	    // no encryption on streams or strings
 	    encVersion = encRevision = -1;
 	  } else {
-	    if (cryptFiltersObj.dictLookup(streamFilterObj.getName(),
-					   &cryptFilterObj)->isDict()) {
-	      cryptFilterObj.dictLookup("CFM", &cfmObj);
+	    Object cryptFilterObj = cryptFiltersObj.dictLookup(streamFilterObj.getName());
+	    if (cryptFilterObj.isDict()) {
+	      Object cfmObj = cryptFilterObj.dictLookup("CFM");
 	      if (cfmObj.isName("V2")) {
 		encVersion = 2;
 		encRevision = 3;
-		if (cryptFilterObj.dictLookup("Length",
-					      &cfLengthObj)->isInt()) {
+		Object cfLengthObj = cryptFilterObj.dictLookup("Length");
+		if (cfLengthObj.isInt()) {
 		  //~ according to the spec, this should be cfLengthObj / 8
 		  fileKeyLength = cfLengthObj.getInt();
 		}
-		cfLengthObj.free();
 	      } else if (cfmObj.isName("AESV2")) {
 		encVersion = 2;
 		encRevision = 3;
 		encAlgorithm = cryptAES;
-		if (cryptFilterObj.dictLookup("Length",
-					      &cfLengthObj)->isInt()) {
+		Object cfLengthObj = cryptFilterObj.dictLookup("Length");
+		if (cfLengthObj.isInt()) {
 		  //~ according to the spec, this should be cfLengthObj / 8
 		  fileKeyLength = cfLengthObj.getInt();
 		}
-		cfLengthObj.free();
 	      } else if (cfmObj.isName("AESV3")) {
 		encVersion = 5;
 		// let encRevision be 5 or 6
 		encAlgorithm = cryptAES256;
-		if (cryptFilterObj.dictLookup("Length",
-					      &cfLengthObj)->isInt()) {
+		Object cfLengthObj = cryptFilterObj.dictLookup("Length");
+		if (cfLengthObj.isInt()) {
 		  //~ according to the spec, this should be cfLengthObj / 8
 		  fileKeyLength = cfLengthObj.getInt();
 		}
-		cfLengthObj.free();
 	      }
-	      cfmObj.free();
 	    }
-	    cryptFilterObj.free();
 	  }
 	}
-	stringFilterObj.free();
-	streamFilterObj.free();
-	cryptFiltersObj.free();
-	if (encryptDictA->dictLookup("EncryptMetadata",
-				     &encryptMetadataObj)->isBool()) {
+	Object encryptMetadataObj = encryptDictA->dictLookup("EncryptMetadata");
+	if (encryptMetadataObj.isBool()) {
 	  encryptMetadata = encryptMetadataObj.getBool();
 	}
-	encryptMetadataObj.free();
       }
       permFlags = permObj.getInt();
       ownerKey = ownerKeyObj.getString()->copy();
@@ -274,12 +258,12 @@ StandardSecurityHandler::StandardSecurityHandler(PDFDoc *docA,
       if (encVersion >= 1 && encVersion <= 2 &&
 	  encRevision >= 2 && encRevision <= 3) {
 	if (fileIDObj.isArray()) {
-	  if (fileIDObj.arrayGet(0, &fileIDObj1)->isString()) {
+	  Object fileIDObj1 = fileIDObj.arrayGet(0);
+	  if (fileIDObj1.isString()) {
 	    fileID = fileIDObj1.getString()->copy();
 	  } else {
 	    fileID = new GooString();
 	  }
-	  fileIDObj1.free();
 	} else {
 	  fileID = new GooString();
 	}
@@ -310,15 +294,6 @@ StandardSecurityHandler::StandardSecurityHandler(PDFDoc *docA,
   } else {
     error(errSyntaxError, -1, "Weird encryption info");
   }
-  fileIDObj.free();
-  permObj.free();
-  userEncObj.free();
-  ownerEncObj.free();
-  userKeyObj.free();
-  ownerKeyObj.free();
-  lengthObj.free();
-  revisionObj.free();
-  versionObj.free();
 }
 
 StandardSecurityHandler::~StandardSecurityHandler() {
@@ -340,19 +315,22 @@ StandardSecurityHandler::~StandardSecurityHandler() {
 }
 
 GBool StandardSecurityHandler::isUnencrypted() {
+  if (!ok) {
+    return gTrue;
+  }
   return encVersion == -1 && encRevision == -1;
 }
 
 void *StandardSecurityHandler::makeAuthData(GooString *ownerPassword,
 					    GooString *userPassword) {
   return new StandardAuthData(ownerPassword ? ownerPassword->copy()
-			                    : (GooString *)NULL,
+			                    : (GooString *)nullptr,
 			      userPassword ? userPassword->copy()
-			                   : (GooString *)NULL);
+			                   : (GooString *)nullptr);
 }
 
 void *StandardSecurityHandler::getAuthData() {
-  return NULL;
+  return nullptr;
 }
 
 void StandardSecurityHandler::freeAuthData(void *authData) {
@@ -369,8 +347,8 @@ GBool StandardSecurityHandler::authorize(void *authData) {
     ownerPassword = ((StandardAuthData *)authData)->ownerPassword;
     userPassword = ((StandardAuthData *)authData)->userPassword;
   } else {
-    ownerPassword = NULL;
-    userPassword = NULL;
+    ownerPassword = nullptr;
+    userPassword = nullptr;
   }
   if (!Decrypt::makeFileKey(encVersion, encRevision, fileKeyLength,
 			    ownerKey, userKey, ownerEnc, userEnc,
@@ -408,7 +386,6 @@ ExternalSecurityHandler::ExternalSecurityHandler(PDFDoc *docA,
 
 ExternalSecurityHandler::~ExternalSecurityHandler() {
   (*xsh->freeDoc)(xsh->handlerData, docData);
-  encryptDict.free();
 }
 
 void *ExternalSecurityHandler::makeAuthData(GooString *ownerPassword,

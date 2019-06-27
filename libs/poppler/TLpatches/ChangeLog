@@ -1,3 +1,49 @@
+2018-08-20  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* patch-03-time: Adapted.
+
+2018-07-21  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* patch-03-time: Adapted.
+
+2018-06-20  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* patch-03-time: Adapted.
+
+2018-05-21  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* patch-03-time: Adapted.
+
+2018-04-29  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* patch-03-time: Adapted.
+	* patch-05-w32: Removed.
+
+2018-04-01  Mojca Miklavec <mojca.miklavec.lists@gmail.com>
+
+	* patch-03-time: Adapted.
+	* patch-04-ctime: Removed.
+
+2018-03-20  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* patch-05-w32: Added to compile gfile.cc on Windows.
+
+2018-03-18  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import poppler-0.63.0.
+
+2018-01-15  Karl Berry  <karl@tug.org>
+
+	* patch-04-ctime: add.
+
+2018-01-08  Karl Berry  <karl@freefriends.org>
+
+	Imported poppler-0.62.0 source tree from:
+	  http://poppler.freedesktop.org/
+	* patch-02-LLONG_MAX, patch-03-Object-functions: try removing,
+	seems like the source may have moved on by now, especially
+	what with requiring C++11.
+
 2017-02-17  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
 
 	Imported poppler-0.52.0 source tree from:

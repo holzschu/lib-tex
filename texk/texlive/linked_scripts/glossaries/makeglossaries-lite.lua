@@ -1,6 +1,6 @@
 #!/usr/bin/env texlua
 --[[
-   File   : makeglossaries.lua
+   File   : makeglossaries-lite.lua
    Author : Nicola Talbot
    
    Lua alternative to the makeglossaries Perl script.
@@ -24,8 +24,37 @@
    version 2005/12/01 or later.
   
    This work has the LPPL maintenance status `maintained'.
+
+   This work consists of the files glossaries.dtx and glossaries.ins 
+   and the derived files glossaries.sty, glossaries-prefix.sty,
+   glossary-hypernav.sty, glossary-inline.sty, glossary-list.sty, 
+   glossary-long.sty, glossary-longbooktabs.sty, glossary-longragged.sty,
+   glossary-mcols.sty, glossary-super.sty, glossary-superragged.sty, 
+   glossary-tree.sty, glossaries-compatible-207.sty, 
+   glossaries-compatible-307.sty, glossaries-accsupp.sty, 
+   glossaries-babel.sty, glossaries-polyglossia.sty, glossaries.perl.
+   Also makeglossaries and makeglossaries-lite.lua.
   
    History:
+   * 4.41:
+     - no change.
+   * 4.40:
+     - no change.
+   * 4.39:
+     - corrected script name in version and help messages
+   * 4.38:
+     - no change.
+   * 4.37:
+     - no change.
+   * 4.36:
+     - fixed check for double-quotes (from \jobname when the file name 
+       contains spaces).
+   * 4.35:
+     - no change.
+   * 4.34:
+     - added check for \glsxtr@resource
+   * 4.33:
+     - version number synchronized with glossaries.sty
    * 1.3
      - added check for \glsxtr@makeglossaries
    * 1.2 (2016-05-27)
@@ -35,7 +64,7 @@
      - changed first line from lua to texlua
 --]]
 
-thisversion = "1.3 2016-12-16"
+thisversion = "4.41 (2018-07-23)"
 
 quiet = false
 dryrun = false
@@ -46,6 +75,8 @@ styfile = nil
 logfile = nil
 
 isxindy = false
+
+isbib2gls = false
 
 xindylang = nil
 xindyexec = "xindy"
@@ -59,15 +90,18 @@ makeindex_extra = nil
 makeindex_m = "makeindex"
 
 function version()
-  print(string.format("makeglossaries.lua version %s", thisversion))
-  print("Copyright (C) 2015 Nicola L C Talbot")
+
+  verYear = string.match(thisversion, "%d%d%d%d");
+
+  print(string.format("makeglossaries-lite version %s", thisversion))
+  print(string.format("Copyright (C) 2015-%s Nicola L C Talbot", verYear))
   print("This material is subject to the LaTeX Project Public License.")
 end
 
 function help()
   version()
   print([[
-Syntax : makeglossaries.lua [options] <filename>
+Syntax : makeglossaries-lite [options] <filename>
 
 For use with the glossaries package to pass relevant
 files to makeindex or xindy.
@@ -111,6 +145,7 @@ Makeindex Options:
 This is a light-weight Lua alternative to the makeglossaries Perl script.
 If you want to use xindy, it's better to use the Perl makeglossaries version
 instead.
+
 ]])
 end
 
@@ -125,6 +160,11 @@ function dorun(name, glg, gls, glo, language, codepage)
 end
 
 function doxindy(name, glg, gls, glo, language, codepage)
+
+  if codepage == nil
+  then
+     codepage = "utf8"
+  end
 
   cmd = string.format('"%s" -I xindy -L %s -C %s -M "%s" -t "%s" -o "%s"',
     xindyexec, language, codepage, styfile, glg, gls)
@@ -327,18 +367,35 @@ assert(io.input(auxfile),
 
 aux = io.read("*a")
 
+if string.find(aux, "\\glsxtr@resource") ~= nil
+then
+  isbib2gls = true
+end
+
 if styfile == nil
 then
-  styfile = string.match(aux, "\\@istfilename{\"?([^}]*%.?%a*)\"?}")
+
+-- v4.36: corrected check for double-quotes
+
+  styfile = string.match(aux, "\\@istfilename{([^}]*)}")
+  styfile = string.gsub(styfile, "\"", "");
 
   if styfile == nil
   then
-    error([[
+    if isbib2gls
+    then
+       error([[
+No \@istfilename found but found \glsxtr@resource.
+You need to run bib2gls not makeglossaries-lite.
+  ]])
+    else
+       error([[
 No \@istfilename found.
 Did your LaTeX run fail?
 Did your LaTeX run produce any output?
 Did you remember to use \makeglossaries?
   ]])
+    end
   end
 end
 

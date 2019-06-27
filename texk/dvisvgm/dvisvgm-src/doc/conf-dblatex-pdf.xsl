@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding="iso-8859-1"?>
 <!-- This file is part of dvisvgm -->
-<!-- Copyright (C) 2015-2017 Martin Gieseking <martin.gieseking@uos.de> -->
+<!-- Copyright (C) 2015-2019 Martin Gieseking <martin.gieseking@uos.de> -->
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 	<xsl:param name="xetex.font">
 		<xsl:text>\setmainfont{Source Sans Pro}&#10;</xsl:text>
@@ -48,5 +48,20 @@
 			<xsl:with-param name="num">1</xsl:with-param>
 		</xsl:call-template>
 		<xsl:apply-templates/>
+	</xsl:template>
+
+	<!-- add named list items (e.g. command-line options, specials) to PDF bookmarks -->
+	<xsl:template match="refsect1/variablelist/varlistentry/term[emphasis]">
+		<xsl:text>\phantomsection\pdfbookmark[3]{</xsl:text>
+		<xsl:choose>
+			<xsl:when test="contains(emphasis, '--')">
+				<xsl:value-of select="concat('-{}-', substring-after(emphasis, '--'))"/>
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:value-of select="emphasis"/>
+			</xsl:otherwise>
+		</xsl:choose>
+		<xsl:value-of select="concat('}{', generate-id(emphasis), '}&#10;')"/>
+		<xsl:apply-imports/>
 	</xsl:template>
 </xsl:stylesheet>

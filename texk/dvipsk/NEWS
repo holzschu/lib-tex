@@ -1,4 +1,11 @@
+$Id: NEWS 49997 2019-02-10 23:50:35Z karl $
 This file records noteworthy changes.  (Public domain.)
+
+dvips 5.999 (TeX Live 2019):
+  Buffer overflows.
+
+dvips 5.998 (TeX Live 2018):
+  New JFM (Japanese font metrics) spec supported; compiler portability fixes.
 
 dvips 5.997 (TeX Live 2017):
   Make the last papersize special win, to match dvipdfmx; the -L0 option

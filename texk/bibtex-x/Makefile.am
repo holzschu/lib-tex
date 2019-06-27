@@ -1,7 +1,7 @@
-## $Id: Makefile.am 44086 2017-04-27 21:38:29Z karl $
+## $Id: Makefile.am 50398 2019-03-15 11:46:02Z hironobu $
 ## Makefile.am for the TeX Live subdirectory texk/bibtex-x/
 ##
-## Copyright 2017  Peter Breitenlohner <tex-live@tug.org>
+## Copyright 2017-2019 Karl Berry <tex-live@tug.org>
 ## Copyright 2009-2015 Peter Breitenlohner <tex-live@tug.org>
 ## You may freely use, modify and/or distribute this file.
 ##
@@ -36,7 +36,7 @@ common_sources = \
 bibtex8_SOURCES = $(common_sources)
 bibtex8_CPPFLAGS = $(AM_CPPFLAGS) -DSUPPORT_8BIT
 $(bibtex8_OBJECTS): $(KPATHSEA_DEPEND)
-bibtex8_LDADD = $(KPATHSEA_LIBS) -arch arm64 -dynamiclib -L/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/ -mios-version-min=11
+bibtex8_LDADD = $(KPATHSEA_LIBS)
 
 
 bibtexu_SOURCES = $(common_sources)
@@ -44,7 +44,9 @@ bibtexu_SOURCES = $(common_sources)
 nodist_EXTRA_bibtexu_SOURCES = dummy.cxx
 bibtexu_CPPFLAGS = $(AM_CPPFLAGS) $(ICU_INCLUDES) -DUTF_8
 $(bibtexu_OBJECTS): $(KPATHSEA_DEPEND) $(ICU_DEPEND)
-bibtexu_LDADD = $(KPATHSEA_LIBS) $(ICU_LIBS) $(ICU_LIBS_EXTRA) -arch arm64 -dynamiclib -L/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/ -mios-version-min=11
+bibtexu_LDADD = $(KPATHSEA_LIBS) $(ICU_LIBS) $(ICU_LIBS_EXTRA)
+
+dist_man1_MANS = bibtex8.1 bibtexu.1
 
 ## Rebuild libkpathsea
 @KPATHSEA_RULE@

@@ -1,6 +1,6 @@
 /* tex-glyph.c: search for GF/PK files.
 
-   Copyright 1993, 1994, 1995, 1996, 2008, 2009, 2011 Karl Berry.
+   Copyright 1993, 1994, 1995, 1996, 2008, 2009, 2011, 2017, 2018 Karl Berry.
    Copyright 1997, 1998, 1999, 2005 Olaf Weber.
 
    This library is free software; you can redistribute it and/or
@@ -101,18 +101,18 @@ try_size (kpathsea kpse, const_string fontname,  unsigned dpi,
   ret = try_pk ? try_format (kpse, kpse_pk_format) : NULL;
   format_found = kpse_pk_format;
 
-  if (ret == NULL && try_gf)
-    {
-      ret = try_format (kpse, kpse_gf_format);
-      format_found = kpse_gf_format;
-    }
+  if (ret == NULL && try_gf) {
+    ret = try_format (kpse, kpse_gf_format);
+    format_found = kpse_gf_format;
+  }
 
-  if (ret != NULL && glyph_file)
-    { /* Success.  Fill in the return info.  */
+  if (ret != NULL) {  /* Success.  */
+    if (glyph_file) { /* Fill in the return info.  */
       glyph_file->name = fontname;
       glyph_file->dpi = dpi;
       glyph_file->format = format_found;
     }
+  }
 
   return ret;
 }
@@ -201,7 +201,10 @@ try_fallback_resolutions (kpathsea kpse,
   /* First find the fallback size closest to DPI, even including DPI.  */
   for (s = 0; kpse->fallback_resolutions[s] != 0; s++)
     {
-      unsigned this_diff = abs (kpse->fallback_resolutions[s] - dpi);
+      unsigned this_diff =
+        kpse->fallback_resolutions[s] > dpi
+          ? kpse->fallback_resolutions[s] - dpi
+          : dpi - kpse->fallback_resolutions[s];
       if (this_diff < closest_diff)
         {
           closest_diff = this_diff;
@@ -287,15 +290,18 @@ kpathsea_find_glyph (kpathsea kpse,
     /* If mktex... succeeded, set return struct.  Doesn't make sense for
        `kpse_make_tex' to set it, since it can only succeed or fail,
        unlike the other routines.  */
-    if (ret && glyph_file) {
-      KPSE_GLYPH_FILE_DPI (*glyph_file) = dpi;
-      KPSE_GLYPH_FILE_NAME (*glyph_file) = fontname;
-    }
+    if (ret) {
+      if (glyph_file) {
+        KPSE_GLYPH_FILE_DPI (*glyph_file) = dpi;
+        KPSE_GLYPH_FILE_NAME (*glyph_file) = fontname;
+      }
 
     /* If mktex... failed, try any fallback resolutions.  */
-    else {
-      if (kpse->fallback_resolutions)
-        ret = try_fallback_resolutions (kpse, fontname, dpi, format, glyph_file);
+    } else {
+      if (kpse->fallback_resolutions) {
+        source = kpse_glyph_source_fallback_res;
+        ret = try_fallback_resolutions (kpse, fontname, dpi,format,glyph_file);
+      }
 
       /* We're down to the font of last resort.  */
       if (!ret && kpse->fallback_font) {
@@ -307,8 +313,9 @@ kpathsea_find_glyph (kpathsea kpse,
         ret = try_resolution (kpse, name, dpi, format, glyph_file);
 
         /* The fallback font at the fallback resolutions.  */
-        if (!ret && kpse->fallback_resolutions)
+        if (!ret && kpse->fallback_resolutions) {
           ret = try_fallback_resolutions (kpse, name, dpi, format, glyph_file);
+        }
       }
     }
   }
@@ -333,8 +340,8 @@ kpse_find_glyph (const_string passed_fontname,  unsigned dpi,
                  kpse_file_format_type format,
                  kpse_glyph_file_type *glyph_file)
 {
-    return kpathsea_find_glyph (kpse_def, passed_fontname, dpi, format,
-                                glyph_file);
+  return kpathsea_find_glyph (kpse_def, passed_fontname, dpi, format,
+                              glyph_file);
 }
 #endif
 

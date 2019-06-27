@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /*
 ***************************************************************************
@@ -13,6 +13,7 @@
 #ifndef UNICODESET_H
 #define UNICODESET_H
 
+#include "unicode/ucpmap.h"
 #include "unicode/unifilt.h"
 #include "unicode/unistr.h"
 #include "unicode/uset.h"
@@ -25,9 +26,8 @@
 U_NAMESPACE_BEGIN
 
 // Forward Declarations.
-void U_CALLCONV UnicodeSet_initInclusion(int32_t src, UErrorCode &status); /**< @internal */
-
 class BMPSet;
+class CharacterProperties;
 class ParsePosition;
 class RBBIRuleScanner;
 class SymbolTable;
@@ -294,7 +294,7 @@ class U_COMMON_API UnicodeSet U_FINAL : public UnicodeFilter {
      * indicating that toPattern() must generate a pattern
      * representation from the inversion list.
      */
-    UChar *pat;
+    char16_t *pat;
     UVector* strings; // maintained in sorted order
     UnicodeSetStringSpan *stringSpan;
 
@@ -584,9 +584,8 @@ public:
     //----------------------------------------------------------------
 
     /**
-     * Make this object represent the range <code>start - end</code>.
-     * If <code>end > start</code> then this object is set to an
-     * an empty range.
+     * Make this object represent the range `start - end`.
+     * If `end > start` then this object is set to an empty range.
      * A frozen set will not be modified.
      *
      * @param start first character in the set, inclusive
@@ -891,7 +890,7 @@ public:
      * @stable ICU 3.8
      * @see USetSpanCondition
      */
-    int32_t span(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
+    int32_t span(const char16_t *s, int32_t length, USetSpanCondition spanCondition) const;
 
     /**
      * Returns the end of the substring of the input string according to the USetSpanCondition.
@@ -924,7 +923,7 @@ public:
      * @stable ICU 3.8
      * @see USetSpanCondition
      */
-    int32_t spanBack(const UChar *s, int32_t length, USetSpanCondition spanCondition) const;
+    int32_t spanBack(const char16_t *s, int32_t length, USetSpanCondition spanCondition) const;
 
     /**
      * Returns the start of the substring of the input string according to the USetSpanCondition.
@@ -1506,6 +1505,7 @@ private:
     //----------------------------------------------------------------
 
     UnicodeSet(const UnicodeSet& o, UBool /* asThawed */);
+    UnicodeSet& copyFrom(const UnicodeSet& o, UBool asThawed);
 
     //----------------------------------------------------------------
     // Implementation: Pattern parsing
@@ -1521,6 +1521,7 @@ private:
                       UnicodeString& rebuiltPat,
                       uint32_t options,
                       UnicodeSet& (UnicodeSet::*caseClosure)(int32_t attribute),
+                      int32_t depth,
                       UErrorCode& ec);
 
     //----------------------------------------------------------------
@@ -1613,7 +1614,7 @@ private:
                               UnicodeString& rebuiltPat,
                               UErrorCode& ec);
 
-    friend void U_CALLCONV UnicodeSet_initInclusion(int32_t src, UErrorCode &status);
+    friend class CharacterProperties;
     static const UnicodeSet* getInclusions(int32_t src, UErrorCode &status);
 
     /**
@@ -1633,8 +1634,14 @@ private:
      */
     void applyFilter(Filter filter,
                      void* context,
-                     int32_t src,
+                     const UnicodeSet* inclusions,
                      UErrorCode &status);
+
+#ifndef U_HIDE_DRAFT_API   // Skipped: ucpmap.h is draft only.
+    void applyIntPropertyValue(const UCPMap *map,
+                               UCPMapValueFilter *filter, const void *context,
+                               UErrorCode &errorCode);
+#endif  /* U_HIDE_DRAFT_API */
 
     /**
      * Set the new pattern to cache.

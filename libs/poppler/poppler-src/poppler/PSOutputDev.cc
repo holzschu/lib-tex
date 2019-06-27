@@ -15,7 +15,7 @@
 //
 // Copyright (C) 2005 Martin Kretzschmar <martink@gnome.org>
 // Copyright (C) 2005, 2006 Kristian Høgsberg <krh@redhat.com>
-// Copyright (C) 2006-2009, 2011-2013, 2015, 2016 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006-2009, 2011-2013, 2015-2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2006 Jeff Muizelaar <jeff@infidigm.net>
 // Copyright (C) 2007, 2008 Brad Hards <bradh@kde.org>
 // Copyright (C) 2008, 2009 Koji Otani <sho@bbr.jp>
@@ -23,14 +23,16 @@
 // Copyright (C) 2009-2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2009 Till Kamppeter <till.kamppeter@gmail.com>
 // Copyright (C) 2009 Carlos Garcia Campos <carlosgc@gnome.org>
-// Copyright (C) 2009, 2011, 2012, 2014-2016 William Bader <williambader@hotmail.com>
+// Copyright (C) 2009, 2011, 2012, 2014-2017 William Bader <williambader@hotmail.com>
 // Copyright (C) 2009 Kovid Goyal <kovid@kovidgoyal.net>
-// Copyright (C) 2009-2011, 2013-2015 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2009-2011, 2013-2015, 2017 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2012, 2014 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012 Lu Wang <coolwanglu@gmail.com>
 // Copyright (C) 2014 Till Kamppeter <till.kamppeter@gmail.com>
 // Copyright (C) 2015 Marek Kasik <mkasik@redhat.com>
 // Copyright (C) 2016 Caolán McNamara <caolanm@redhat.com>
+// Copyright (C) 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
+// Copyright (C) 2018 Adam Reichold <adam.reichold@t-online.de>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -52,7 +54,6 @@
 #include <algorithm>
 #include "goo/GooString.h"
 #include "goo/GooList.h"
-#include "goo/GooHash.h"
 #include "poppler-config.h"
 #include "GlobalParams.h"
 #include "Object.h"
@@ -67,10 +68,10 @@
 #include "Catalog.h"
 #include "Page.h"
 #include "Stream.h"
-#if ENABLE_ZLIB
+#ifdef ENABLE_ZLIB
 #  include "FlateEncoder.h"
 #endif
-#if ENABLE_ZLIB_UNCOMPRESS
+#ifdef ENABLE_ZLIB_UNCOMPRESS
 #  include "FlateStream.h"
 #endif
 #include "Annot.h"
@@ -78,7 +79,7 @@
 #include "PreScanOutputDev.h"
 #include "FileSpec.h"
 #include "CharCodeToUnicode.h"
-#if HAVE_SPLASH
+#ifdef HAVE_SPLASH
 #  include "splash/Splash.h"
 #  include "splash/SplashBitmap.h"
 #  include "SplashOutputDev.h"
@@ -830,7 +831,7 @@ static const char *prolog[] = {
   "} def",
   "~123sn",
   "end",
-  NULL
+  nullptr
 };
 
 static const char *cmapProlog[] = {
@@ -875,7 +876,7 @@ static const char *cmapProlog[] = {
   "  currentdict CMapName exch /CMap defineresource pop",
   "end",
   "end",
-  NULL
+  nullptr
 };
 
 //------------------------------------------------------------------------
@@ -946,6 +947,9 @@ public:
 		   double yA, double kA, GooString *nameA);
   ~PSOutCustomColor();
 
+  PSOutCustomColor(const PSOutCustomColor &) = delete;
+  PSOutCustomColor& operator=(const PSOutCustomColor &) = delete;
+
   double c, m, y, k;
   GooString *name;
   PSOutCustomColor *next;
@@ -958,7 +962,7 @@ PSOutCustomColor::PSOutCustomColor(double cA, double mA,
   y = yA;
   k = kA;
   name = nameA;
-  next = NULL;
+  next = nullptr;
 }
 
 PSOutCustomColor::~PSOutCustomColor() {
@@ -976,6 +980,8 @@ struct PSOutImgClipRect {
 struct PSOutPaperSize {
   PSOutPaperSize(GooString *nameA, int wA, int hA) { name = nameA; w = wA; h = hA; }
   ~PSOutPaperSize() { delete name; }
+  PSOutPaperSize(const PSOutPaperSize &) = delete;
+  PSOutPaperSize& operator=(const PSOutPaperSize &) = delete;
   GooString *name;
   int w, h;
 };
@@ -989,16 +995,16 @@ public:
 
   DeviceNRecoder(Stream *strA, int widthA, int heightA,
 		 GfxImageColorMap *colorMapA);
-  virtual ~DeviceNRecoder();
-  virtual StreamKind getKind() { return strWeird; }
-  virtual void reset();
-  virtual int getChar()
+  ~DeviceNRecoder();
+  StreamKind getKind() override { return strWeird; }
+  void reset() override;
+  int getChar() override
     { return (bufIdx >= bufSize && !fillBuf()) ? EOF : buf[bufIdx++]; }
-  virtual int lookChar()
+  int lookChar() override
     { return (bufIdx >= bufSize && !fillBuf()) ? EOF : buf[bufIdx]; }
-  virtual GooString *getPSFilter(int psLevel, const char *indent) { return NULL; }
-  virtual GBool isBinary(GBool last = gTrue) { return gTrue; }
-  virtual GBool isEncoder() { return gTrue; }
+  GooString *getPSFilter(int psLevel, const char *indent) override { return nullptr; }
+  GBool isBinary(GBool last = gTrue) override { return gTrue; }
+  GBool isEncoder() override { return gTrue; }
 
 private:
 
@@ -1020,7 +1026,7 @@ DeviceNRecoder::DeviceNRecoder(Stream *strA, int widthA, int heightA,
   width = widthA;
   height = heightA;
   colorMap = colorMapA;
-  imgStr = NULL;
+  imgStr = nullptr;
   pixelIdx = 0;
   bufIdx = gfxColorMaxComps;
   bufSize = ((GfxDeviceNColorSpace *)colorMap->getColorSpace())->
@@ -1094,28 +1100,26 @@ PSOutputDev::PSOutputDev(const char *fileName, PDFDoc *doc,
   FILE *f;
   PSFileType fileTypeA;
 
-  underlayCbk = NULL;
-  underlayCbkData = NULL;
-  overlayCbk = NULL;
-  overlayCbkData = NULL;
+  underlayCbk = nullptr;
+  underlayCbkData = nullptr;
+  overlayCbk = nullptr;
+  overlayCbkData = nullptr;
   customCodeCbk = customCodeCbkA;
   customCodeCbkData = customCodeCbkDataA;
 
-  fontIDs = NULL;
-  fontNames = new GooHash(gTrue);
-  fontMaxValidGlyph = new GooHash(gTrue);
-  t1FontNames = NULL;
-  font8Info = NULL;
-  font16Enc = NULL;
-  imgIDs = NULL;
-  formIDs = NULL;
-  paperSizes = NULL;
-  embFontList = NULL;
-  customColors = NULL;
+  fontIDs = nullptr;
+  t1FontNames = nullptr;
+  font8Info = nullptr;
+  font16Enc = nullptr;
+  imgIDs = nullptr;
+  formIDs = nullptr;
+  paperSizes = nullptr;
+  embFontList = nullptr;
+  customColors = nullptr;
   haveTextClip = gFalse;
-  t3String = NULL;
+  t3String = nullptr;
   forceRasterize = forceRasterizeA;
-  psTitle = NULL;
+  psTitle = nullptr;
 
   // open file or pipe
   if (!strcmp(fileName, "-")) {
@@ -1163,28 +1167,26 @@ PSOutputDev::PSOutputDev(PSOutputFunc outputFuncA, void *outputStreamA,
 			 GBool manualCtrlA,
 			 PSOutCustomCodeCbk customCodeCbkA,
 			 void *customCodeCbkDataA) {
-  underlayCbk = NULL;
-  underlayCbkData = NULL;
-  overlayCbk = NULL;
-  overlayCbkData = NULL;
+  underlayCbk = nullptr;
+  underlayCbkData = nullptr;
+  overlayCbk = nullptr;
+  overlayCbkData = nullptr;
   customCodeCbk = customCodeCbkA;
   customCodeCbkData = customCodeCbkDataA;
 
-  fontIDs = NULL;
-  fontNames = new GooHash(gTrue);
-  fontMaxValidGlyph = new GooHash(gTrue);
-  t1FontNames = NULL;
-  font8Info = NULL;
-  font16Enc = NULL;
-  imgIDs = NULL;
-  formIDs = NULL;
-  paperSizes = NULL;
-  embFontList = NULL;
-  customColors = NULL;
+  fontIDs = nullptr;
+  t1FontNames = nullptr;
+  font8Info = nullptr;
+  font16Enc = nullptr;
+  imgIDs = nullptr;
+  formIDs = nullptr;
+  paperSizes = nullptr;
+  embFontList = nullptr;
+  customColors = nullptr;
   haveTextClip = gFalse;
-  t3String = NULL;
+  t3String = nullptr;
   forceRasterize = forceRasterizeA;
-  psTitle = NULL;
+  psTitle = nullptr;
 
   init(outputFuncA, outputStreamA, psGeneric, psTitleA,
        doc, pages, modeA,
@@ -1217,7 +1219,7 @@ static const StandardMedia standardMedia[] =
     { "Folio",     612,  936 },
     { "Quarto",    610,  780 },
     { "10x14",     720, 1008 },
-    { NULL,          0,    0 }
+    { nullptr,          0,    0 }
 };
 
 /* PLRM specifies a tolerance of 5 points when matching page sizes */
@@ -1259,13 +1261,14 @@ void PSOutputDev::init(PSOutputFunc outputFuncA, void *outputStreamA,
   rasterMono = gFalse;
   rasterResolution = 300;
   uncompressPreloadedImages = gFalse;
+  psCenter = gTrue;
   rasterAntialias = gFalse;
   displayText = gTrue;
   ok = gTrue;
   outputFunc = outputFuncA;
   outputStream = outputStreamA;
   fileType = fileTypeA;
-  psTitle = (psTitleA? strdup(psTitleA): NULL);
+  psTitle = (psTitleA? strdup(psTitleA): nullptr);
   doc = docA;
   level = globalParams->getPSLevel();
   pages = pagesA;
@@ -1280,14 +1283,14 @@ void PSOutputDev::init(PSOutputFunc outputFuncA, void *outputStreamA,
   imgURY = imgURYA;
   manualCtrl = manualCtrlA;
 
-  xref = NULL;
+  xref = nullptr;
 
   processColors = 0;
   inType3Char = gFalse;
   inUncoloredPattern = gFalse;
   t3FillColorOnly = gFalse;
 
-#if OPI_SUPPORT
+#ifdef OPI_SUPPORT
   // initialize OPI nesting levels
   opi13Nest = 0;
   opi20Nest = 0;
@@ -1311,7 +1314,6 @@ void PSOutputDev::postInit()
   Catalog *catalog;
   PDFRectangle *box;
   PSOutPaperSize *size;
-  GooList *names;
   int w, h, i;
 
   if (postInitDone || !ok) {
@@ -1333,7 +1335,7 @@ void PSOutputDev::postInit()
   for (size_t pgi = 0; pgi < pages.size(); ++pgi) {
     const int pg = pages[pgi];
     page = catalog->getPage(pg);
-    if (page == NULL)
+    if (page == nullptr)
       paperMatch = gFalse;
     if (!paperMatch) {
       w = paperWidth;
@@ -1368,7 +1370,7 @@ void PSOutputDev::postInit()
     }
     if (i == paperSizes->getLength()) {
       const StandardMedia *media = standardMedia;
-      GooString *name = NULL;
+      GooString *name = nullptr;
       while (media->name) {
         if (pageDimensionEqual(w, media->width) && pageDimensionEqual(h, media->height)) {
           name = new GooString(media->name);
@@ -1403,13 +1405,8 @@ void PSOutputDev::postInit()
   fontIDLen = 0;
   fontIDs = (Ref *)gmallocn(fontIDSize, sizeof(Ref));
   for (i = 0; i < 14; ++i) {
-    fontNames->add(new GooString(psBase14SubstFonts[i].psName), 1);
+    fontNames.emplace(psBase14SubstFonts[i].psName);
   }
-  names = globalParams->getPSResidentFonts();
-  for (i = 0; i < names->getLength(); ++i) {
-    fontNames->add((GooString *)names->get(i), 1);
-  }
-  delete names;
   t1FontNameSize = 64;
   t1FontNameLen = 0;
   t1FontNames = (PST1FontName *)gmallocn(t1FontNameSize, sizeof(PST1FontName));
@@ -1498,8 +1495,6 @@ PSOutputDev::~PSOutputDev() {
   if (fontIDs) {
     gfree(fontIDs);
   }
-  delete fontNames;
-  delete fontMaxValidGlyph;
   if (t1FontNames) {
     for (i = 0; i < t1FontNameLen; ++i) {
       delete t1FontNames[i].psName;
@@ -1533,10 +1528,8 @@ PSOutputDev::~PSOutputDev() {
 void PSOutputDev::writeHeader(const std::vector<int> &pages,
 			      PDFRectangle *mediaBox, PDFRectangle *cropBox,
 			      int pageRotate, char *psTitle) {
-  Object info, obj1;
   PSOutPaperSize *size;
   double x1, y1, x2, y2;
-  int i;
 
   switch (mode) {
   case psModePS:
@@ -1550,13 +1543,14 @@ void PSOutputDev::writeHeader(const std::vector<int> &pages,
     break;
   }
   writePSFmt("%Produced by poppler pdftops version: {0:s} (http://poppler.freedesktop.org)\n", PACKAGE_VERSION);
-  xref->getDocInfo(&info);
-  if (info.isDict() && info.dictLookup("Creator", &obj1)->isString()) {
-    writePS("%%Creator: ");
-    writePSTextLine(obj1.getString());
+  Object info = xref->getDocInfo();
+  if (info.isDict()) {
+    Object obj1 = info.dictLookup("Creator");
+    if (obj1.isString()) {
+        writePS("%%Creator: ");
+        writePSTextLine(obj1.getString());
+    }
   }
-  obj1.free();
-  info.free();
   if(psTitle) {
     char *sanitizedTitle = strdup(psTitle);
     for (Guint i = 0; i < strlen(sanitizedTitle); ++i) {
@@ -1581,7 +1575,7 @@ void PSOutputDev::writeHeader(const std::vector<int> &pages,
 
   switch (mode) {
   case psModePS:
-    for (i = 0; i < paperSizes->getLength(); ++i) {
+    for (int i = 0; i < paperSizes->getLength(); ++i) {
       size = (PSOutPaperSize *)paperSizes->get(i);
       writePSFmt("%%{0:s} {1:t} {2:d} {3:d} 0 () ()\n",
                  i==0 ? "DocumentMedia:" : "+", size->name, size->w, size->h);
@@ -1677,9 +1671,7 @@ void PSOutputDev::writeDocSetup(PDFDoc *doc, Catalog *catalog,
   Dict *resDict;
   Annots *annots;
   Object *acroForm;
-  Object obj1, obj2, obj3;
   GooString *s;
-  int i;
 
   if (mode == psModeForm) {
     // swap the form and xpdf dicts
@@ -1698,30 +1690,30 @@ void PSOutputDev::writeDocSetup(PDFDoc *doc, Catalog *catalog,
       setupResources(resDict);
     }
     annots = page->getAnnots();
-    for (i = 0; i < annots->getNumAnnots(); ++i) {
-      if (annots->getAnnot(i)->getAppearanceResDict(&obj1)->isDict()) {
+    for (int i = 0; i < annots->getNumAnnots(); ++i) {
+      Object obj1 = annots->getAnnot(i)->getAppearanceResDict();
+      if (obj1.isDict()) {
         setupResources(obj1.getDict());
       }
-      obj1.free();
     }
   }
   if ((acroForm = catalog->getAcroForm()) && acroForm->isDict()) {
-    if (acroForm->dictLookup("DR", &obj1)->isDict()) {
+    Object obj1 = acroForm->dictLookup("DR");
+    if (obj1.isDict()) {
       setupResources(obj1.getDict());
     }
-    obj1.free();
-    if (acroForm->dictLookup("Fields", &obj1)->isArray()) {
-      for (i = 0; i < obj1.arrayGetLength(); ++i) {
-	if (obj1.arrayGet(i, &obj2)->isDict()) {
-	  if (obj2.dictLookup("DR", &obj3)->isDict()) {
+    obj1 = acroForm->dictLookup("Fields");
+    if (obj1.isArray()) {
+      for (int i = 0; i < obj1.arrayGetLength(); ++i) {
+	Object obj2 = obj1.arrayGet(i);
+	if (obj2.isDict()) {
+	  Object obj3 = obj2.dictLookup("DR");
+	  if (obj3.isDict()) {
 	    setupResources(obj3.getDict());
 	  }
-	  obj3.free();
 	}
-	obj2.free();
       }
     }
-    obj1.free();
   }
   if (mode != psModeForm) {
     if (mode != psModeEPS && !manualCtrl) {
@@ -1731,7 +1723,7 @@ void PSOutputDev::writeDocSetup(PDFDoc *doc, Catalog *catalog,
 	writePSFmt("{0:d} {1:d} pdfSetupPaper\n", paperWidth, paperHeight);
       }
     }
-#if OPI_SUPPORT
+#ifdef OPI_SUPPORT
     if (generateOPI) {
       writePS("/opiMatrix matrix currentmatrix def\n");
     }
@@ -1795,24 +1787,22 @@ void PSOutputDev::writeTrailer() {
 }
 
 void PSOutputDev::setupResources(Dict *resDict) {
-  Object xObjDict, xObjRef, xObj, patDict, patRef, pat, resObj;
-  Ref ref0;
   GBool skip;
-  int i;
 
   setupFonts(resDict);
   setupImages(resDict);
   setupForms(resDict);
 
   //----- recursively scan XObjects
-  resDict->lookup("XObject", &xObjDict);
+  Object xObjDict = resDict->lookup("XObject");
   if (xObjDict.isDict()) {
-    for (i = 0; i < xObjDict.dictGetLength(); ++i) {
+    for (int i = 0; i < xObjDict.dictGetLength(); ++i) {
 
       // avoid infinite recursion on XObjects
       skip = gFalse;
-      if ((xObjDict.dictGetValNF(i, &xObjRef)->isRef())) {
-	ref0 = xObjRef.getRef();
+      Object xObjRef = xObjDict.dictGetValNF(i);
+      if (xObjRef.isRef()) {
+	Ref ref0 = xObjRef.getRef();
 	if (resourceIDs.find(ref0.num) != resourceIDs.end()) {
 	  skip = gTrue;
 	} else {
@@ -1822,32 +1812,28 @@ void PSOutputDev::setupResources(Dict *resDict) {
       if (!skip) {
 
 	// process the XObject's resource dictionary
-	xObjDict.dictGetVal(i, &xObj);
+	Object xObj = xObjDict.dictGetVal(i);
 	if (xObj.isStream()) {
-	  xObj.streamGetDict()->lookup("Resources", &resObj);
+	  Object resObj = xObj.streamGetDict()->lookup("Resources");
 	  if (resObj.isDict()) {
 	    setupResources(resObj.getDict());
 	  }
-	  resObj.free();
 	}
-	xObj.free();
       }
-
-      xObjRef.free();
     }
   }
-  xObjDict.free();
 
   //----- recursively scan Patterns
-  resDict->lookup("Pattern", &patDict);
+  Object patDict = resDict->lookup("Pattern");
   if (patDict.isDict()) {
     inType3Char = gTrue;
-    for (i = 0; i < patDict.dictGetLength(); ++i) {
+    for (int i = 0; i < patDict.dictGetLength(); ++i) {
 
       // avoid infinite recursion on Patterns
       skip = gFalse;
-      if ((patDict.dictGetValNF(i, &patRef)->isRef())) {
-	ref0 = patRef.getRef();
+      Object patRef = patDict.dictGetValNF(i);
+      if (patRef.isRef()) {
+	Ref ref0 = patRef.getRef();
 	if (resourceIDs.find(ref0.num) != resourceIDs.end()) {
 	  skip = gTrue;
 	} else {
@@ -1857,42 +1843,35 @@ void PSOutputDev::setupResources(Dict *resDict) {
       if (!skip) {
 
 	// process the Pattern's resource dictionary
-	patDict.dictGetVal(i, &pat);
+	Object pat = patDict.dictGetVal(i);
 	if (pat.isStream()) {
-	  pat.streamGetDict()->lookup("Resources", &resObj);
+	  Object resObj = pat.streamGetDict()->lookup("Resources");
 	  if (resObj.isDict()) {
 	    setupResources(resObj.getDict());
 	  }
-	  resObj.free();
 	}
-	pat.free();
       }
-
-      patRef.free();
     }
     inType3Char = gFalse;
   }
-  patDict.free();
 }
 
 void PSOutputDev::setupFonts(Dict *resDict) {
-  Object obj1, obj2;
   Ref r;
   GfxFontDict *gfxFontDict;
   GfxFont *font;
   int i;
 
-  gfxFontDict = NULL;
-  resDict->lookupNF("Font", &obj1);
+  gfxFontDict = nullptr;
+  Object obj1 = resDict->lookupNF("Font");
   if (obj1.isRef()) {
-    obj1.fetch(xref, &obj2);
+    Object obj2 = obj1.fetch(xref);
     if (obj2.isDict()) {
       r = obj1.getRef();
       gfxFontDict = new GfxFontDict(xref, &r, obj2.getDict());
     }
-    obj2.free();
   } else if (obj1.isDict()) {
-    gfxFontDict = new GfxFontDict(xref, NULL, obj1.getDict());
+    gfxFontDict = new GfxFontDict(xref, nullptr, obj1.getDict());
   }
   if (gfxFontDict) {
     for (i = 0; i < gfxFontDict->getNumFonts(); ++i) {
@@ -1902,7 +1881,6 @@ void PSOutputDev::setupFonts(Dict *resDict) {
     }
     delete gfxFontDict;
   }
-  obj1.free();
 }
 
 void PSOutputDev::setupFont(GfxFont *font, Dict *parentResDict) {
@@ -1932,7 +1910,7 @@ void PSOutputDev::setupFont(GfxFont *font, Dict *parentResDict) {
   }
   fontIDs[fontIDLen++] = *font->getID();
 
-  psName = NULL;
+  psName = nullptr;
   xs = ys = 1;
   subst = gFalse;
 
@@ -1942,7 +1920,7 @@ void PSOutputDev::setupFont(GfxFont *font, Dict *parentResDict) {
     setupType3Font(font, psName, parentResDict);
   } else {
     fontLoc = font->locateFont(xref, this);
-    if (fontLoc != NULL) {
+    if (fontLoc != nullptr) {
       switch (fontLoc->locType) {
       case gfxFontLocEmbedded:
 	switch (fontLoc->fontType) {
@@ -2032,7 +2010,7 @@ void PSOutputDev::setupFont(GfxFont *font, Dict *parentResDict) {
 					       sizeof(PSFont16Enc));
 	}
 	font16Enc[font16EncLen].fontID = *font->getID();
-	font16Enc[font16EncLen].enc = NULL;
+	font16Enc[font16EncLen].enc = nullptr;
 	++font16EncLen;
       } else {
 	error(errSyntaxError, -1,
@@ -2084,7 +2062,7 @@ void PSOutputDev::setupFont(GfxFont *font, Dict *parentResDict) {
 	error(errSyntaxError, -1,
 	      "Couldn't find Unicode map for 16-bit font encoding '{0:t}'",
 	      fontLoc->encoding);
-	font16Enc[font16EncLen].enc = NULL;
+	font16Enc[font16EncLen].enc = nullptr;
       }
       ++font16EncLen;
     }
@@ -2136,25 +2114,22 @@ void PSOutputDev::setupFont(GfxFont *font, Dict *parentResDict) {
 
 void PSOutputDev::setupEmbeddedType1Font(Ref *id, GooString *psName) {
   static const char hexChar[17] = "0123456789abcdef";
-  Object refObj, strObj, obj1, obj2, obj3;
   Dict *dict;
   long length1, length2, length3;
-  int c;
+  int c, i;
   int start[4];
   GBool binMode;
   GBool writePadding = gTrue;
-  int i;
 
   // check if font is already embedded
-  if (fontNames->lookupInt(psName)) {
+  if (!fontNames.emplace(psName->toStr()).second) {
     return;
   }
-  fontNames->add(psName->copy(), 1);
 
   // get the font stream and info
-  refObj.initRef(id->num, id->gen);
-  refObj.fetch(xref, &strObj);
-  refObj.free();
+  Object obj1, obj2, obj3;
+  Object refObj(id->num, id->gen);
+  Object strObj = refObj.fetch(xref);
   if (!strObj.isStream()) {
     error(errSyntaxError, -1, "Embedded font file object is not a stream");
     goto err1;
@@ -2164,23 +2139,17 @@ void PSOutputDev::setupEmbeddedType1Font(Ref *id, GooString *psName) {
 	  "Embedded font stream is missing its dictionary");
     goto err1;
   }
-  dict->lookup("Length1", &obj1);
-  dict->lookup("Length2", &obj2);
-  dict->lookup("Length3", &obj3);
+  obj1 = dict->lookup("Length1");
+  obj2 = dict->lookup("Length2");
+  obj3 = dict->lookup("Length3");
   if (!obj1.isInt() || !obj2.isInt() || !obj3.isInt()) {
     error(errSyntaxError, -1,
 	  "Missing length fields in embedded font stream dictionary");
-    obj1.free();
-    obj2.free();
-    obj3.free();
     goto err1;
   }
   length1 = obj1.getInt();
   length2 = obj2.getInt();
   length3 = obj3.getInt();
-  obj1.free();
-  obj2.free();
-  obj3.free();
 
   // beginning comment
   writePSFmt("%%BeginResource: font {0:t}\n", psName);
@@ -2324,7 +2293,6 @@ void PSOutputDev::setupEmbeddedType1Font(Ref *id, GooString *psName) {
  err1:
   if (strObj.isStream())
     strObj.streamClose();
-  strObj.free();
 }
 
 void PSOutputDev::setupExternalType1Font(GooString *fileName, GooString *psName) {
@@ -2332,10 +2300,9 @@ void PSOutputDev::setupExternalType1Font(GooString *fileName, GooString *psName)
   FILE *fontFile;
   int c;
 
-  if (fontNames->lookupInt(psName)) {
+  if (!fontNames.emplace(psName->toStr()).second) {
     return;
   }
-  fontNames->add(psName->copy(), 1);
 
   // beginning comment
   writePSFmt("%%BeginResource: font {0:t}\n", psName);
@@ -2432,7 +2399,7 @@ void PSOutputDev::setupEmbeddedType1CFont(GfxFont *font, Ref *id,
   // convert it to a Type 1 font
   if ((fontBuf = font->readEmbFontFile(xref, &fontLen))) {
     if ((ffT1C = FoFiType1C::make(fontBuf, fontLen))) {
-      ffT1C->convertToType1(psName->getCString(), NULL, gTrue,
+      ffT1C->convertToType1(psName->getCString(), nullptr, gTrue,
 			    outputFunc, outputStream);
       delete ffT1C;
     }
@@ -2478,7 +2445,7 @@ void PSOutputDev::setupEmbeddedOpenTypeT1CFont(GfxFont *font, Ref *id,
   if ((fontBuf = font->readEmbFontFile(xref, &fontLen))) {
     if ((ffTT = FoFiTrueType::make(fontBuf, fontLen))) {
       if (ffTT->isOpenTypeCFF()) {
-	ffTT->convertToType1(psName->getCString(), NULL, gTrue,
+	ffTT->convertToType1(psName->getCString(), nullptr, gTrue,
 			     outputFunc, outputStream);
       }
       delete ffTT;
@@ -2510,7 +2477,7 @@ void PSOutputDev::setupEmbeddedTrueTypeFont(GfxFont *font, Ref *id,
       ffTT->convertToType42(psName->getCString(),
 			    ((Gfx8BitFont *)font)->getHasEncoding()
 			      ? ((Gfx8BitFont *)font)->getEncoding()
-			      : (char **)NULL,
+			      : (char **)nullptr,
 			    codeToGID, outputFunc, outputStream);
       if (codeToGID) {
 	if (font8InfoLen >= font8InfoSize) {
@@ -2549,7 +2516,7 @@ void PSOutputDev::setupExternalTrueTypeFont(GfxFont *font, GooString *fileName,
     ffTT->convertToType42(psName->getCString(),
 			  ((Gfx8BitFont *)font)->getHasEncoding()
 			    ? ((Gfx8BitFont *)font)->getEncoding()
-			    : (char **)NULL,
+			    : (char **)nullptr,
 			  codeToGID, outputFunc, outputStream);
     if (codeToGID) {
       if (font8InfoLen >= font8InfoSize) {
@@ -2567,6 +2534,15 @@ void PSOutputDev::setupExternalTrueTypeFont(GfxFont *font, GooString *fileName,
 
   // ending comment
   writePS("%%EndResource\n");
+}
+
+void PSOutputDev::updateFontMaxValidGlyph(GfxFont *font, int maxValidGlyph) {
+  if (maxValidGlyph >= 0 && font->getName()) {
+    auto& fontMaxValidGlyph = this->fontMaxValidGlyph[font->getName()->toStr()];
+    if (fontMaxValidGlyph < maxValidGlyph) {
+      fontMaxValidGlyph = maxValidGlyph;
+    }
+  }
 }
 
 void PSOutputDev::setupExternalCIDTrueTypeFont(GfxFont *font,
@@ -2589,7 +2565,7 @@ void PSOutputDev::setupExternalCIDTrueTypeFont(GfxFont *font,
 
     // check for embedding permission
     if (ffTT->getEmbeddingRights() >= 1) {
-      codeToGID = NULL;
+      codeToGID = nullptr;
       codeToGIDLen = 0;
       if (((GfxCIDFont *)font)->getCIDToGID()) {
 	codeToGIDLen = ((GfxCIDFont *)font)->getCIDToGIDLen();
@@ -2619,9 +2595,7 @@ void PSOutputDev::setupExternalCIDTrueTypeFont(GfxFont *font,
 		needVerticalMetrics,
 		&maxValidGlyph,
 		outputFunc, outputStream);
-	if (maxValidGlyph >= 0 && font->getName()) {
-	  fontMaxValidGlyph->replace(font->getName()->copy(), maxValidGlyph);
-	}
+	updateFontMaxValidGlyph(font, maxValidGlyph);
       }
       gfree(codeToGID);
     } else {
@@ -2673,11 +2647,11 @@ void PSOutputDev::setupEmbeddedCIDType0Font(GfxFont *font, Ref *id,
     if ((ffT1C = FoFiType1C::make(fontBuf, fontLen))) {
       if (globalParams->getPSLevel() >= psLevel3) {
 	// Level 3: use a CID font
-	ffT1C->convertToCIDType0(psName->getCString(), NULL, 0,
+	ffT1C->convertToCIDType0(psName->getCString(), nullptr, 0,
 				 outputFunc, outputStream);
       } else {
 	// otherwise: use a non-CID composite font
-	ffT1C->convertToType0(psName->getCString(), NULL, 0,
+	ffT1C->convertToType0(psName->getCString(), nullptr, 0,
 			      outputFunc, outputStream);
       }
       delete ffT1C;
@@ -2721,9 +2695,7 @@ void PSOutputDev::setupEmbeddedCIDTrueTypeFont(GfxFont *font, Ref *id,
 			     needVerticalMetrics,
 			     &maxValidGlyph,
 			     outputFunc, outputStream);
-	if (maxValidGlyph > 0 && font->getName()) {
-	  fontMaxValidGlyph->replace(font->getName()->copy(), maxValidGlyph);
-	}
+	updateFontMaxValidGlyph(font, maxValidGlyph);
       }
       delete ffTT;
     }
@@ -2796,7 +2768,6 @@ void PSOutputDev::setupType3Font(GfxFont *font, GooString *psName,
 				 Dict *parentResDict) {
   Dict *resDict;
   Dict *charProcs;
-  Object charProc;
   Gfx *gfx;
   PDFRectangle box;
   double *m;
@@ -2845,7 +2816,7 @@ void PSOutputDev::setupType3Font(GfxFont *font, GooString *psName,
     box.y1 = m[1];
     box.x2 = m[2];
     box.y2 = m[3];
-    gfx = new Gfx(doc, this, resDict, &box, NULL);
+    gfx = new Gfx(doc, this, resDict, &box, nullptr);
     inType3Char = gTrue;
     for (i = 0; i < charProcs->getLength(); ++i) {
       t3FillColorOnly = gFalse;
@@ -2854,8 +2825,8 @@ void PSOutputDev::setupType3Font(GfxFont *font, GooString *psName,
       writePS("/");
       writePSName(charProcs->getKey(i));
       writePS(" {\n");
-      gfx->display(charProcs->getVal(i, &charProc));
-      charProc.free();
+      Object charProc = charProcs->getVal(i);
+      gfx->display(&charProc);
       if (t3String) {
 	if (t3Cacheable) {
 	  buf = GooString::format("{0:.6g} {1:.6g} {2:.6g} {3:.6g} {4:.6g} {5:.6g} setcachedevice\n",
@@ -2868,7 +2839,7 @@ void PSOutputDev::setupType3Font(GfxFont *font, GooString *psName,
 	(*outputFunc)(outputStream, t3String->getCString(),
 		      t3String->getLength());
 	delete t3String;
-	t3String = NULL;
+	t3String = nullptr;
       }
       if (t3NeedsRestore) {
 	(*outputFunc)(outputStream, "Q\n", 2);
@@ -2888,21 +2859,20 @@ void PSOutputDev::setupType3Font(GfxFont *font, GooString *psName,
 
 // Make a unique PS font name, based on the names given in the PDF
 // font object, and an object ID (font file object for 
-GooString *PSOutputDev::makePSFontName(GfxFont *font, Ref *id) {
-  GooString *psName, *s;
+GooString *PSOutputDev::makePSFontName(GfxFont *font, const Ref *id) {
+  GooString *psName;
+  const GooString *s;
 
   if ((s = font->getEmbeddedFontName())) {
     psName = filterPSName(s);
-    if (!fontNames->lookupInt(psName)) {
-      fontNames->add(psName->copy(), 1);
+    if (fontNames.emplace(psName->toStr()).second) {
       return psName;
     }
     delete psName;
   }
   if ((s = font->getName())) {
     psName = filterPSName(s);
-    if (!fontNames->lookupInt(psName)) {
-      fontNames->add(psName->copy(), 1);
+    if (fontNames.emplace(psName->toStr()).second) {
       return psName;
     }
     delete psName;
@@ -2917,30 +2887,29 @@ GooString *PSOutputDev::makePSFontName(GfxFont *font, Ref *id) {
     psName->append('_')->append(s);
     delete s;
   }
-  fontNames->add(psName->copy(), 1);
+  fontNames.emplace(psName->toStr());
   return psName;
 }
 
 void PSOutputDev::setupImages(Dict *resDict) {
-  Object xObjDict, xObj, xObjRef, subtypeObj, maskObj, maskRef;
   Ref imgID;
-  int i, j;
 
   if (!(mode == psModeForm || inType3Char || preloadImagesForms)) {
     return;
   }
 
   //----- recursively scan XObjects
-  resDict->lookup("XObject", &xObjDict);
+  Object xObjDict = resDict->lookup("XObject");
   if (xObjDict.isDict()) {
-    for (i = 0; i < xObjDict.dictGetLength(); ++i) {
-      xObjDict.dictGetValNF(i, &xObjRef);
-      xObjDict.dictGetVal(i, &xObj);
+    for (int i = 0; i < xObjDict.dictGetLength(); ++i) {
+      Object xObjRef = xObjDict.dictGetValNF(i);
+      Object xObj = xObjDict.dictGetVal(i);
       if (xObj.isStream()) {
-	xObj.streamGetDict()->lookup("Subtype", &subtypeObj);
+	Object subtypeObj = xObj.streamGetDict()->lookup("Subtype");
 	if (subtypeObj.isName("Image")) {
 	  if (xObjRef.isRef()) {
 	    imgID = xObjRef.getRef();
+	    int j;
 	    for (j = 0; j < imgIDLen; ++j) {
 	      if (imgIDs[j].num == imgID.num && imgIDs[j].gen == imgID.gen) {
 		break;
@@ -2957,24 +2926,21 @@ void PSOutputDev::setupImages(Dict *resDict) {
 	      }
 	      imgIDs[imgIDLen++] = imgID;
 	      setupImage(imgID, xObj.getStream(), gFalse);
-	      if (level >= psLevel3 &&
-		  xObj.streamGetDict()->lookup("Mask", &maskObj)->isStream()) {
-		setupImage(imgID, maskObj.getStream(), gTrue);
+	      if (level >= psLevel3) {
+		Object maskObj = xObj.streamGetDict()->lookup("Mask");
+		if (maskObj.isStream()) {
+		  setupImage(imgID, maskObj.getStream(), gTrue);
+		}
 	      }
-	      maskObj.free();
 	    }
 	  } else {
 	    error(errSyntaxError, -1,
 		  "Image in resource dict is not an indirect reference");
 	  }
 	}
-	subtypeObj.free();
       }
-      xObj.free();
-      xObjRef.free();
     }
   }
-  xObjDict.free();
 }
 
 void PSOutputDev::setupImage(Ref id, Stream *str, GBool mask) {
@@ -3017,7 +2983,7 @@ void PSOutputDev::setupImage(Ref id, Stream *str, GBool mask) {
   if (useCompressed) {
     str = str->getUndecodedStream();
   }
-#if ENABLE_ZLIB
+#ifdef ENABLE_ZLIB
   if (useFlate) {
     str = new FlateEncoder(str);
   } else
@@ -3146,20 +3112,17 @@ void PSOutputDev::setupImage(Ref id, Stream *str, GBool mask) {
 }
 
 void PSOutputDev::setupForms(Dict *resDict) {
-  Object xObjDict, xObj, xObjRef, subtypeObj;
-  int i;
-
   if (!preloadImagesForms) {
     return;
   }
 
-  resDict->lookup("XObject", &xObjDict);
+  Object xObjDict = resDict->lookup("XObject");
   if (xObjDict.isDict()) {
-    for (i = 0; i < xObjDict.dictGetLength(); ++i) {
-      xObjDict.dictGetValNF(i, &xObjRef);
-      xObjDict.dictGetVal(i, &xObj);
+    for (int i = 0; i < xObjDict.dictGetLength(); ++i) {
+      Object xObjRef = xObjDict.dictGetValNF(i);
+      Object xObj = xObjDict.dictGetVal(i);
       if (xObj.isStream()) {
-	xObj.streamGetDict()->lookup("Subtype", &subtypeObj);
+	Object subtypeObj = xObj.streamGetDict()->lookup("Subtype");
 	if (subtypeObj.isName("Form")) {
 	  if (xObjRef.isRef()) {
 	    setupForm(xObjRef.getRef(), &xObj);
@@ -3168,25 +3131,19 @@ void PSOutputDev::setupForms(Dict *resDict) {
 		  "Form in resource dict is not an indirect reference");
 	  }
 	}
-	subtypeObj.free();
       }
-      xObj.free();
-      xObjRef.free();
     }
   }
-  xObjDict.free();
 }
 
 void PSOutputDev::setupForm(Ref id, Object *strObj) {
   Dict *dict, *resDict;
-  Object matrixObj, bboxObj, resObj, obj1;
   double m[6], bbox[4];
   PDFRectangle box;
   Gfx *gfx;
-  int i;
 
   // check if form is already defined
-  for (i = 0; i < formIDLen; ++i) {
+  for (int i = 0; i < formIDLen; ++i) {
     if (formIDs[i].num == id.num && formIDs[i].gen == id.gen) {
       return;
     }
@@ -3206,37 +3163,32 @@ void PSOutputDev::setupForm(Ref id, Object *strObj) {
   dict = strObj->streamGetDict();
 
   // get bounding box
-  dict->lookup("BBox", &bboxObj);
+  Object bboxObj = dict->lookup("BBox");
   if (!bboxObj.isArray()) {
-    bboxObj.free();
     error(errSyntaxError, -1, "Bad form bounding box");
     return;
   }
-  for (i = 0; i < 4; ++i) {
-    bboxObj.arrayGet(i, &obj1);
+  for (int i = 0; i < 4; ++i) {
+    Object obj1 = bboxObj.arrayGet(i);
     bbox[i] = obj1.getNum();
-    obj1.free();
   }
-  bboxObj.free();
 
   // get matrix
-  dict->lookup("Matrix", &matrixObj);
+  Object matrixObj = dict->lookup("Matrix");
   if (matrixObj.isArray()) {
-    for (i = 0; i < 6; ++i) {
-      matrixObj.arrayGet(i, &obj1);
+    for (int i = 0; i < 6; ++i) {
+      Object obj1 = matrixObj.arrayGet(i);
       m[i] = obj1.getNum();
-      obj1.free();
     }
   } else {
     m[0] = 1; m[1] = 0;
     m[2] = 0; m[3] = 1;
     m[4] = 0; m[5] = 0;
   }
-  matrixObj.free();
 
   // get resources
-  dict->lookup("Resources", &resObj);
-  resDict = resObj.isDict() ? resObj.getDict() : (Dict *)NULL;
+  Object resObj = dict->lookup("Resources");
+  resDict = resObj.isDict() ? resObj.getDict() : (Dict *)nullptr;
 
   writePSFmt("/f_{0:d}_{1:d} {{\n", id.num, id.gen);
   writePS("q\n");
@@ -3253,8 +3205,6 @@ void PSOutputDev::setupForm(Ref id, Object *strObj) {
 
   writePS("Q\n");
   writePS("} def\n");
-
-  resObj.free();
 }
 
 GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
@@ -3268,7 +3218,7 @@ GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
 				  void *annotDisplayDecideCbkData) {
   PreScanOutputDev *scan;
   GBool rasterize;
-#if HAVE_SPLASH
+#ifdef HAVE_SPLASH
   GBool useFlate, useLZW;
   SplashOutputDev *splashOut;
   SplashColor paperColor;
@@ -3276,7 +3226,6 @@ GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
   GfxState *state;
   SplashBitmap *bitmap;
   Stream *str0, *str;
-  Object obj;
   Guchar *p;
   Guchar col[4];
   double hDPI2, vDPI2;
@@ -3284,10 +3233,10 @@ GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
   int nStripes, stripeH, stripeY;
   int c, w, h, x, y, comp, i;
   int numComps, initialNumComps;
-#endif
   char hexBuf[32*2 + 2];	// 32 values X 2 chars/value + line ending + null
   Guchar digit;
   GBool isGray;
+#endif
 
   if (!postInitDone) {
     postInit();
@@ -3307,7 +3256,7 @@ GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
     return gTrue;
   }
 
-#if HAVE_SPLASH
+#ifdef HAVE_SPLASH
   // get the rasterization parameters
   useFlate = getEnableFlate() && level >= psLevel3;
   useLZW = getEnableLZW();
@@ -3330,7 +3279,7 @@ GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
     paperColor[0] = 0xff;
     splashOut = new SplashOutputDev(splashModeMono8, 1, gFalse,
 				    paperColor, gFalse);
-#if SPLASH_CMYK
+#ifdef SPLASH_CMYK
   } else if (level == psLevel1Sep || level == psLevel2Sep ||
 	     level == psLevel3Sep || globalParams->getOverprintPreview()) {
     numComps = 4;
@@ -3594,9 +3543,8 @@ GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
     case psLevel2Sep:
     case psLevel3:
     case psLevel3Sep:
-      obj.initNull();
       p = bitmap->getDataPtr() + (h - 1) * bitmap->getRowSize();
-      str0 = new MemStream((char *)p, 0, w * h * numComps, &obj);
+      str0 = new MemStream((char *)p, 0, w * h * numComps, Object(objNull));
       // Check for a color image that uses only gray
       if (!getOptimizeColorSpace()) {
 	isGray = gFalse;
@@ -3625,7 +3573,7 @@ GBool PSOutputDev::checkPageSlice(Page *page, double /*hDPI*/, double /*vDPI*/,
         isGray = gFalse;
       }
       str0->reset();
-#if ENABLE_ZLIB
+#ifdef ENABLE_ZLIB
       if (useFlate) {
         if (isGray && numComps == 4) {
 	  str = new FlateEncoder(new CMYKGrayEncoder(str0));
@@ -3795,7 +3743,7 @@ void PSOutputDev::startPage(int pageNum, GfxState *state, XRef *xrefA) {
     (*underlayCbk)(this, underlayCbkData);
   }
   if (overlayCbk) {
-    saveState(NULL);
+    saveState(nullptr);
   }
 
   xScale = yScale = 1;
@@ -3884,7 +3832,7 @@ void PSOutputDev::startPage(int pageNum, GfxState *state, XRef *xrefA) {
     if (tx0 >= 0 && ty0 >= 0) {
       tx += (rotate == 0 || rotate == 180) ? tx0 : ty0;
       ty += (rotate == 0 || rotate == 180) ? ty0 : -tx0;
-    } else if (globalParams->getPSCenter()) {
+    } else if (psCenter) {
       if (clipLLX0 < clipURX0 && clipLLY0 < clipURY0) {
 	tx += (imgWidth2 - xScale * (clipURX0 - clipLLX0)) / 2;
 	ty += (imgHeight2 - yScale * (clipURY0 - clipLLY0)) / 2;
@@ -4009,7 +3957,7 @@ void PSOutputDev::startPage(int pageNum, GfxState *state, XRef *xrefA) {
 
 void PSOutputDev::endPage() {
   if (overlayCbk) {
-    restoreState(NULL);
+    restoreState(nullptr);
     (*overlayCbk)(this, overlayCbkData);
   }
 
@@ -4460,7 +4408,7 @@ GBool PSOutputDev::tilingPatternFillL1(GfxState *state, Catalog *cat, Object *st
   box.y1 = bbox[1];
   box.x2 = bbox[2];
   box.y2 = bbox[3];
-  gfx = new Gfx(doc, this, resDict, &box, NULL);
+  gfx = new Gfx(doc, this, resDict, &box, nullptr);
   writePS("/x {\n");
   if (paintType == 2) {
     writePSFmt("{0:.6g} 0 {1:.6g} {2:.6g} {3:.6g} {4:.6g} setcachedevice\n",
@@ -4533,7 +4481,7 @@ GBool PSOutputDev::tilingPatternFillL2(GfxState *state, Catalog *cat, Object *st
   box.y1 = bbox[1];
   box.x2 = bbox[2];
   box.y2 = bbox[3];
-  gfx = new Gfx(doc, this, resDict, &box, NULL);
+  gfx = new Gfx(doc, this, resDict, &box, nullptr);
   inType3Char = gTrue;
   if (paintType == 2) {
     inUncoloredPattern = gTrue;
@@ -4578,7 +4526,7 @@ GBool PSOutputDev::tilingPatternFill(GfxState *state, Gfx *gfxA, Catalog *cat, O
     box.y1 = bbox[1];
     box.x2 = bbox[2];
     box.y2 = bbox[3];
-    gfx = new Gfx(doc, this, resDict, &box, NULL, NULL, NULL, gfxA->getXRef());
+    gfx = new Gfx(doc, this, resDict, &box, nullptr, nullptr, nullptr, gfxA);
     writePSFmt("[{0:.6g} {1:.6g} {2:.6g} {3:.6g} {4:.6g} {5:.6g}] cm\n", mat[0], mat[1], mat[2], mat[3], tx, ty);
     inType3Char = gTrue;
     gfx->display(str);
@@ -5051,13 +4999,13 @@ void PSOutputDev::doPath(GfxPath *path) {
   }
 }
 
-void PSOutputDev::drawString(GfxState *state, GooString *s) {
+void PSOutputDev::drawString(GfxState *state, const GooString *s) {
   GfxFont *font;
   int wMode;
   int *codeToGID;
   GooString *s2;
   double dx, dy, originX, originY;
-  char *p;
+  const char *p;
   UnicodeMap *uMap;
   CharCode code;
   Unicode *u;
@@ -5085,14 +5033,14 @@ void PSOutputDev::drawString(GfxState *state, GooString *s) {
   if (!(font = state->getFont())) {
     return;
   }
-  maxGlyphInt = (font->getName()? fontMaxValidGlyph->lookupInt(font->getName()): 0);
+  maxGlyphInt = (font->getName() ? fontMaxValidGlyph[font->getName()->toStr()] : 0);
   if (maxGlyphInt < 0) maxGlyphInt = 0;
   maxGlyph = (CharCode) maxGlyphInt;
   wMode = font->getWMode();
 
   // check for a subtitute 16-bit font
-  uMap = NULL;
-  codeToGID = NULL;
+  uMap = nullptr;
+  codeToGID = nullptr;
   if (font->isCIDFont()) {
     for (i = 0; i < font16EncLen; ++i) {
       if (font->getID()->num == font16Enc[i].fontID.num &&
@@ -5234,18 +5182,18 @@ void PSOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
   switch (level) {
     case psLevel1:
     case psLevel1Sep:
-      doImageL1(ref, NULL, invert, inlineImg, str, width, height, len,
-                NULL, NULL, 0, 0, gFalse);
+      doImageL1(ref, nullptr, invert, inlineImg, str, width, height, len,
+                nullptr, nullptr, 0, 0, gFalse);
     break;
     case psLevel2:
     case psLevel2Sep:
-      doImageL2(ref, NULL, invert, inlineImg, str, width, height, len,
-                NULL, NULL, 0, 0, gFalse);
+      doImageL2(ref, nullptr, invert, inlineImg, str, width, height, len,
+                nullptr, nullptr, 0, 0, gFalse);
     break;
     case psLevel3:
     case psLevel3Sep:
-      doImageL3(ref, NULL, invert, inlineImg, str, width, height, len,
-                NULL, NULL, 0, 0, gFalse);
+      doImageL3(ref, nullptr, invert, inlineImg, str, width, height, len,
+                nullptr, nullptr, 0, 0, gFalse);
     break;
   }
 }
@@ -5274,22 +5222,22 @@ void PSOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   switch (level) {
   case psLevel1:
     doImageL1(ref, colorMap, gFalse, inlineImg, str,
-	     width, height, len, maskColors, NULL, 0, 0, gFalse);
+	     width, height, len, maskColors, nullptr, 0, 0, gFalse);
     break;
   case psLevel1Sep:
     //~ handle indexed, separation, ... color spaces
     doImageL1Sep(ref, colorMap, gFalse, inlineImg, str,
-	     width, height, len, maskColors, NULL, 0, 0, gFalse);
+	     width, height, len, maskColors, nullptr, 0, 0, gFalse);
     break;
   case psLevel2:
   case psLevel2Sep:
     doImageL2(ref, colorMap, gFalse, inlineImg, str,
-	      width, height, len, maskColors, NULL, 0, 0, gFalse);
+	      width, height, len, maskColors, nullptr, 0, 0, gFalse);
     break;
   case psLevel3:
   case psLevel3Sep:
     doImageL3(ref, colorMap, gFalse, inlineImg, str,
-	      width, height, len, maskColors, NULL, 0, 0, gFalse);
+	      width, height, len, maskColors, nullptr, 0, 0, gFalse);
     break;
   }
   t3Cacheable = gFalse;
@@ -5309,22 +5257,22 @@ void PSOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
   switch (level) {
   case psLevel1:
     doImageL1(ref, colorMap, gFalse, gFalse, str, width, height, len,
-	      NULL, maskStr, maskWidth, maskHeight, maskInvert);    
+	      nullptr, maskStr, maskWidth, maskHeight, maskInvert);    
     break;
   case psLevel1Sep:
     //~ handle indexed, separation, ... color spaces
     doImageL1Sep(ref, colorMap, gFalse, gFalse, str, width, height, len,
-	      NULL, maskStr, maskWidth, maskHeight, maskInvert);    
+	      nullptr, maskStr, maskWidth, maskHeight, maskInvert);    
     break;
   case psLevel2:
   case psLevel2Sep:
     doImageL2(ref, colorMap, gFalse, gFalse, str, width, height, len,
-	      NULL, maskStr, maskWidth, maskHeight, maskInvert);
+	      nullptr, maskStr, maskWidth, maskHeight, maskInvert);
     break;
   case psLevel3:
   case psLevel3Sep:
     doImageL3(ref, colorMap, gFalse, gFalse, str, width, height, len,
-	      NULL, maskStr, maskWidth, maskHeight, maskInvert);
+	      nullptr, maskStr, maskWidth, maskHeight, maskInvert);
     break;
   }
   t3Cacheable = gFalse;
@@ -6037,7 +5985,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
   // filters
   if ((mode == psModeForm || inType3Char || preloadImagesForms) &&
       uncompressPreloadedImages) {
-    s = NULL;
+    s = nullptr;
     useLZW = useRLE = gFalse;
     useCompressed = gFalse;
     useASCII = gFalse;
@@ -6117,7 +6065,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
 
     // end of image dictionary
     writePS(">>\n");
-#if OPI_SUPPORT
+#ifdef OPI_SUPPORT
     if (opi13Nest) {
       if (inlineImg) {
 	// this can't happen -- OPI dictionaries are in XObjects
@@ -6170,7 +6118,7 @@ void PSOutputDev::doImageL2(Object *ref, GfxImageColorMap *colorMap,
     // add newline and trailer to the end
     writePSChar('\n');
     writePS("%-EOD-\n");
-#if OPI_SUPPORT
+#ifdef OPI_SUPPORT
     if (opi13Nest) {
       writePS("%%EndData\n");
     }
@@ -6211,7 +6159,7 @@ void PSOutputDev::doImageL3(Object *ref, GfxImageColorMap *colorMap,
 
   useFlate = useLZW = useRLE = useASCII = useCompressed = gFalse;
   maskUseFlate = maskUseLZW = maskUseRLE = maskUseASCII = maskUseCompressed = gFalse;
-  maskFilters = NULL; // make gcc happy
+  maskFilters = nullptr; // make gcc happy
 
   // explicit masking
   if (maskStr) {
@@ -6219,7 +6167,7 @@ void PSOutputDev::doImageL3(Object *ref, GfxImageColorMap *colorMap,
     // mask data source
     if ((mode == psModeForm || inType3Char || preloadImagesForms) &&
       uncompressPreloadedImages) {
-      s = NULL;
+      s = nullptr;
     } else {
       s = maskStr->getPSFilter(3, "  ");
       if (!s) {
@@ -6267,7 +6215,7 @@ void PSOutputDev::doImageL3(Object *ref, GfxImageColorMap *colorMap,
       if (maskUseCompressed) {
 	maskStr = maskStr->getUndecodedStream();
       }
-#if ENABLE_ZLIB
+#ifdef ENABLE_ZLIB
       if (maskUseFlate) {
 	maskStr = new FlateEncoder(maskStr);
       } else
@@ -6316,7 +6264,7 @@ void PSOutputDev::doImageL3(Object *ref, GfxImageColorMap *colorMap,
     if (inlineImg) {
       // create an array
       str2 = new FixedLengthEncoder(str, len);
-#if ENABLE_ZLIB
+#ifdef ENABLE_ZLIB
       if (getEnableFlate()) {
 	str2 = new FlateEncoder(str2);
       } else
@@ -6458,7 +6406,7 @@ void PSOutputDev::doImageL3(Object *ref, GfxImageColorMap *colorMap,
 
   if ((mode == psModeForm || inType3Char || preloadImagesForms) &&
       uncompressPreloadedImages) {
-    s = NULL;
+    s = nullptr;
   } else {
     s = str->getPSFilter(level < psLevel2 ? 1 : level < psLevel3 ? 2 : 3,
 			 "    ");
@@ -6563,7 +6511,7 @@ void PSOutputDev::doImageL3(Object *ref, GfxImageColorMap *colorMap,
     }
 
     // add FlateEncode/LZWEncode/RunLengthEncode and ASCIIHex/85 encode filters
-#if ENABLE_ZLIB
+#ifdef ENABLE_ZLIB
     if (useFlate) {
       str = new FlateEncoder(str);
     } else
@@ -6769,7 +6717,7 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace,
       if (((GfxDeviceNColorSpace *)baseCS)->getAlt()->getMode() == csLab) {
 	labCS = (GfxLabColorSpace *)((GfxDeviceNColorSpace *)baseCS)->getAlt();
       } else {
-	labCS = NULL;
+	labCS = nullptr;
       }
       numAltComps = ((GfxDeviceNColorSpace *)baseCS)->getAlt()->getNComps();
       p = lookup;
@@ -6878,140 +6826,113 @@ void PSOutputDev::dumpColorSpaceL2(GfxColorSpace *colorSpace,
   }
 }
 
-#if OPI_SUPPORT
+#ifdef OPI_SUPPORT
 void PSOutputDev::opiBegin(GfxState *state, Dict *opiDict) {
-  Object dict;
-
   if (generateOPI) {
-    opiDict->lookup("2.0", &dict);
+    Object dict = opiDict->lookup("2.0");
     if (dict.isDict()) {
       opiBegin20(state, dict.getDict());
-      dict.free();
     } else {
-      dict.free();
-      opiDict->lookup("1.3", &dict);
+      dict = opiDict->lookup("1.3");
       if (dict.isDict()) {
 	opiBegin13(state, dict.getDict());
       }
-      dict.free();
     }
   }
 }
 
 void PSOutputDev::opiBegin20(GfxState *state, Dict *dict) {
-  Object obj1, obj2, obj3, obj4;
   double width, height, left, right, top, bottom;
   int w, h;
-  int i;
 
   writePS("%%BeginOPI: 2.0\n");
   writePS("%%Distilled\n");
 
-  dict->lookup("F", &obj1);
-  if (getFileSpecName(&obj1, &obj2)) {
+  Object obj1 = dict->lookup("F");
+  Object obj2 = getFileSpecName(&obj1);
+  if (obj2.isString()) {
     writePSFmt("%%ImageFileName: {0:t}\n", obj2.getString());
-    obj2.free();
   }
-  obj1.free();
 
-  dict->lookup("MainImage", &obj1);
+  obj1 = dict->lookup("MainImage");
   if (obj1.isString()) {
     writePSFmt("%%MainImage: {0:t}\n", obj1.getString());
   }
-  obj1.free();
 
   //~ ignoring 'Tags' entry
   //~ need to use writePSString() and deal with >255-char lines
 
-  dict->lookup("Size", &obj1);
+  obj1 = dict->lookup("Size");
   if (obj1.isArray() && obj1.arrayGetLength() == 2) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     width = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     height = obj2.getNum();
-    obj2.free();
     writePSFmt("%%ImageDimensions: {0:.6g} {1:.6g}\n", width, height);
   }
-  obj1.free();
 
-  dict->lookup("CropRect", &obj1);
+  obj1 = dict->lookup("CropRect");
   if (obj1.isArray() && obj1.arrayGetLength() == 4) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     left = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     top = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(2, &obj2);
+    obj2 = obj1.arrayGet(2);
     right = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(3, &obj2);
+    obj2 = obj1.arrayGet(3);
     bottom = obj2.getNum();
-    obj2.free();
     writePSFmt("%%ImageCropRect: {0:.6g} {1:.6g} {2:.6g} {3:.6g}\n",
 	       left, top, right, bottom);
   }
-  obj1.free();
 
-  dict->lookup("Overprint", &obj1);
+  obj1 = dict->lookup("Overprint");
   if (obj1.isBool()) {
     writePSFmt("%%ImageOverprint: {0:s}\n", obj1.getBool() ? "true" : "false");
   }
-  obj1.free();
 
-  dict->lookup("Inks", &obj1);
+  obj1 = dict->lookup("Inks");
   if (obj1.isName()) {
     writePSFmt("%%ImageInks: {0:s}\n", obj1.getName());
   } else if (obj1.isArray() && obj1.arrayGetLength() >= 1) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     if (obj2.isName()) {
       writePSFmt("%%ImageInks: {0:s} {1:d}",
 		 obj2.getName(), (obj1.arrayGetLength() - 1) / 2);
-      for (i = 1; i+1 < obj1.arrayGetLength(); i += 2) {
-	obj1.arrayGet(i, &obj3);
-	obj1.arrayGet(i+1, &obj4);
+      for (int i = 1; i+1 < obj1.arrayGetLength(); i += 2) {
+	Object obj3 = obj1.arrayGet(i);
+	Object obj4 = obj1.arrayGet(i+1);
 	if (obj3.isString() && obj4.isNum()) {
 	  writePS(" ");
 	  writePSString(obj3.getString());
 	  writePSFmt(" {0:.6g}", obj4.getNum());
 	}
-	obj3.free();
-	obj4.free();
       }
       writePS("\n");
     }
-    obj2.free();
   }
-  obj1.free();
 
   writePS("gsave\n");
 
   writePS("%%BeginIncludedImage\n");
 
-  dict->lookup("IncludedImageDimensions", &obj1);
+  obj1 = dict->lookup("IncludedImageDimensions");
   if (obj1.isArray() && obj1.arrayGetLength() == 2) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     w = obj2.getInt();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     h = obj2.getInt();
-    obj2.free();
     writePSFmt("%%IncludedImageDimensions: {0:d} {1:d}\n", w, h);
   }
-  obj1.free();
 
-  dict->lookup("IncludedImageQuality", &obj1);
+  obj1 = dict->lookup("IncludedImageQuality");
   if (obj1.isNum()) {
     writePSFmt("%%IncludedImageQuality: {0:.6g}\n", obj1.getNum());
   }
-  obj1.free();
 
   ++opi20Nest;
 }
 
 void PSOutputDev::opiBegin13(GfxState *state, Dict *dict) {
-  Object obj1, obj2;
   int left, right, top, bottom, samples, bits, width, height;
   double c, m, y, k;
   double llx, lly, ulx, uly, urx, ury, lrx, lry;
@@ -7023,86 +6944,68 @@ void PSOutputDev::opiBegin13(GfxState *state, Dict *dict) {
   writePS("/opiMatrix2 matrix currentmatrix def\n");
   writePS("opiMatrix setmatrix\n");
 
-  dict->lookup("F", &obj1);
-  if (getFileSpecName(&obj1, &obj2)) {
+  Object obj1 = dict->lookup("F");
+  Object obj2 = getFileSpecName(&obj1);
+  if (obj2.isString()) {
     writePSFmt("%ALDImageFileName: {0:t}\n", obj2.getString());
-    obj2.free();
   }
-  obj1.free();
 
-  dict->lookup("CropRect", &obj1);
+  obj1 = dict->lookup("CropRect");
   if (obj1.isArray() && obj1.arrayGetLength() == 4) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     left = obj2.getInt();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     top = obj2.getInt();
-    obj2.free();
-    obj1.arrayGet(2, &obj2);
+    obj2 = obj1.arrayGet(2);
     right = obj2.getInt();
-    obj2.free();
-    obj1.arrayGet(3, &obj2);
+    obj2 = obj1.arrayGet(3);
     bottom = obj2.getInt();
-    obj2.free();
     writePSFmt("%ALDImageCropRect: {0:d} {1:d} {2:d} {3:d}\n",
 	       left, top, right, bottom);
   }
-  obj1.free();
 
-  dict->lookup("Color", &obj1);
+  obj1 = dict->lookup("Color");
   if (obj1.isArray() && obj1.arrayGetLength() == 5) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     c = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     m = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(2, &obj2);
+    obj2 = obj1.arrayGet(2);
     y = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(3, &obj2);
+    obj2 = obj1.arrayGet(3);
     k = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(4, &obj2);
+    obj2 = obj1.arrayGet(4);
     if (obj2.isString()) {
       writePSFmt("%ALDImageColor: {0:.4g} {1:.4g} {2:.4g} {3:.4g} ",
 		 c, m, y, k);
       writePSString(obj2.getString());
       writePS("\n");
     }
-    obj2.free();
   }
-  obj1.free();
 
-  dict->lookup("ColorType", &obj1);
+  obj1 = dict->lookup("ColorType");
   if (obj1.isName()) {
     writePSFmt("%ALDImageColorType: {0:s}\n", obj1.getName());
   }
-  obj1.free();
 
   //~ ignores 'Comments' entry
   //~ need to handle multiple lines
 
-  dict->lookup("CropFixed", &obj1);
+  obj1 = dict->lookup("CropFixed");
   if (obj1.isArray()) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     ulx = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     uly = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(2, &obj2);
+    obj2 = obj1.arrayGet(2);
     lrx = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(3, &obj2);
+    obj2 = obj1.arrayGet(3);
     lry = obj2.getNum();
-    obj2.free();
     writePSFmt("%ALDImageCropFixed: {0:.6g} {1:.6g} {2:.6g} {3:.6g}\n",
 	       ulx, uly, lrx, lry);
   }
-  obj1.free();
 
-  dict->lookup("GrayMap", &obj1);
+  obj1 = dict->lookup("GrayMap");
   if (obj1.isArray()) {
     writePS("%ALDImageGrayMap:");
     for (i = 0; i < obj1.arrayGetLength(); i += 16) {
@@ -7110,116 +7013,90 @@ void PSOutputDev::opiBegin13(GfxState *state, Dict *dict) {
 	writePS("\n%%+");
       }
       for (j = 0; j < 16 && i+j < obj1.arrayGetLength(); ++j) {
-	obj1.arrayGet(i+j, &obj2);
+	obj2 = obj1.arrayGet(i+j);
 	writePSFmt(" {0:d}", obj2.getInt());
-	obj2.free();
       }
     }
     writePS("\n");
   }
-  obj1.free();
 
-  dict->lookup("ID", &obj1);
+  obj1 = dict->lookup("ID");
   if (obj1.isString()) {
     writePSFmt("%ALDImageID: {0:t}\n", obj1.getString());
   }
-  obj1.free();
 
-  dict->lookup("ImageType", &obj1);
+  obj1 = dict->lookup("ImageType");
   if (obj1.isArray() && obj1.arrayGetLength() == 2) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     samples = obj2.getInt();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     bits = obj2.getInt();
-    obj2.free();
     writePSFmt("%ALDImageType: {0:d} {1:d}\n", samples, bits);
   }
-  obj1.free();
 
-  dict->lookup("Overprint", &obj1);
+  dict->lookup("Overprint");
   if (obj1.isBool()) {
     writePSFmt("%ALDImageOverprint: {0:s}\n",
 	       obj1.getBool() ? "true" : "false");
   }
-  obj1.free();
 
-  dict->lookup("Position", &obj1);
+  obj1 = dict->lookup("Position");
   if (obj1.isArray() && obj1.arrayGetLength() == 8) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     llx = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     lly = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(2, &obj2);
+    obj2 = obj1.arrayGet(2);
     ulx = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(3, &obj2);
+    obj2 = obj1.arrayGet(3);
     uly = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(4, &obj2);
+    obj2 = obj1.arrayGet(4);
     urx = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(5, &obj2);
+    obj2 = obj1.arrayGet(5);
     ury = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(6, &obj2);
+    obj2 = obj1.arrayGet(6);
     lrx = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(7, &obj2);
+    obj2 = obj1.arrayGet(7);
     lry = obj2.getNum();
-    obj2.free();
     opiTransform(state, llx, lly, &tllx, &tlly);
     opiTransform(state, ulx, uly, &tulx, &tuly);
     opiTransform(state, urx, ury, &turx, &tury);
     opiTransform(state, lrx, lry, &tlrx, &tlry);
     writePSFmt("%ALDImagePosition: {0:.6g} {1:.6g} {2:.6g} {3:.6g} {4:.6g} {5:.6g} {6:.6g} {7:.6g}\n",
 	       tllx, tlly, tulx, tuly, turx, tury, tlrx, tlry);
-    obj2.free();
   }
-  obj1.free();
 
-  dict->lookup("Resolution", &obj1);
+  obj1 = dict->lookup("Resolution");
   if (obj1.isArray() && obj1.arrayGetLength() == 2) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     horiz = obj2.getNum();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     vert = obj2.getNum();
-    obj2.free();
     writePSFmt("%ALDImageResoution: {0:.6g} {1:.6g}\n", horiz, vert);
-    obj2.free();
   }
-  obj1.free();
 
-  dict->lookup("Size", &obj1);
+  obj1 = dict->lookup("Size");
   if (obj1.isArray() && obj1.arrayGetLength() == 2) {
-    obj1.arrayGet(0, &obj2);
+    obj2 = obj1.arrayGet(0);
     width = obj2.getInt();
-    obj2.free();
-    obj1.arrayGet(1, &obj2);
+    obj2 = obj1.arrayGet(1);
     height = obj2.getInt();
-    obj2.free();
     writePSFmt("%ALDImageDimensions: {0:d} {1:d}\n", width, height);
   }
-  obj1.free();
 
   //~ ignoring 'Tags' entry
   //~ need to use writePSString() and deal with >255-char lines
 
-  dict->lookup("Tint", &obj1);
+  obj1 = dict->lookup("Tint");
   if (obj1.isNum()) {
     writePSFmt("%ALDImageTint: {0:.6g}\n", obj1.getNum());
   }
-  obj1.free();
 
-  dict->lookup("Transparency", &obj1);
+  obj1 = dict->lookup("Transparency");
   if (obj1.isBool()) {
     writePSFmt("%ALDImageTransparency: {0:s}\n",
 	       obj1.getBool() ? "true" : "false");
   }
-  obj1.free();
 
   writePS("%%BeginObject: image\n");
   writePS("opiMatrix2 setmatrix\n");
@@ -7253,25 +7130,20 @@ void PSOutputDev::opiTransform(GfxState *state, double x0, double y0,
 }
 
 void PSOutputDev::opiEnd(GfxState *state, Dict *opiDict) {
-  Object dict;
-
   if (generateOPI) {
-    opiDict->lookup("2.0", &dict);
+    Object dict = opiDict->lookup("2.0");
     if (dict.isDict()) {
       writePS("%%EndIncludedImage\n");
       writePS("%%EndOPI\n");
       writePS("grestore\n");
       --opi20Nest;
-      dict.free();
     } else {
-      dict.free();
-      opiDict->lookup("1.3", &dict);
+      dict = opiDict->lookup("1.3");
       if (dict.isDict()) {
 	writePS("%%EndObject\n");
 	writePS("restore\n");
 	--opi13Nest;
       }
-      dict.free();
     }
   }
 }
@@ -7553,7 +7425,7 @@ void PSOutputDev::writePSFmt(const char *fmt, ...) {
   va_end(args);
 }
 
-void PSOutputDev::writePSString(GooString *s) {
+void PSOutputDev::writePSString(const GooString *s) {
   Guchar *p;
   int n, line;
   char buf[8];
@@ -7599,7 +7471,7 @@ void PSOutputDev::writePSName(const char *s) {
   }
 }
 
-GooString *PSOutputDev::filterPSName(GooString *name) {
+GooString *PSOutputDev::filterPSName(const GooString *name) {
   GooString *name2;
   char buf[8];
   int i;
@@ -7698,7 +7570,7 @@ GooString* PSOutputDev::filterPSLabel(GooString *label, GBool *needParens) {
 }
 
 // Write a DSC-compliant <textline>.
-void PSOutputDev::writePSTextLine(GooString *s) {
+void PSOutputDev::writePSTextLine(const GooString *s) {
   int i, j, step;
   int c;
 

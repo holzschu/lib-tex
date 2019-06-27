@@ -2,7 +2,7 @@
 ** SVGOutput.cpp                                                        **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -33,8 +33,9 @@
 
 using namespace std;
 
-SVGOutput::SVGOutput (const char *base, const string &pattern, int zipLevel)
-	: _path(base ? base : ""), _pattern(pattern), _stdout(base == 0), _zipLevel(zipLevel), _page(-1)
+
+SVGOutput::SVGOutput (const string &base, const string &pattern, int zipLevel)
+	: _path(base), _pattern(pattern), _stdout(base.empty()), _zipLevel(zipLevel), _page(-1)
 {
 }
 
@@ -42,21 +43,29 @@ SVGOutput::SVGOutput (const char *base, const string &pattern, int zipLevel)
 /** Returns an output stream for the given page.
  *  @param[in] page number of current page
  *  @param[in] numPages total number of pages in the DVI file
+ *  @param[in] hash hash value of the current page
  *  @return output stream for the given page */
-ostream& SVGOutput::getPageStream (int page, int numPages) const {
-	string fname = filename(page, numPages);
+ostream& SVGOutput::getPageStream (int page, int numPages, const HashTriple &hashes) const {
+	string fname = filename(page, numPages, hashes);
 	if (fname.empty()) {
-		_osptr.reset();
-		return cout;
+		if (_zipLevel == 0) {
+			_osptr.reset();
+			return cout;
+		}
+#ifdef _WIN32
+		if (_setmode(_fileno(stdout), _O_BINARY) == -1)
+			throw MessageException("can't open stdout in binary mode");
+#endif
+		return *(_osptr = util::make_unique<ZLibOutputStream>(cout, ZLIB_GZIP, _zipLevel));
 	}
 	if (page == _page)
 		return *_osptr;
 
 	_page = page;
 	if (_zipLevel > 0)
-		_osptr.reset(new ZLibOutputStream(fname, _zipLevel));
+		_osptr = util::make_unique<ZLibOutputFileStream>(fname, ZLIB_GZIP, _zipLevel);
 	else
-		_osptr.reset(new ofstream(fname.c_str()));
+		_osptr = util::make_unique<ofstream>(fname);
 	if (!_osptr)
 		throw MessageException("can't open file "+fname+" for writing");
 	return *_osptr;
@@ -65,14 +74,18 @@ ostream& SVGOutput::getPageStream (int page, int numPages) const {
 
 /** Returns the name of the SVG file containing the given page.
  *  @param[in] page number of current page
- *  @param[in] numPages total number of pages */
-string SVGOutput::filename (int page, int numPages) const {
+ *  @param[in] numPages total number of pages
+ *  @param[in] hash hash value of current page */
+string SVGOutput::filename (int page, int numPages, const HashTriple &hashes) const {
 	if (_stdout)
 		return "";
-	string expanded_pattern = util::trim(expandFormatString(_pattern, page, numPages));
+
+	string expanded_pattern = util::trim(expandFormatString(_pattern, page, numPages, hashes));
 	// set and expand default pattern if necessary
-	if (expanded_pattern.empty())
-		expanded_pattern = expandFormatString(numPages > 1 ? "%f-%p" : "%f", page, numPages);
+	if (expanded_pattern.empty()) {
+		string pattern = hashes.empty() ? (numPages > 1 ? "%f-%p" : "%f") : "%f-%hd";
+		expanded_pattern = expandFormatString(pattern, page, numPages, hashes);
+	}
 	// append suffix if necessary
 	FilePath outpath(expanded_pattern, true);
 	if (outpath.suffix().empty())
@@ -101,10 +114,15 @@ string SVGOutput::outpath (int page, int numPages) const {
 /** Replaces expressions in a given string by the corresponding values and returns the result.
  *  Supported constructs:
  *  %f: basename of the current file (filename without suffix)
+ *  %h: hash value of current page
  *  %[0-9]?p: current page number
  *  %[0-9]?P: number of pages in DVI file
- *  %[0-9]?(expr): arithmetic expression */
-string SVGOutput::expandFormatString (string str, int page, int numPages) const {
+ *  %[0-9]?(expr): arithmetic expression
+ *  @param[in] str string to expand
+ *  @param[in] page number of current page
+ *  @param[in] numPages total number of pages
+ *  @param[in] hash hash value of current page (skipped if empty) */
+string SVGOutput::expandFormatString (string str, int page, int numPages, const HashTriple &hashes) const {
 	string result;
 	while (!str.empty()) {
 		size_t pos = str.find('%');
@@ -117,17 +135,27 @@ string SVGOutput::expandFormatString (string str, int page, int numPages) const 
 			str = str.substr(pos);
 			pos = 1;
 			ostringstream oss;
-			if (isdigit(str[pos])) {
+			if (!isdigit(str[pos]))
+				oss << setw(util::ilog10(numPages)+1) << setfill('0');
+			else {
 				oss << setw(str[pos]-'0') << setfill('0');
 				pos++;
-			}
-			else {
-				oss << setw(util::ilog10(numPages)+1) << setfill('0');
 			}
 			switch (str[pos]) {
 				case 'f':
 					result += _path.basename();
 					break;
+				case 'h': {
+					char variant = pos+1 < str.length() ? str[++pos] : '\0';
+					switch (variant) {
+						case 'd': result += hashes.dviHash(); break;
+						case 'c': result += hashes.cmbHash(); break;
+						case 'o': result += hashes.optHash(); break;
+						default:
+							throw MessageException("hash type 'd', 'c', or 'o' expected after '%h' in filename pattern");
+					}
+					break;
+				}
 				case 'p':
 				case 'P':
 					oss << (str[pos] == 'p' ? page : numPages);
@@ -159,4 +187,11 @@ string SVGOutput::expandFormatString (string str, int page, int numPages) const 
 		}
 	}
 	return result;
+}
+
+
+/** Returns true if methods 'filename' and 'getPageStream' ignore the hash
+ *  parameter because it's not requested in the filename pattern. */
+bool SVGOutput::ignoresHashes () const {
+	return _stdout || (!_pattern.empty() && _pattern.find("%h") == string::npos);
 }

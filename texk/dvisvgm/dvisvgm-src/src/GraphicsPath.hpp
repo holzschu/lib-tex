@@ -2,7 +2,7 @@
 ** GraphicsPath.hpp                                                     **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -22,8 +22,8 @@
 #define GRAPHICSPATH_HPP
 
 #include <cctype>
+#include <deque>
 #include <ostream>
-#include <vector>
 #include "BoundingBox.hpp"
 #include "Matrix.hpp"
 #include "Pair.hpp"
@@ -31,12 +31,11 @@
 
 
 template <typename T>
-class GraphicsPath
-{
+class GraphicsPath {
 	friend class PathClipper;
 	public:
 		enum class WindingRule {EVEN_ODD, NON_ZERO};
-		typedef Pair<T> Point;
+		using Point = Pair<T>;
 
 		struct Command {
 			enum class Type {MOVETO, LINETO, CONICTO, CUBICTO, CLOSEPATH};
@@ -72,6 +71,20 @@ class GraphicsPath
 			void transform (const Matrix &matrix) {
 				for (int i=0; i < numParams(); i++)
 					params[i] = matrix * params[i];
+			}
+
+			bool operator == (const Command &cmd) const {
+				bool ret = (type == cmd.type);
+				for (int i=0; ret && i < numParams(); i++)
+					ret &= (params[i] == cmd.params[i]);
+				return ret;
+			}
+
+			bool operator != (const Command &cmd) const {
+				bool ret = (type != cmd.type);
+				for (int i=0; !ret && i < numParams(); i++)
+					ret |= (params[i] != cmd.params[i]);
+				return ret;
 			}
 
 			Type type;
@@ -317,10 +330,35 @@ class GraphicsPath
 				command.transform(matrix);
 		}
 
+
+		bool operator == (const GraphicsPath &path) const {
+			if (size() != path.size())
+				return false;
+			auto it = _commands.begin();
+			for (const Command &cmd : path._commands) {
+				if (*it++ != cmd)
+					return false;
+			}
+			return true;
+		}
+
+
+		bool operator != (const GraphicsPath &path) const {
+			if (size() != path.size())
+				return true;
+			auto it = _commands.begin();
+			for (const Command &cmd : path._commands) {
+				if (*it++ != cmd)
+					return true;
+			}
+			return false;
+		}
+
+
 		void iterate (Actions &actions, bool optimize) const;
 
 	private:
-		std::vector<Command> _commands;
+		std::deque<Command> _commands;
 		WindingRule _windingRule;
 };
 

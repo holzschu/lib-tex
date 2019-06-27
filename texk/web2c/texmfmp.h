@@ -129,16 +129,16 @@ extern int tfmtemp, texinputtype;
 #if !defined (pdfTeX)
 extern void pdftex_fail(const char *fmt, ...);
 #endif
-#if !defined(XeTeX)
 extern char start_time_str[];
 extern void initstarttime(void);
+#if !defined(XeTeX)
 extern char *makecstring(integer s);
 extern char *makecfilename(integer s);
+#endif /* !XeTeX */
 extern void getcreationdate(void);
 extern void getfilemoddate(integer s);
 extern void getfilesize(integer s);
 extern void getfiledump(integer s, int offset, int length);
-#endif
 extern void convertStringToHexString(const char *in, char *out, int lin);
 extern void getmd5sum(integer s, int file);
 #endif
@@ -227,7 +227,7 @@ extern boolean input_line (FILE *);
 #define	dateandtime(i,j,k,l) get_date_and_time (&(i), &(j), &(k), &(l))
 extern void get_date_and_time (integer *, integer *, integer *, integer *);
 
-#if defined(pdfTeX) || defined(epTeX) || defined(eupTeX)
+#if defined(pdfTeX) || defined(epTeX) || defined(eupTeX) || defined(XeTeX)
 /* Get high-res time info. */
 #define secondsandmicros(i,j) get_seconds_and_micros (&(i), &(j))
 extern void get_seconds_and_micros (integer *, integer *);
@@ -281,9 +281,12 @@ extern void topenin (void);
 #ifdef XeTeX
 #if ENABLE_PIPES
 extern boolean u_open_in_or_pipe(unicodefile* f, integer filefmt, const_string fopen_mode, integer mode, integer encodingData);
+extern void u_close_file_or_pipe(unicodefile* f);
 #define uopenin(f,p,m,d) u_open_in_or_pipe(&(f), p, FOPEN_RBIN_MODE, m, d)
+#define uclose(f) u_close_file_or_pipe(&(f))
 #else
 #define uopenin(f,p,m,d) u_open_in(&(f), p, FOPEN_RBIN_MODE, m, d)
+#define uclose(f) u_close_inout(&(f))
 #endif
 #endif
 

@@ -292,13 +292,14 @@ mem[NODE+TYPE##_node_size-synchronization_field_size+1].cint
 #       define SYNCTEX_OFFSET_IS_PDF 0
 #   endif
 
-#if defined(_WIN32) && (defined(upTeX) || defined(eupTeX) || defined(XeTeX))
+#if defined(_WIN32)
+#if defined(pdfTeX) || defined(upTeX) || defined(eupTeX) || defined(XeTeX)
 #define W32UPTEXSYNCTEX 1
 #include <wchar.h>
 static char *chgto_oem(char *src);
 static int fsyscp_remove(char *name);
-#define remove fsyscp_remove
-#endif
+#endif /* pdfTeX ... */
+#endif /* _WIN32 */
 
 /*  This macro layer was added to take luatex into account as suggested by T. Hoekwater. */
 #   if !defined(SYNCTEX_GET_JOB_NAME)
@@ -496,7 +497,11 @@ void synctexabort(boolean log_opened __attribute__ ((unused)))
             gzclose((gzFile) SYNCTEX_FILE);
         }
         SYNCTEX_FILE = NULL;
+#if defined(W32UPTEXSYNCTEX)
+        fsyscp_remove(synctex_ctxt.busy_name);
+#else
         remove(synctex_ctxt.busy_name);
+#endif /* W32UPTEXSYNCTEX */
         SYNCTEX_FREE(synctex_ctxt.busy_name);
         synctex_ctxt.busy_name = NULL;
     }
@@ -530,7 +535,7 @@ static char *chgto_oem(char *src)
     f_codepage = AreFileApisANSI() ? GetACP() : GetOEMCP();
   }
 
-  if(f_codepage == file_system_codepage) {
+  if(file_system_codepage == 0 || f_codepage == file_system_codepage) {
     dst = xstrdup(src);
     return dst;
   }
@@ -545,6 +550,10 @@ static gzFile fsyscp_gzopen(const char *path, const char *mode)
 {
   gzFile  gzf;
   wchar_t *pathw = NULL;
+
+  if(!file_system_codepage)
+    return gzopen(path, mode);
+
   pathw = get_wstring_from_fsyscp(path, pathw);
   gzf = gzopen_w(pathw, mode);
   free(pathw);
@@ -555,6 +564,10 @@ static int fsyscp_remove(char *s)
 {
   wchar_t *sw = NULL;
   int ret;
+
+  if(!file_system_codepage)
+    return remove(s);
+
   sw = get_wstring_from_fsyscp(s, sw);
   ret = _wremove(sw);
   if(sw) free(sw);
@@ -565,6 +578,9 @@ static int fsyscp_rename(char *s1, char *s2)
 {
   wchar_t *sw1 = NULL, *sw2 = NULL;
   int ret;
+
+  if(!file_system_codepage)
+    return rename(s1, s2);
 
   sw1 = get_wstring_from_fsyscp(s1, sw1);
   sw2 = get_wstring_from_fsyscp(s2, sw2);
@@ -578,7 +594,8 @@ static int fsyscp_rename(char *s1, char *s2)
 #define fopen fsyscp_fopen
 #define gzopen fsyscp_gzopen
 #define rename fsyscp_rename
-#endif
+#define remove fsyscp_remove
+#endif /* W32UPTEXSYNCTEX */
 
 /*  synctex_dot_open ensures that the foo.synctex file is open.
  *  In case of problem, it definitely disables synchronization.
@@ -671,7 +688,8 @@ static void *synctex_dot_open(void)
             if (SYNCTEX_FILE) {
                 if (SYNCTEX_NO_ERROR == synctex_record_preamble()) {
                     /*  Initialization of the context */
-                    synctex_ctxt.magnification = 1000;
+                    if (synctex_ctxt.magnification == 0)
+                        synctex_ctxt.magnification = 1000;
                     synctex_ctxt.unit = SYNCTEX_UNIT_FACTOR;
                     /*  synctex_ctxt.busy_name was NULL before, it now owns the_busy_name */
                     synctex_ctxt.busy_name = the_busy_name;
@@ -1047,17 +1065,17 @@ void synctexsheet(integer mag)
         }
         return;
     }
+    if (SYNCTEX_GET_TOTAL_PAGES() == 0) {
+        /*  Now it is time to properly set up the scale factor. */
+        if (mag > 0) {
+            synctex_ctxt.magnification = mag;
+        }
+    }
     if (NULL != synctex_prepare_content()) {
         /*  First possibility: the .synctex file is already open because SyncTeX was activated on the CLI
          *  or it was activated with the \synctex macro and the first page is already shipped out.
          *  Second possibility: tries to open the .synctex, useful if synchronization was enabled
          *  from the source file and not from the CLI. */
-        if (SYNCTEX_GET_TOTAL_PAGES() == 0) {
-            /*  Now it is time to properly set up the scale factor. */
-            if (mag > 0) {
-                synctex_ctxt.magnification = mag;
-            }
-        }
         synctex_record_sheet(SYNCTEX_GET_TOTAL_PAGES()+1);
     }
 #   if SYNCTEX_DEBUG

@@ -27,7 +27,6 @@ xrealloc (void *old_ptr, size_t size)
         new_mem = xmalloc(size);
     } else {
         new_mem = (void *)realloc(old_ptr, size ? size : 1);
-
         if (new_mem == NULL) {
             /* We used to print OLD_PTR here using %x, and casting its
                value to unsigned, but that lost on the Alpha, where

@@ -1,6 +1,6 @@
 /* mpfr_cmp_d -- compare a floating-point number with a double
 
-Copyright 2003-2004, 2006-2016 Free Software Foundation, Inc.
+Copyright 2003-2004, 2006-2019 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,7 +17,7 @@ License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
+https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
 
 #include "mpfr-impl.h"
@@ -27,19 +27,19 @@ mpfr_cmp_d (mpfr_srcptr b, double d)
 {
   mpfr_t tmp;
   int res;
+  mp_limb_t tmp_man[MPFR_LIMBS_PER_DOUBLE];
   MPFR_SAVE_EXPO_DECL (expo);
 
   MPFR_SAVE_EXPO_MARK (expo);
 
-  mpfr_init2 (tmp, IEEE_DBL_MANT_DIG);
+  MPFR_TMP_INIT1(tmp_man, tmp, IEEE_DBL_MANT_DIG);
   res = mpfr_set_d (tmp, d, MPFR_RNDN);
   MPFR_ASSERTD (res == 0);
 
-  mpfr_clear_flags ();
+  MPFR_CLEAR_FLAGS ();
   res = mpfr_cmp (b, tmp);
   MPFR_SAVE_EXPO_UPDATE_FLAGS (expo, __gmpfr_flags);
 
-  mpfr_clear (tmp);
   MPFR_SAVE_EXPO_FREE (expo);
   return res;
 }

@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2002-2016 by Jin-Hwan Cho and Shunsaku Hirata,
+    Copyright (C) 2002-2018 by Jin-Hwan Cho and Shunsaku Hirata,
     the dvipdfmx project team.
     
     Copyright (C) 1998, 1999 by Mark A. Wicks <mwicks@kettering.edu>
@@ -32,6 +32,7 @@
 #include "error.h"
 
 #include "numbers.h"
+#include "dpxconf.h"
 #include "dpxutil.h"
 
 #include "tfm.h"
@@ -41,9 +42,6 @@
 
 #define FWBASE ((double) (1<<20))
 
-static int verbose = 0;
-
-
 #ifndef WITHOUT_ASCII_PTEX
 /*
  * ID is 9 for vertical JFM file.
@@ -52,7 +50,7 @@ static int verbose = 0;
 #define JFMV_ID  9
 #define IS_JFM(i) ((i) == JFM_ID || (i) == JFMV_ID)
 
-#define CHARACTER_INDEX(i)  ((i > 0xFFFFUL ? 0x10000UL : i))
+#define CHARACTER_INDEX(i)  ((i > 0x10FFFFUL ? 0x110000UL : i))
 #else
 #define CHARACTER_INDEX(i)  ((i))
 #endif
@@ -83,7 +81,7 @@ struct tfm_font
 #endif /* !WITHOUT_OMEGA */
   fixword       *header;
 #ifndef WITHOUT_ASCII_PTEX
-  unsigned short *chartypes;
+  unsigned int *chartypes;
 #endif /* !WITHOUT_ASCII_PTEX */
   uint32_t      *char_info;
   unsigned short *width_index;
@@ -181,7 +179,11 @@ struct range_map {
 struct char_map
 {
   struct coverage coverage;
+#ifndef WITHOUT_ASCII_PTEX
+  unsigned int *indices;
+#else
   unsigned short *indices;
+#endif
 };
 
 static void
@@ -324,13 +326,6 @@ fms_need (unsigned n)
   }
 }
 
-void
-tfm_set_verbose (void)
-{
-  verbose++;
-}
-
-
 static int
 fread_fwords (fixword *words, int32_t nmemb, FILE *fp)
 {
@@ -451,20 +446,30 @@ tfm_get_sizes (FILE *tfm_file, off_t tfm_file_size, struct tfm_font *tfm)
 }
 
 #ifndef WITHOUT_ASCII_PTEX
+static unsigned int
+get_unsigned_triple_kanji(FILE *file)
+{
+  unsigned int triple = get_unsigned_byte(file);
+  triple = (triple << 8) | get_unsigned_byte(file);
+  triple = triple | (get_unsigned_byte(file)<<16);
+  return triple;
+}
+
 static void
 jfm_do_char_type_array (FILE *tfm_file, struct tfm_font *tfm)
 {
-  unsigned short charcode;
+  unsigned int charcode;
   unsigned short chartype;
-  int i;
+  unsigned int i;
 
-  tfm->chartypes = NEW(65536, unsigned short);
-  for (i = 0; i < 65536; i++) {
+  tfm->chartypes = NEW(1114112, unsigned int);
+  for (i = 0; i < 1114112; i++) {
     tfm->chartypes[i] = 0;
   }
   for (i = 0; i < tfm->nt; i++) {
-    charcode = get_unsigned_pair(tfm_file);
-    chartype = get_unsigned_pair(tfm_file);
+    /* support new JFM spec by texjporg */
+    charcode = get_unsigned_triple_kanji(tfm_file);
+    chartype = get_unsigned_byte(tfm_file);
     tfm->chartypes[charcode] = chartype;
   }
 }
@@ -481,14 +486,14 @@ jfm_make_charmap (struct font_metric *fm, struct tfm_font *tfm)
     map->coverage.first_char = 0;
 #ifndef WITHOUT_ASCII_PTEX
     map->coverage.num_chars  = 0x10FFFFL;
-    map->indices    = NEW(0x10001L, unsigned short);
-    map->indices[0x10000L] = tfm->chartypes[0];
+    map->indices    = NEW(0x110001L, unsigned int);
+    map->indices[0x110000L] = tfm->chartypes[0];
+    for (code = 0; code <= 0x10FFFFU; code++) {
 #else
     map->coverage.num_chars  = 0xFFFFL;
     map->indices    = NEW(0x10000L, unsigned short);
-#endif
-
     for (code = 0; code <= 0xFFFFU; code++) {
+#endif
       map->indices[code] = tfm->chartypes[code];
     }
   } else {
@@ -908,12 +913,12 @@ tfm_open (const char *tfm_name, int must_exist)
     ERROR("Could not open specified TFM/OFM file \"%s\".", tfm_name);
   }
 
-  if (verbose) {
+  if (dpx_conf.verbose_level > 0) {
     if (format == TFM_FORMAT)
       MESG("(TFM:%s", tfm_name);
     else if (format == OFM_FORMAT)
       MESG("(OFM:%s", tfm_name);
-    if (verbose > 1)
+    if (dpx_conf.verbose_level > 1)
       MESG("[%s]", file_name);
   }
 
@@ -943,7 +948,7 @@ tfm_open (const char *tfm_name, int must_exist)
   fms[numfms].tex_name = NEW(strlen(tfm_name)+1, char);
   strcpy(fms[numfms].tex_name, tfm_name);
 
-  if (verbose) 
+  if (dpx_conf.verbose_level > 0) 
     MESG(")");
 
   return numfms++;

@@ -3,7 +3,6 @@
    This file is public domain.  */
 
 #define	EXTERN /* Instantiate data from xetexd.h here.  */
-#define DLLPROC dllxetexmain
 
 /* This file defines TeX and XeTeX.  */
 #include <xetexd.h>

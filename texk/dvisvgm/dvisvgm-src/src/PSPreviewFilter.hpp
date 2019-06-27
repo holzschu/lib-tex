@@ -2,7 +2,7 @@
 ** PSPreviewFilter.hpp                                                  **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -28,8 +28,7 @@
 
 class SpecialActions;
 
-class PSPreviewFilter : public PSFilter
-{
+class PSPreviewFilter : public PSFilter {
 	public:
 		PSPreviewFilter (PSInterpreter &psi);
 		void activate ();
@@ -38,7 +37,6 @@ class PSPreviewFilter : public PSFilter
 		std::string version () const           {return _version;}
 		bool tightpage () const                {return _tightpage;}
 		void setDviScaleFactor (double dvi2bp) {_dvi2bp = dvi2bp;}
-		bool getBorders (double &left, double &right, double &top, double &bottom) const;
 		void assignBorders (BoundingBox &bbox) const;
 		bool getBoundingBox (BoundingBox &bbox) const;
 		double height () const;

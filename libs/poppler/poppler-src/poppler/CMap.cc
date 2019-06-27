@@ -14,8 +14,9 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2008 Koji Otani <sho@bbr.jp>
-// Copyright (C) 2008, 2009 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2008, 2009, 2017, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2013 Fabio D'Urso <fabiodurso@hotmail.it>
+// Copyright (C) 2017 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -76,12 +77,12 @@ CMap *CMap::parse(CMapCache *cache, GooString *collectionA, Object *obj) {
     }
     delete cMapNameA;
   } else if (obj->isStream()) {
-    if (!(cMap = CMap::parse(NULL, collectionA, obj->getStream()))) {
+    if (!(cMap = CMap::parse(nullptr, collectionA, obj->getStream()))) {
       error(errSyntaxError, -1, "Invalid CMap in Type 0 font");
     }
   } else {
     error(errSyntaxError, -1, "Invalid Encoding in Type 0 font");
-    return NULL;
+    return nullptr;
   }
   return cMap;
 }
@@ -104,7 +105,7 @@ CMap *CMap::parse(CMapCache *cache, GooString *collectionA,
     error(errSyntaxError, -1,
 	  "Couldn't find '{0:t}' CMap file for '{1:t}' collection",
 	  cMapNameA, collectionA);
-    return NULL;
+    return nullptr;
   }
 
   cMap = new CMap(collectionA->copy(), cMapNameA->copy());
@@ -116,15 +117,11 @@ CMap *CMap::parse(CMapCache *cache, GooString *collectionA,
 }
 
 CMap *CMap::parse(CMapCache *cache, GooString *collectionA, Stream *str) {
-  Object obj1;
-  CMap *cMap;
-
-  cMap = new CMap(collectionA->copy(), NULL);
-
-  if (!str->getDict()->lookup("UseCMap", &obj1)->isNull()) {
+  CMap *cMap = new CMap(collectionA->copy(), nullptr);
+  Object obj1 = str->getDict()->lookup("UseCMap");
+  if (!obj1.isNull()) {
     cMap->useCMap(cache, &obj1);
   }
-  obj1.free();
 
   str->reset();
   cMap->parse2(cache, &getCharFromStream, str);
@@ -134,7 +131,7 @@ CMap *CMap::parse(CMapCache *cache, GooString *collectionA, Stream *str) {
 
 CMap *CMap::parse(CMapCache *cache, GooString *collectionA,
 		  GooString *cMapNameA, Stream *stream) {
-  FILE *f = NULL;
+  FILE *f = nullptr;
   CMap *cmap;
   PSTokenizer *pst;
   char tok1[256], tok2[256], tok3[256];
@@ -157,7 +154,7 @@ CMap *CMap::parse(CMapCache *cache, GooString *collectionA,
 
       error(errSyntaxError, -1, "Couldn't find '{0:t}' CMap file for '{1:t}' collection",
 	    cMapNameA, collectionA);
-      return NULL;
+      return nullptr;
     }
     pst = new PSTokenizer(&getCharFromFile, f);
   }
@@ -237,7 +234,7 @@ void CMap::parse2(CMapCache *cache, int (*getCharFunc)(void *), void *data) {
   PSTokenizer *pst;
   char tok1[256], tok2[256], tok3[256];
   int n1, n2, n3;
-  Guint start, end, code;
+  Guint start = 0, end = 0, code;
 
   pst = new PSTokenizer(getCharFunc, data);
   pst->getToken(tok1, sizeof(tok1), &n1);
@@ -316,7 +313,7 @@ CMap::CMap(GooString *collectionA, GooString *cMapNameA) {
     vector[i].cid = 0;
   }
   refCnt = 1;
-#if MULTITHREADED
+#ifdef MULTITHREADED
   gInitMutex(&mutex);
 #endif
 }
@@ -326,9 +323,9 @@ CMap::CMap(GooString *collectionA, GooString *cMapNameA, int wModeA) {
   cMapName = cMapNameA;
   isIdent = gTrue;
   wMode = wModeA;
-  vector = NULL;
+  vector = nullptr;
   refCnt = 1;
-#if MULTITHREADED
+#ifdef MULTITHREADED
   gInitMutex(&mutex);
 #endif
 }
@@ -343,7 +340,7 @@ void CMap::useCMap(CMapCache *cache, char *useName) {
   // GlobalParams::getCMap() in order to acqure the lock need to use
   // GlobalParams::getCMap
   if (cache) {
-    subCMap = cache->getCMap(collection, useNameStr, NULL);
+    subCMap = cache->getCMap(collection, useNameStr, nullptr);
   } else {
     subCMap = globalParams->getCMap(collection, useNameStr);
   }
@@ -436,7 +433,7 @@ CMap::~CMap() {
   if (vector) {
     freeCMapVector(vector);
   }
-#if MULTITHREADED
+#ifdef MULTITHREADED
   gDestroyMutex(&mutex);
 #endif
 }
@@ -453,11 +450,11 @@ void CMap::freeCMapVector(CMapVectorEntry *vec) {
 }
 
 void CMap::incRefCnt() {
-#if MULTITHREADED
+#ifdef MULTITHREADED
   gLockMutex(&mutex);
 #endif
   ++refCnt;
-#if MULTITHREADED
+#ifdef MULTITHREADED
   gUnlockMutex(&mutex);
 #endif
 }
@@ -465,11 +462,11 @@ void CMap::incRefCnt() {
 void CMap::decRefCnt() {
   GBool done;
 
-#if MULTITHREADED
+#ifdef MULTITHREADED
   gLockMutex(&mutex);
 #endif
   done = --refCnt == 0;
-#if MULTITHREADED
+#ifdef MULTITHREADED
   gUnlockMutex(&mutex);
 #endif
   if (done) {
@@ -481,7 +478,7 @@ GBool CMap::match(GooString *collectionA, GooString *cMapNameA) {
   return !collection->cmp(collectionA) && !cMapName->cmp(cMapNameA);
 }
 
-CID CMap::getCID(char *s, int len, CharCode *c, int *nUsed) {
+CID CMap::getCID(const char *s, int len, CharCode *c, int *nUsed) {
   CMapVectorEntry *vec;
   CharCode cc;
   int n, i;
@@ -514,7 +511,7 @@ void CMap::setReverseMapVector(Guint startCode, CMapVectorEntry *vec,
  Guint *rmap, Guint rmapSize, Guint ncand) {
   int i;
 
-  if (vec == 0) return;
+  if (vec == nullptr) return;
   for (i = 0;i < 256;i++) {
     if (vec[i].isVector) {
       setReverseMapVector((startCode+i) << 8,
@@ -550,7 +547,7 @@ CMapCache::CMapCache() {
   int i;
 
   for (i = 0; i < cMapCacheSize; ++i) {
-    cache[i] = NULL;
+    cache[i] = nullptr;
   }
 }
 
@@ -594,5 +591,5 @@ CMap *CMapCache::getCMap(GooString *collection, GooString *cMapName, Stream *str
     cmap->incRefCnt();
     return cmap;
   }
-  return NULL;
+  return nullptr;
 }

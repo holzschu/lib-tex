@@ -105,11 +105,11 @@ inline static void *gmalloc(size_t size, bool checkoverflow) {
   void *p;
 
   if (size == 0) {
-    return NULL;
+    return nullptr;
   }
   if (!(p = malloc(size))) {
     fprintf(stderr, "Out of memory\n");
-    if (checkoverflow) return NULL;
+    if (checkoverflow) return nullptr;
     else exit(1);
   }
   return p;
@@ -153,7 +153,7 @@ inline static void *grealloc(void *p, size_t size, bool checkoverflow) {
     if (p) {
       free(p);
     }
-    return NULL;
+    return nullptr;
   }
   if (p) {
     q = realloc(p, size);
@@ -162,7 +162,7 @@ inline static void *grealloc(void *p, size_t size, bool checkoverflow) {
   }
   if (!q) {
     fprintf(stderr, "Out of memory\n");
-    if (checkoverflow) return NULL;
+    if (checkoverflow) return nullptr;
     else exit(1);
   }
   return q;
@@ -178,17 +178,15 @@ void *grealloc_checkoverflow(void *p, size_t size) {
 }
 
 inline static void *gmallocn(int nObjs, int objSize, bool checkoverflow) {
-  int n;
-
   if (nObjs == 0) {
-    return NULL;
+    return nullptr;
   }
-  n = nObjs * objSize;
   if (objSize <= 0 || nObjs < 0 || nObjs >= INT_MAX / objSize) {
     fprintf(stderr, "Bogus memory allocation size\n");
-    if (checkoverflow) return NULL;
+    if (checkoverflow) return nullptr;
     else exit(1);
   }
+  const int n = nObjs * objSize;
   return gmalloc(n, checkoverflow);
 }
 
@@ -204,7 +202,7 @@ inline static void *gmallocn3(int a, int b, int c, bool checkoverflow) {
   int n = a * b;
   if (b <= 0 || a < 0 || a >= INT_MAX / b) {
     fprintf(stderr, "Bogus memory allocation size\n");
-    if (checkoverflow) return NULL;
+    if (checkoverflow) return nullptr;
     else exit(1);
   }
   return gmallocn(n, c, checkoverflow);
@@ -219,24 +217,22 @@ void *gmallocn3_checkoverflow(int a, int b, int c) {
 }
 
 inline static void *greallocn(void *p, int nObjs, int objSize, bool checkoverflow) {
-  int n;
-
   if (nObjs == 0) {
     if (p) {
       gfree(p);
     }
-    return NULL;
+    return nullptr;
   }
-  n = nObjs * objSize;
   if (objSize <= 0 || nObjs < 0 || nObjs >= INT_MAX / objSize) {
     fprintf(stderr, "Bogus memory allocation size\n");
     if (checkoverflow) {
       gfree(p);
-      return NULL;
+      return nullptr;
     } else {
       exit(1);
     }
   }
+  const int n = nObjs * objSize;
   return grealloc(p, n, checkoverflow);
 }
 

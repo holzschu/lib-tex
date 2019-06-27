@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /*************************************************************************
  * Copyright (c) 1999-2016, International Business Machines
@@ -16,6 +16,8 @@
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_BREAK_ITERATION
+
+#include <memory>
 
 #include "intltest.h"
 #include "unicode/brkiter.h"
@@ -41,12 +43,6 @@ public:
 
     void runIndexedTest( int32_t index, UBool exec, const char* &name, char* par = NULL );
 
-    /**
-     * Tests rule status return values
-     **/
-    void TestStatusReturn();
-
-    void TestEmptyString();
     void TestGetAvailableLocales();
     void TestGetDisplayName();
     void TestEndBehaviour();
@@ -76,6 +72,16 @@ public:
     void TestBug9983();
     void TestBug7547();
     void TestBug12797();
+    void TestBug12918();
+    void TestBug12932();
+    void TestEmoji();
+    void TestBug12519();
+    void TestBug12677();
+    void TestTableRedundancies();
+    void TestBug13447();
+    void TestReverse();
+    void TestReverse(std::unique_ptr<RuleBasedBreakIterator>bi);
+    void TestBug13692();
 
     void TestDebug();
     void TestProperties();
@@ -85,40 +91,6 @@ private:
     /**
      * internal methods to prepare test data
      **/
-
-    /**
-     * Perform tests of BreakIterator forward and backward functionality
-     * on different kinds of iterators (word, sentence, line and character).
-     * It tests the methods first(), next(), current(), preceding(), following()
-     * previous() and isBoundary().
-     * It makes use of internal functions to achieve this.
-     **/
-    void generalIteratorTest(RuleBasedBreakIterator& bi, BITestData  &td);
-    /**
-     * Internal method to perform iteration and test the first() and next() functions
-     **/
-    void testFirstAndNext(RuleBasedBreakIterator& bi, BITestData &td);
-    /**
-     * Internal method to perform iteration and test the last() and previous() functions
-     **/
-    void testLastAndPrevious(RuleBasedBreakIterator& bi, BITestData &td);
-    /**
-     * Internal method to perform iteration and test the following() function
-     **/
-    void testFollowing(RuleBasedBreakIterator& bi, BITestData &td);
-    /**
-     * Internal method to perform iteration and test the preceding() function
-     **/
-    void testPreceding(RuleBasedBreakIterator& bi, BITestData &td);
-    /**
-     * Internal method to perform iteration and test the isBoundary() function
-     **/
-    void testIsBoundary(RuleBasedBreakIterator& bi, BITestData &td);
-    /**
-     * Internal method to perform tests of BreakIterator multiple selection functionality
-     * on different kinds of iterators (word, sentence, line and character)
-     **/
-    void doMultipleSelectionTest(RuleBasedBreakIterator& iterator, BITestData &td);
 
     void RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name, uint32_t  seed,
         int32_t loopCount, UBool useUText);

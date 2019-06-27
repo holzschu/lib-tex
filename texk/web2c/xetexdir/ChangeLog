@@ -1,3 +1,122 @@
+2019-01-03  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* NEWS, xetex_version.h, xetex.web: Sync with the upstream.
+	XeTeX version is 0.999991.
+
+2018-12-25  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* pdfimage.cpp: Simplify the support of Rotate.
+
+2018-12-24  Stefan Br\"uns  <stefan.bruens@rwth-aachen.de>
+
+	* pdfimage.cpp: Avoid modification of internal poppler object,
+	fix compilation with poppler 0.70.0 and newer ones.
+	Improve the change on 2018-10-22.
+
+2018-11-17  Joseph Wright  <joseph.wright@morningstar2.co.uk>
+
+	* xetex.web, xetex.defines: Support some primitives from
+	pdfTeX in XeTeX. Add \expanded and extend \Uchar a bit.
+
+2018-10-22  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* pdfimage.cpp: Support poppler 0.70.0.
+
+2018-09-09  Karl Berry  <karl@tug.org>
+
+	* xetex-bug73.test: LC_ALL=LANGUAGE=C.
+
+2018-05-11  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* XeTeX_pic.c: Allow non-ascii image names (W32 only).
+
+2018-03-24  Hironobu Yamashita <h.y.acetaminophen@gmail.com>
+            Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* xetex.ch: Recover the right \lastnodetype initialization
+	value ignored by tex.ch.
+
+2018-02-26  Jonathan Kew <jfkthame@gmail.com>
+
+	* xetex.web: Fix the code to skip discretionaries when looking
+	for a |native_word|.
+
+2018-02-04  Jonathan Kew <jfkthame@gmail.com>
+
+	* NEWS: Update for 0.99999.
+
+2018-02-03  Jonathan Kew <jfkthame@gmail.com>
+
+	* Bump version number to 0.99999, aiming for the TL'18 release.
+	Fix issues reported on https://sourceforge.net/p/xetex/bugs
+	* xetex.web, xetex.ch: Patch from Hironori Kitagawa to
+	integrate prim_eqtb into eqtb. Fixes issue where
+	\primitive\vrule\q incorrectly swallows the \q instead of
+	giving an error. Fixes #143.
+	* xetex.web: Patch from Hironobu Yamashita for \strcmp and
+	\mdfivesum errors. Fixes #144.
+	* xetex.web: Patch from Hironobu Yamashita for \uchyph with
+	native fonts. Fixes #145.
+	* XeTeX_ext.[ch]: Patch from Hironobu Yamashita to properly
+	close input pipes. Fixes 147.
+	* xetex.web: Leave text as UTF-16 in trick_buf for better
+	error context printing. (Mostly) fixes #146.
+	It's still possible that error context could include half of
+	a supplementary-plane character (i.e. an unpaired surrogate).
+	Should be a lot less likely, and less troublesome than broken
+	UTF-8, however.
+	* XeTeXFontMgr.cpp, XeTeXFontMgr.h: Convert optical size info
+	in OpenType 'size' feature from PostScript to TeX points.
+	Note that this will change behavior for existing documents
+	that use OpenType fonts from optically-sized families, and
+	depend on XeTeX choosing the appropriate face for a given
+	size: the boundaries at which face selection changes will be
+	slightly shifted (corrected) from how earlier versions behaved.
+	* xetex.web: Avoid prematurely merging following text with the
+	no-break text of a \discretionary. We don't want to combine
+	text after \discretionary{A}{B}{C} into the same node as the
+	(trailing node of the) no-break parameter {C}, because this
+	would result in following text being lost in the case where
+	the discretionary break is taken. When this happens, its
+	no-break text (recorded as a count of nodes) is supposed
+	to be skipped over, but if we've combined following characters
+	with the trailing node, they will also be (incorrectly)
+	skipped. Fixes #137.
+
+2018-01-17  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* am/xetex.am (OBJCXXFLAGS) [XETEX_MACOSX]: add -std=c++11.
+
+2017-12-22  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* image/jpegimage.c: If j_info->xdpi and j_info->ydpi are not
+	determined in some JPEG format, they are assumed to be 72.0
+	in order to avoid division by zero.
+
+2017-11-07  Jonathan Kew  <jfkthame@gmail.com>
+
+	* XeTeX_ext.c: Guard against out-of-range result from UTF-8
+	decoding, and return U+FFFD Replacement Character instead
+	to avoid a crash for invalid inputs (from A. Kakuto).
+
+2017-09-24  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* xetex.web: Avoid overwriting prim_* entries by primitive().
+
+2017-09-05  Karl Berry  <karl@tug.org>
+        and Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* xetexdir/XeTeX_ext.c (IS_SPC_OR_EOL): new macro.
+	(input_line): use it, instead of ISBLANK.
+	See also analogous change in lib/texmfmp.c.
+	Original bug report from Evan Aad,
+	http://tug.org/pipermail/tex-k/2017-August/002801.html
+
+2017-08-06  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* pdfimage.cpp: Support /Rotate in PDF image inclusion with
+	the new xdvipdfmx-20170806.
+
 2017-07-17  Jonathan Kew  <jfkthame@gmail.com>
 
 	* xetex.ch: Set a non-zero exit code if the pipe

@@ -13,7 +13,7 @@
 // All changes made under the Poppler project to this file are licensed
 // under GPL version 2 or later
 //
-// Copyright (C) 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2012, 2018 Albert Astals Cid <aacid@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -47,6 +47,9 @@ public:
 
   SecurityHandler(PDFDoc *docA);
   virtual ~SecurityHandler();
+
+  SecurityHandler(const SecurityHandler &) = delete;
+  SecurityHandler& operator=(const SecurityHandler &) = delete;
 
   // Returns true if the file is actually unencrypted.
   virtual GBool isUnencrypted() { return gFalse; }
@@ -107,21 +110,21 @@ class StandardSecurityHandler: public SecurityHandler {
 public:
 
   StandardSecurityHandler(PDFDoc *docA, Object *encryptDictA);
-  virtual ~StandardSecurityHandler();
+  ~StandardSecurityHandler();
 
-  virtual GBool isUnencrypted();
-  virtual void *makeAuthData(GooString *ownerPassword,
-			     GooString *userPassword);
-  virtual void *getAuthData();
-  virtual void freeAuthData(void *authData);
-  virtual GBool authorize(void *authData);
-  virtual int getPermissionFlags() { return permFlags; }
-  virtual GBool getOwnerPasswordOk() { return ownerPasswordOk; }
-  virtual Guchar *getFileKey() { return fileKey; }
-  virtual int getFileKeyLength() { return fileKeyLength; }
-  virtual int getEncVersion() { return encVersion; }
-  virtual int getEncRevision() { return encRevision; }
-  virtual CryptAlgorithm getEncAlgorithm() { return encAlgorithm; }
+  GBool isUnencrypted() override;
+  void *makeAuthData(GooString *ownerPassword,
+			     GooString *userPassword) override;
+  void *getAuthData() override;
+  void freeAuthData(void *authData) override;
+  GBool authorize(void *authData) override;
+  int getPermissionFlags() override { return permFlags; }
+  GBool getOwnerPasswordOk() override { return ownerPasswordOk; }
+  Guchar *getFileKey() override { return fileKey; }
+  int getFileKeyLength() override { return fileKeyLength; }
+  int getEncVersion() override { return encVersion; }
+  int getEncRevision() override { return encRevision; }
+  CryptAlgorithm getEncAlgorithm() override { return encAlgorithm; }
 
 private:
 

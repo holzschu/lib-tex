@@ -1,12 +1,14 @@
-#! /bin/sh
-#
-# Copyright (C) 2013 Peter Breitenlohner <tex-live@tug.org>
+#! /bin/sh -vx
+# $Id: ttf2afm.test 804 2018-05-17 22:29:15Z karl $
+# Copyright 2017-2018 Karl Berry <tex-live@tug.org>#
+# Copyright 2013 Peter Breitenlohner <tex-live@tug.org>
 # You may freely use, modify and/or distribute this file.
 
-TEXMFCNF=$srcdir/../kpathsea
-TEXINPUTS=$srcdir/pdftexdir/tests:$srcdir/tests
-TEXFONTS=$srcdir/pdftexdir/tests
-export TEXMFCNF TEXINPUTS TEXFONTS
+LC_ALL=C; export LC_ALL;  LANGUAGE=C; export LANGUAGE
+
+TEXMFCNF=$srcdir/../kpathsea; export TEXMFCNF
+TEXINPUTS=$srcdir/pdftexdir/tests:$srcdir/tests; export TEXINPUTS;
+TEXFONTS=$srcdir/pdftexdir/tests; export TEXFONTS
 
 testsrc=$srcdir/pdftexdir/tests
 

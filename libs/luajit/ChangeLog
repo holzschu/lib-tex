@@ -1,3 +1,18 @@
+2019-03-26  Karl Berry  <karl@freefriends.org>
+
+	* configure.ac (LIBLUAJIT_LDEXTRA): -lc++abi -lpthread for
+	openbsd:*:clang, from Luigi.
+
+2018-09-09  Karl Berry  <karl@tug.org>
+
+	* lutjiterr.test: LC_ALL=LANGUAGE=C.
+
+2017-20-06 Luigi Scarso <luigi.scarso@gmail.com>
+
+	Import LuaJIT-2.1.0-beta3.
+	* version.ac: Adjust.
+
+
 2016-03-09 Luigi Scarso <luigi.scarso@gmail.com>
 
 	Import LuaJIT-2.1.0-beta2.
@@ -96,4 +111,3 @@
 
 	Import LuaJIT-2.0.2/ from
 	  http://luajit.org/download/LuaJIT-2.0.2.tar.gz.
-

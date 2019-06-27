@@ -1,6 +1,7 @@
 ## texk/web2c/pdftexdir/am/pdftex.am: Makefile fragment for pdfTeX.
 ##
-## Copyright (C) 2009-2015 Peter Breitenlohner <tex-live@tug.org>
+## Copyright 2016-2018 Karl Berry <tex-live@tug.org>
+## Copyright 2009-2015 Peter Breitenlohner <tex-live@tug.org>
 ## You may freely use, modify and/or distribute this file.
 
 pdftex_cppflags = $(AM_CPPFLAGS) $(ZLIB_INCLUDES) $(LIBPNG_INCLUDES) $(XPDF_INCLUDES)
@@ -72,6 +73,13 @@ pdftex_ch_srcs = \
 	$(pdftex_ch_synctex) \
 	pdftexdir/pdftex.ch \
 	tex-binpool.ch
+
+# Convenience target for making the typeset output; not invoked automatically
+pdftex.pdf: pdftex.tex
+	env MKTEXFMT=0 pdftex '\nonstopmode\input pdftex.tex'
+pdftex.tex: $(srcdir)/pdftexdir/pdftex.web
+	weave $(srcdir)/pdftexdir/pdftex.web
+	
 ##
 EXTRA_DIST += $(pdftex_ch_srcs) pdftexdir/pdftex.defines
 
@@ -84,10 +92,13 @@ EXTRA_DIST += \
 	pdftexdir/README \
 	pdftexdir/change-files.txt
 
-# pdfTeX Tests
+# pdfTeX tests
 #
-pdftex_tests = pdftexdir/wprob.test pdftexdir/pdftex.test pdftexdir/pdfimage.test
-pdftexdir/wprob.log pdftexdir/pdftex.log pdftexdir/pdfimage.log: pdftex$(EXEEXT)
+pdftex_tests = pdftexdir/wprob.test pdftexdir/pdftex.test \
+  pdftexdir/pdfimage.test pdftexdir/expanded.test
+
+pdftexdir/wprob.log pdftexdir/pdftex.log \
+  pdftexdir/pdfimage.log pdftexdir/expanded.log: pdftex$(EXEEXT)
 
 EXTRA_DIST += $(pdftex_tests)
 
@@ -104,3 +115,6 @@ EXTRA_DIST += pdftexdir/tests/pdfimage.tex \
 	tests/1-4.jpg tests/B.pdf tests/basic.tex tests/lily-ledger-broken.png
 DISTCLEANFILES += pdfimage.fmt pdfimage.log pdfimage.pdf
 
+## expanded.test
+EXTRA_DIST += tests/expanded.tex
+DISTCLEANFILES += expanded.log

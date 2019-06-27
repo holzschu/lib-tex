@@ -9,13 +9,13 @@ char kanjioption[16];
 @x
 @d TEX     "tex"
 @y
-@d TEX "e" P_UP "tex"
+@d TEX "e"@= @>P_UP@= @>"tex"
 @z
 
 @x
 #define MPXCOMMAND "makempx"
 @y
-#define MPXCOMMAND P_UP "makempx"
+#define MPXCOMMAND P_UP@= @>"makempx"
 @z
 
 @x
@@ -78,13 +78,13 @@ char kanjioption[16];
 @x
         const char *banner = "% Written by metapost version ";
 @y
-        const char *banner = "% Written by " P_UP "mpost version ";
+        const char *banner = "% Written by "@= @>P_UP@= @>"mpost version ";
 @z
 
 @x
       const char *banner = "% Written by dvitomp version ";
 @y
-      const char *banner = "% Written by " P_UP "dvitomp version ";
+      const char *banner = "% Written by "@= @>P_UP@= @>"dvitomp version ";
 @z
 
 @x
@@ -98,9 +98,14 @@ char kanjioption[16];
     } else if (ARGUMENT_IS ("interaction")) {
 @y
     } else if (ARGUMENT_IS ("kanji")) {
-      strcpy(kanjioption, optarg);
-      if(!set_enc_string(optarg, optarg)) {
-        fprintf(stderr,"Ignoring unknown argument `%s' to --kanji", optarg);
+      if (optarg) {
+        if (strlen(optarg) > 15) {
+          optarg[15] = '\0';
+        }
+        strcpy(kanjioption, optarg);
+        if (!set_enc_string(optarg, NULL)) {
+          fprintf(stderr,"Ignoring unknown argument `%s' to --kanji\n", optarg);
+        }
       }
 
     } else if (ARGUMENT_IS ("interaction")) {
@@ -120,9 +125,14 @@ char kanjioption[16];
     } else if (option_is ("progname")) {
       user_progname = optarg;
     } else if (option_is ("kanji")) {
-      strcpy (kanjioption, optarg);
-      if(!set_enc_string(optarg, optarg)) {
-        fprintf(stderr,"Ignoring unknown argument `%s' to --kanji", optarg);
+      if (optarg) {
+        if (strlen(optarg) > 15) {
+          optarg[15] = '\0';
+        }
+        strcpy (kanjioption, optarg);
+        if (!set_enc_string(optarg, NULL)) {
+          fprintf(stderr,"Ignoring unknown argument `%s' to --kanji\n", optarg);
+        }
       }
 @z
 
@@ -131,9 +141,9 @@ char kanjioption[16];
 else
   fprintf(stdout, "This is MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 @y
-  fprintf(stdout, "This is " P_UP "dvitomp %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
+  fprintf(stdout, "This is "@= @>P_UP@= @>"dvitomp %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 else
-  fprintf(stdout, "This is " P_UP "MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
+  fprintf(stdout, "This is "@= @>P_UP@= @>"MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 @z
 
 @x
@@ -149,17 +159,17 @@ else
 fprintf(stdout,
 "  -ini                      be inimpost, for dumping mem files\n"
 @y
-"Usage: " P_UP "mpost [OPTION] [&MEMNAME] [MPNAME[.mp]] [COMMANDS]\n"
-"       " P_UP "mpost --dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
+"Usage: "@= @>P_UP@= @>"mpost [OPTION] [&MEMNAME] [MPNAME[.mp]] [COMMANDS]\n"
+"       "@= @>P_UP@= @>"mpost --dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
 "\n"
-"  Run " P_UP "MetaPost on MPNAME, usually creating MPNAME.NNN (and perhaps\n"
+"  Run "@= @>P_UP@= @>"MetaPost on MPNAME, usually creating MPNAME.NNN (and perhaps\n"
 "  MPNAME.tfm), where NNN are the character numbers generated.\n"
-"  Any remaining COMMANDS are processed as " P_UP "MetaPost input,\n"
+"  Any remaining COMMANDS are processed as "@= @>P_UP@= @>"MetaPost input,\n"
 "  after MPNAME is read.\n\n"
-"  With a --dvitomp argument, " P_UP "MetaPost acts as DVI-to-MPX converter only.\n"
-"  Call " P_UP "MetaPost with --dvitomp --help for option explanations.\n\n");
+"  With a --dvitomp argument, "@= @>P_UP@= @>"MetaPost acts as DVI-to-MPX converter only.\n"
+"  Call "@= @>P_UP@= @>"MetaPost with --dvitomp --help for option explanations.\n\n");
 fprintf(stdout,
-"  -ini                      be ini" P_UP "mpost, for dumping mem files\n"
+"  -ini                      be ini"@= @>P_UP@= @>"mpost, for dumping mem files\n"
 @z
 
 @x
@@ -182,17 +192,17 @@ fprintf(stdout,
 else
   fprintf(stdout, "This is MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 @y
-  fprintf(stdout, "This is " P_UP "dvitomp %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
+  fprintf(stdout, "This is "@= @>P_UP@= @>"dvitomp %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 else
-  fprintf(stdout, "This is " P_UP "MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
+  fprintf(stdout, "This is "@= @>P_UP@= @>"MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 @z
 
 @x
 "Usage: dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
 "       mpost --dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
 @y
-"Usage: " P_UP "dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
-"       " P_UP "mpost --dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
+"Usage: "@= @>P_UP@= @>"dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
+"       "@= @>P_UP@= @>"mpost --dvitomp DVINAME[.dvi] [MPXNAME[.mpx]]\n"
 @z
 
 @x
@@ -211,9 +221,9 @@ else
 else
   fprintf(stdout, "MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 @y
-  fprintf(stdout, P_UP "dvitomp (" P_UP "MetaPost) %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
+  fprintf(stdout, P_UP@= @>"dvitomp ("@= @>P_UP@= @>"MetaPost) %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 else
-  fprintf(stdout, P_UP "MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
+  fprintf(stdout, P_UP@= @>"MetaPost %s" WEB2CVERSION " (%s)\n", s, kpathsea_version_string);
 @z
 
 @x
@@ -230,12 +240,14 @@ else
 @x
   const char * banner = "This is MetaPost, version ";
 @y
-  const char * banner = "This is " P_UP "MetaPost, version ";
+  const char * banner = "This is "@= @>P_UP@= @>"MetaPost, version ";
 @z
 
 @x
+@<Declarations@>=
 #define DLLPROC dllmpostmain
 @y
+@<Declarations@>=
 #ifdef UPMP
 #define DLLPROC dllupmpostmain
 #else
@@ -246,18 +258,24 @@ else
 @x
     if (FILESTRCASEEQ(base, "rmpost")){
 @y
-    if (FILESTRCASEEQ(base, "r" P_UP "mpost")){
+    if (FILESTRCASEEQ(base, "r"@= @>P_UP@= @>"mpost")){
+@z
+
+@x
+    } else if (FILESTRCASEEQ(base, "r-mpost")){
+@y
+    } else if (FILESTRCASEEQ(base, "r-"@= @>P_UP@= @>"mpost")){
 @z
 
 @x
     if (FILESTRCASEEQ(base, "dvitomp"))
 @y
-    if (FILESTRCASEEQ(base, P_UP "dvitomp"))
+    if (FILESTRCASEEQ(base, P_UP@= @>"dvitomp"))
 @z
 
 @x
   if (dvitomp_only) {
-    @<Read and set dvitomp command line options@>;
+    @<Read and set \.{dvitomp} command line options@>;
   } else {
 @y
   kanjioption[0] = '\0';
@@ -267,25 +285,31 @@ else
 #else
   enable_UPTEX (false);
 #if defined(WIN32)
-  set_enc_string("sjis", "sjis");
+  set_enc_string("utf8", "sjis");
 #else
   set_enc_string("utf8", "euc");
 #endif
 #endif
 
   if (dvitomp_only) {
-    @<Read and set dvitomp command line options@>;
+    @<Read and set \.{dvitomp} command line options@>;
   } else {
 @z
 
 @x
     if (FILESTRCASEEQ(kpse_program_name, "rmpost"))
 @y
-    if (FILESTRCASEEQ(kpse_program_name, "r" P_UP "mpost"))
+    if (FILESTRCASEEQ(kpse_program_name, "r"@= @>P_UP@= @>"mpost"))
+@z
+
+@x
+    else if (FILESTRCASEEQ(kpse_program_name, "r-mpost"))
+@y
+    else if (FILESTRCASEEQ(kpse_program_name, "r-"@= @>P_UP@= @>"mpost"))
 @z
 
 @x
   if(putenv(xstrdup("engine=metapost")))
 @y
-  if(putenv(xstrdup("engine=" P_UP "mpost")))
+  if(putenv(xstrdup("engine="@= @>P_UP@= @>"mpost")))
 @z

@@ -1,3 +1,46 @@
+2018-10-25  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* synctex.c: Cleanup for non-ascii file names (w32 only).
+
+2018-07-27  Karl Berry  <karl@freefriends.org>
+
+	* synctex_parser_api_level.txt: new file (contents "2.0.0").
+	* ac/synctex.ac: use it instead of synctex_parser_version.txt.
+	Per Debian.
+	https://github.com/jlaurens/synctex/issues/23
+	https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=895980
+
+2018-07-15  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* synctex.c: Fix a bug that Magnification is not correctly
+	recorded. Report by Karel Horak:
+	https://tug.org/pipermail/tex-live/2018-July/042063.html
+
+2018-06-13  Karl Berry  <karl@tug.org>
+
+	* man1/synctex.1: man page list syntax.
+	Report/patch from esr, 12 Jun 2018 15:16:13.
+
+2018-06-10  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* synctex.c: Allow non-ascii file names for pdfTeX
+	with UTF-8 source files (w32 only).
+
+2018-05-29  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* synctex.c: Discard the changes on 2018-05-11, since
+	'command_line_encoding=utf-8' is not so natural for
+	pdfTeX (w32 only).
+
+2018-05-11  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* synctex.c: Allow non-ascii file names also for pdfTeX
+	(w32 only).
+
+2018-01-18  Karl Berry  <karl@freefriends.org>
+
+	* man5/synctex.5: spacing, typos, per Debian.
+
 2017-07-18  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
 
 	* synctex_parser_utils.c: mingw32 also may not have syslog.h.

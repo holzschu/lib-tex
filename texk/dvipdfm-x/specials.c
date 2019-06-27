@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2002-2016 by Jin-Hwan Cho and Shunsaku Hirata,
+    Copyright (C) 2002-2019 by Jin-Hwan Cho and Shunsaku Hirata,
     the dvipdfmx project team.
     
     Copyright (C) 1998, 1999 by Mark A. Wicks <mwicks@kettering.edu>
@@ -30,6 +30,7 @@
 #include "mem.h"
 #include "error.h"
 #include "numbers.h"
+#include "dpxconf.h"
 
 #include "dvi.h"
 
@@ -52,23 +53,16 @@
 
 #include "specials.h"
 
-static int verbose = 0;
-void
-spc_set_verbose (void)
-{
-  verbose++;
-}
-
-
+#define THEBUFFLENGTH 1024
 void
 spc_warn (struct spc_env *spe, const char *fmt, ...)
 {
   va_list  ap;
-  static char buf[1024];
+  static char buf[THEBUFFLENGTH];
 
   va_start(ap, fmt);
 
-  vsprintf(buf, fmt, ap);
+  vsnprintf(buf, THEBUFFLENGTH, fmt, ap);
   WARN(buf);
 
   va_end(ap);
@@ -371,7 +365,7 @@ static struct {
    spc_pdfm_at_begin_document,
    spc_pdfm_at_end_document,
    NULL,
-   NULL,
+   spc_pdfm_at_end_page,
    spc_pdfm_check_special,
    spc_pdfm_setup_handler
   },
@@ -571,7 +565,8 @@ spc_exec_special (const char *buffer, int32_t size,
   struct spc_arg     args;
   struct spc_handler special;
 
-  if (verbose > 3) {
+  if (dpx_conf.verbose_level > 3) {
+    MESG("Executing special command: ");
     dump(buffer, buffer + size);
   }
 
@@ -595,4 +590,3 @@ spc_exec_special (const char *buffer, int32_t size,
 
   return error;
 }
-

@@ -1,7 +1,7 @@
 /* expand.c: general expansion.
 
    Copyright 1993, 1994, 1995, 1996, 1997, 2005, 2008, 2009, 2011,
-             2012, 2016 Karl Berry.
+             2012, 2016, 2017 Karl Berry.
    Copyright 1997-2005 Olaf Weber.
 
    This library is free software; you can redistribute it and/or
@@ -160,7 +160,6 @@ kpathsea_brace_expand (kpathsea kpse, const_string path)
   string kpse_dot_expansion;
   string elt;
   unsigned len;
-
   /* Must do variable expansion first because if we have
        foo = .:~
        TEXINPUTS = $foo
@@ -336,6 +335,8 @@ brace_expand (kpathsea kpse, const_string *text)
             /* Check for missing closing brace. */
             if (*p != '}') {
                 WARNING1 ("kpathsea: %s: Unmatched {", *text);
+                --p; /* undo ++p above for the next iteration,
+                        to avoid potential buffer overrun */
             }
             *text = p+1;
         } else if (*p == '$') {
@@ -374,30 +375,36 @@ report_error (format, arg1, arg2)
   fprintf (stderr, "\n");
 }
 
+int
 main (int argc, char **argv)
 {
   char example[256];
-  kpse_set_program_name(argv[0], NULL);
+  char *result;
 
+  kpse_set_program_name(argv[0], NULL);
+  result = kpse_brace_expand ("a{\0exebad");
+  printf ("%s\n", result);
+
+#if 0 /* if you want an interactive loop */
   for (;;)
     {
-      char *result;
       int i;
 
       fprintf (stderr, "brace_expand> ");
 
-      if ((!fgets (example, 256, stdin)) ||
-          (strncmp (example, "quit", 4) == 0))
+      if ((!fgets (example, 256, stdin))
+          || strncmp (example, "quit", 4) == 0)
         break;
 
       if (strlen (example))
         example[strlen (example) - 1] = 0;
 
       result = kpse_brace_expand (example);
-
-        printf ("%s\n", result);
-
+      printf ("%s\n", result);
     }
+#endif
+  return 0;
+
 }
 
 
@@ -405,6 +412,6 @@ main (int argc, char **argv)
 
 /*
 Local variables:
-standalone-compile-command: "gcc -g -I. -I.. -DTEST expand.c kpathsea.a"
+standalone-compile-command: "gcc -g -DMAKE_KPSE_DLL -I. -I.. -I$kp -I$kp/.. -DTEST $kp/expand.c .libs/libkpathsea.a"
 end:
 */

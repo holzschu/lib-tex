@@ -17,10 +17,11 @@
 //
 // Copyright (C) 2009 Kovid Goyal <kovid@kovidgoyal.net>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
-// Copyright (C) 2013 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2013, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2013 Adam Reichold <adamreichold@myopera.com>
 // Copyright (C) 2014 Bogdan Cristea <cristeab@gmail.com>
 // Copyright (C) 2014 Peter Breitenlohner <peb@mppmu.mpg.de>
+// Copyright (C) 2017 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -29,6 +30,8 @@
 
 #ifndef GMUTEX_H
 #define GMUTEX_H
+
+#ifdef MULTITHREADED
 
 // Usage:
 //
@@ -78,8 +81,13 @@ public:
   MutexLocker(GooMutex *mutexA) : mutex(mutexA) { gLockMutex(mutex); }
   ~MutexLocker() { gUnlockMutex(mutex); }
 
+  MutexLocker(const MutexLocker &) = delete;
+  MutexLocker& operator=(const MutexLocker &other) = delete;
+
 private:
   GooMutex *mutex;
 };
 
-#endif
+#endif // MULTITHREADED
+
+#endif // GMUTEX_H

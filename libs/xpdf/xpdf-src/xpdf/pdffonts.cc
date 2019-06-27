@@ -13,9 +13,10 @@
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+#include "gmem.h"
+#include "gmempp.h"
 #include "parseargs.h"
 #include "GString.h"
-#include "gmem.h"
 #include "GlobalParams.h"
 #include "Error.h"
 #include "Object.h"
@@ -94,7 +95,7 @@ static int seenObjsSize;
 
 int main(int argc, char *argv[]) {
   PDFDoc *doc;
-  GString *fileName;
+  char *fileName;
   GString *ownerPW, *userPW;
   GBool ok;
   Page *page;
@@ -107,10 +108,8 @@ int main(int argc, char *argv[]) {
 
   exitCode = 99;
 
-#ifdef _MSC_VER
-  (void)kpse_set_program_name(argv[0], NULL);
-#endif
   // parse args
+  fixCommandLine(&argc, &argv);
   ok = parseArgs(argDesc, &argc, argv);
   if (!ok || argc != 2 || printVersion || printHelp) {
     fprintf(stderr, "pdffonts version %s\n", xpdfVersion);
@@ -120,7 +119,7 @@ int main(int argc, char *argv[]) {
     }
     goto err0;
   }
-  fileName = new GString(argv[1]);
+  fileName = argv[1];
 
   // read config file
   globalParams = new GlobalParams(cfgFileName);
@@ -159,11 +158,11 @@ int main(int argc, char *argv[]) {
 
   // scan the fonts
   if (showFontLoc || showFontLocPS) {
-    printf("name                                 type              emb sub uni object ID location\n");
-    printf("------------------------------------ ----------------- --- --- --- --------- --------\n");
+    printf("name                                 type              emb sub uni prob object ID location\n");
+    printf("------------------------------------ ----------------- --- --- --- ---- --------- --------\n");
   } else {
-    printf("name                                 type              emb sub uni object ID\n");
-    printf("------------------------------------ ----------------- --- --- --- ---------\n");
+    printf("name                                 type              emb sub uni prob object ID\n");
+    printf("------------------------------------ ----------------- --- --- --- ---- ---------\n");
   }
   fonts = NULL;
   fontsLen = fontsSize = 0;
@@ -380,12 +379,13 @@ static void scanFont(GfxFont *font, PDFDoc *doc) {
   }
 
   // print the font info
-  printf("%-36s %-17s %-3s %-3s %-3s",
+  printf("%-36s %-17s %-3s %-3s %-3s %-4s",
 	 name ? name->getCString() : "[none]",
 	 fontTypeNames[font->getType()],
 	 emb ? "yes" : "no",
 	 subset ? "yes" : "no",
-	 hasToUnicode ? "yes" : "no");
+	 hasToUnicode ? "yes" : "no",
+	 font->problematicForUnicode() ? " X" : "");
   if (fontRef.gen >= 100000) {
     printf(" [none]");
   } else {

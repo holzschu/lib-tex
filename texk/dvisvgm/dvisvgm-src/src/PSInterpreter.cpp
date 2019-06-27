@@ -2,7 +2,7 @@
 ** PSInterpreter.cpp                                                    **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -18,10 +18,11 @@
 ** along with this program; if not, see <http://www.gnu.org/licenses/>. **
 *************************************************************************/
 
-#include <config.h>
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 #include "FileFinder.hpp"
 #include "InputReader.hpp"
 #include "Message.hpp"
@@ -32,29 +33,27 @@
 using namespace std;
 
 
-const char *PSInterpreter::GSARGS[] = {
-	"gs",                // dummy name
-	"-q",                // be quiet, suppress gs banner
-	"-dSAFER",           // disallow writing of files
-	"-dNODISPLAY",       // we don't need a display device
-	"-dNOPAUSE",         // keep going
-	"-dWRITESYSTEMDICT", // leave systemdict writable as some operators must be replaced
-	"-dNOPROMPT",
-//	"-dNOBIND",
-};
-
-
 /** Constructs a new PSInterpreter object.
  *  @param[in] actions template methods to be executed after recognizing the corresponding PS operator. */
 PSInterpreter::PSInterpreter (PSActions *actions)
-	: _mode(PS_NONE), _actions(actions), _filter(0), _bytesToRead(0), _inError(false), _initialized(false)
+	: _mode(PS_NONE), _actions(actions)
 {
 }
 
 
 void PSInterpreter::init () {
 	if (!_initialized) {
-		_gs.init(sizeof(GSARGS)/sizeof(char*), GSARGS, this);
+		vector<const char*> gsargs {
+			"gs",                // dummy name
+			"-q",                // be quiet, suppress gs banner
+			"-dNODISPLAY",       // we don't need a display device
+			"-dNOPAUSE",         // keep going
+			"-dWRITESYSTEMDICT", // leave systemdict writable as some operators must be replaced
+			"-dNOPROMPT"
+		};
+		if (int gsrev = _gs.revision())
+			gsargs.emplace_back(gsrev == 922 ? "-dREALLYDELAYBIND" : "-dDELAYBIND");
+		_gs.init(gsargs.size(), gsargs.data(), this);
 		_gs.set_stdio(input, output, error);
 		_initialized = true;
 		// Before executing any random PS code redefine some operators and run
@@ -239,108 +238,93 @@ int GSDLLCALL PSInterpreter::output (void *inst, const char *buf, int len) {
 }
 
 
-/** Converts a vector of strings to a vector of doubles.
- * @param[in] str the strings to be converted
- * @param[out] d the resulting doubles */
-static void str2double (const vector<string> &str, vector<double> &d) {
-	for (size_t i=0; i < str.size(); i++) {
-		istringstream iss(str[i]);
-		iss >> d[i];
-	}
-}
-
-
 /** Evaluates a command emitted by Ghostscript and invokes the corresponding
  *  method of interface class PSActions.
  *  @param[in] in reader pointing to the next command */
 void PSInterpreter::callActions (InputReader &in) {
-	// array of currently supported operators (must be ascendingly sorted)
-	static const struct Operator {
-		const char *name; // name of operator
+	struct Operator {
 		int pcount;       // number of parameters (< 0 : variable number of parameters)
-		void (PSActions::*op)(vector<double> &p);  // operation handler
-	} operators [] = {
-		{"applyscalevals",  3, &PSActions::applyscalevals},
-		{"clip",            0, &PSActions::clip},
-		{"clippath",        0, &PSActions::clippath},
-		{"closepath",       0, &PSActions::closepath},
-		{"curveto",         6, &PSActions::curveto},
-		{"eoclip",          0, &PSActions::eoclip},
-		{"eofill",          0, &PSActions::eofill},
-		{"fill",            0, &PSActions::fill},
-		{"grestore",        0, &PSActions::grestore},
-		{"grestoreall",     0, &PSActions::grestoreall},
-		{"gsave",           0, &PSActions::gsave},
-		{"initclip",        0, &PSActions::initclip},
-		{"lineto",          2, &PSActions::lineto},
-		{"makepattern",    -1, &PSActions::makepattern},
-		{"moveto",          2, &PSActions::moveto},
-		{"newpath",         1, &PSActions::newpath},
-		{"querypos",        2, &PSActions::querypos},
-		{"raw",            -1, 0},
-		{"restore",         1, &PSActions::restore},
-		{"rotate",          1, &PSActions::rotate},
-		{"save",            1, &PSActions::save},
-		{"scale",           2, &PSActions::scale},
-		{"setcmykcolor",    4, &PSActions::setcmykcolor},
-		{"setdash",        -1, &PSActions::setdash},
-		{"setgray",         1, &PSActions::setgray},
-		{"sethsbcolor",     3, &PSActions::sethsbcolor},
-		{"setlinecap",      1, &PSActions::setlinecap},
-		{"setlinejoin",     1, &PSActions::setlinejoin},
-		{"setlinewidth",    1, &PSActions::setlinewidth},
-		{"setmatrix",       6, &PSActions::setmatrix},
-		{"setmiterlimit",   1, &PSActions::setmiterlimit},
-		{"setopacityalpha", 1, &PSActions::setopacityalpha},
-		{"setpattern",     -1, &PSActions::setpattern},
-		{"setrgbcolor",     3, &PSActions::setrgbcolor},
-		{"shfill",         -1, &PSActions::shfill},
-		{"stroke",          0, &PSActions::stroke},
-		{"translate",       2, &PSActions::translate},
+		void (PSActions::*handler)(vector<double> &p);  // operation handler
+	};
+	static const unordered_map<string, Operator> operators {
+		{"applyscalevals", { 3, &PSActions::applyscalevals}},
+		{"clip",           { 0, &PSActions::clip}},
+		{"clippath",       { 0, &PSActions::clippath}},
+		{"closepath",      { 0, &PSActions::closepath}},
+		{"curveto",        { 6, &PSActions::curveto}},
+		{"eoclip",         { 0, &PSActions::eoclip}},
+		{"eofill",         { 0, &PSActions::eofill}},
+		{"fill",           { 0, &PSActions::fill}},
+		{"grestore",       { 0, &PSActions::grestore}},
+		{"grestoreall",    { 0, &PSActions::grestoreall}},
+		{"gsave",          { 0, &PSActions::gsave}},
+		{"initclip",       { 0, &PSActions::initclip}},
+		{"lineto",         { 2, &PSActions::lineto}},
+		{"makepattern",    {-1, &PSActions::makepattern}},
+		{"moveto",         { 2, &PSActions::moveto}},
+		{"newpath",        { 1, &PSActions::newpath}},
+		{"querypos",       { 2, &PSActions::querypos}},
+		{"raw",            {-1, nullptr}},
+		{"restore",        { 1, &PSActions::restore}},
+		{"rotate",         { 1, &PSActions::rotate}},
+		{"save",           { 1, &PSActions::save}},
+		{"scale",          { 2, &PSActions::scale}},
+		{"setblendmode",   { 1, &PSActions::setblendmode}},
+		{"setcmykcolor",   { 4, &PSActions::setcmykcolor}},
+		{"setdash",        {-1, &PSActions::setdash}},
+		{"setgray",        { 1, &PSActions::setgray}},
+		{"sethsbcolor",    { 3, &PSActions::sethsbcolor}},
+		{"setlinecap",     { 1, &PSActions::setlinecap}},
+		{"setlinejoin",    { 1, &PSActions::setlinejoin}},
+		{"setlinewidth",   { 1, &PSActions::setlinewidth}},
+		{"setmatrix",      { 6, &PSActions::setmatrix}},
+		{"setmiterlimit",  { 1, &PSActions::setmiterlimit}},
+		{"setopacityalpha",{ 1, &PSActions::setopacityalpha}},
+		{"setshapealpha",  { 1, &PSActions::setshapealpha}},
+		{"setpagedevice",  { 0, &PSActions::setpagedevice}},
+		{"setpattern",     {-1, &PSActions::setpattern}},
+		{"setrgbcolor",    { 3, &PSActions::setrgbcolor}},
+		{"shfill",         {-1, &PSActions::shfill}},
+		{"stroke",         { 0, &PSActions::stroke}},
+		{"translate",      { 2, &PSActions::translate}},
 	};
 	if (_actions) {
 		in.skipSpace();
-		// binary search
-		int first=0, last=sizeof(operators)/sizeof(Operator)-1;
-		while (first <= last) {
-			int mid = first+(last-first)/2;
-			int cmp = in.compare(operators[mid].name);
-			if (cmp < 0)
-				last = mid-1;
-			else if (cmp > 0)
-				first = mid+1;
-			else {
-				if (!operators[mid].op) {  // raw string data received
-					_rawData.clear();
+		auto it = operators.find(in.getWord());
+		if (it != operators.end()) {
+			if (!it->second.handler) { // raw string data received?
+				_rawData.clear();
+				in.skipSpace();
+				while (!in.eof()) {
+					_rawData.emplace_back(in.getString());
 					in.skipSpace();
-					while (!in.eof()) {
-						_rawData.emplace_back(in.getString());
+				}
+			}
+			else {
+				// collect parameters
+				vector<string> params;
+				int pcount = it->second.pcount;
+				if (pcount < 0) {       // variable number of parameters?
+					in.skipSpace();
+					while (!in.eof()) {  // read all available parameters
+						params.emplace_back(in.getString());
 						in.skipSpace();
 					}
 				}
-				else {
-					// collect parameters and call handler
-					vector<string> params;
-					int pcount = operators[mid].pcount;
-					if (pcount < 0) {       // variable number of parameters?
+				else {   // fix number of parameters
+					for (int i=0; i < pcount; i++) {
 						in.skipSpace();
-						while (!in.eof()) {  // read all available parameters
-							params.emplace_back(in.getString());
-							in.skipSpace();
-						}
+						params.emplace_back(in.getString());
 					}
-					else {   // fix number of parameters
-						for (int i=0; i < pcount; i++) {
-							in.skipSpace();
-							params.emplace_back(in.getString());
-						}
-					}
-					vector<double> v(params.size());
-					str2double(params, v);
-					(_actions->*operators[mid].op)(v);
-					_actions->executed();
 				}
-				break;
+				// convert parameter strings to doubles
+				vector<double> v(params.size());
+				transform(params.begin(), params.end(), v.begin(), [](const string &str) {
+					return stod(str);
+				});
+				// call operator handler
+				(_actions->*it->second.handler)(v);
+				_actions->executed();
 			}
 		}
 	}
@@ -356,3 +340,32 @@ int GSDLLCALL PSInterpreter::error (void *inst, const char *buf, int len) {
 	return len;
 }
 
+
+/** Returns the total number of pages of a PDF file.
+ *  @param[in] fname name/path of the PDF file */
+int PSInterpreter::pdfPageCount (const string &fname) {
+	executeRaw("\n("+fname+")@pdfpagecount ", 1);
+	if (!_rawData.empty()) {
+		size_t index;
+		int ret = stoi(_rawData[0], &index, 10);
+		if (index > 0)
+			return ret;
+	}
+	return 0;
+}
+
+
+/** Returns the bounding box of a PDF page. If the selected page doesn't exist,
+ *  the "invalid" flag of the returned bounding box is set.
+ *  @param[in] fname name/path of the PDF file
+ *  @param[in] pageno page number
+ *  @return the bounding box of the given page */
+BoundingBox PSInterpreter::pdfPageBox (const string &fname, int pageno) {
+	BoundingBox pagebox;
+	executeRaw("\n"+to_string(pageno)+"("+fname+")@pdfpagebox ", 4);
+	if (_rawData.size() < 4)
+		pagebox.invalidate();
+	else
+		pagebox = BoundingBox(stod(_rawData[0]), stod(_rawData[1]), stod(_rawData[2]), stod(_rawData[3]));
+	return pagebox;
+}

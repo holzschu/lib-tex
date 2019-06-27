@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 
 /********************************************************************
@@ -20,6 +20,7 @@
 #if !UCONFIG_NO_TRANSLITERATION
 
 #include "unicode/translit.h"
+#include "cpdtrans.h"
 #include "intltest.h"
 
 /**

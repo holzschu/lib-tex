@@ -1,3 +1,20 @@
+2019-02-14  Karl Berry  <karl@tug.org>
+
+	* Makefile.am (icubuild): cp icudt.a to icudata.a
+	and libicuin.a libicui18n.a, for mingw cross compile, per Luigi.
+
+2019-02-10  Karl Berry  <karl@tug.org>
+
+	* Makefile.am (LDADD) [cross]: icu-native/lib/icudt.a per Luigi.
+
+2019-01-08  Karl Berry  <karl@freefriends.org>
+
+	* Import icu-63.1.
+
+2018-01-12  Karl Berry  <karl@freefriends.org>
+
+	* Import icu-60, now requiring C++11; reautoconf.
+
 2017-04-27  Karl Berry  <karl@tug.org>
 
 	* Makefile.am (LDADD): link icutest with ICU_LIBS_EXTRA.

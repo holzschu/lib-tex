@@ -1,6 +1,6 @@
 /* tex-make.c: run external programs to make TeX-related files.
 
-   Copyright 1993, 1994, 1995, 1996, 1997, 2008-2013 Karl Berry.
+   Copyright 1993, 1994, 1995, 1996, 1997, 2008-2013, 2018 Karl Berry.
    Copyright 1997, 1998, 2001-05 Olaf Weber.
 
    This library is free software; you can redistribute it and/or
@@ -324,20 +324,32 @@ maketex (kpathsea kpse, kpse_file_format_type format, string* args)
       /* stdin -- the child will not receive input from this */
       if (childin != 0) {
         close(0);
-        dup(childin);
+        if (dup(childin) != 0) {
+          perror("kpathsea: dup(2) failed for stdin");
+          close(childin);
+          _exit(1);
+        }
         close(childin);
       }
       /* stdout -- the output of the child's action */
       if (childout[1] != 1) {
         close(1);
-        dup(childout[1]);
+        if (dup(childout[1]) != 1) {
+          perror("kpathsea: dup(2) failed for stdout");
+          close(childout[1]);
+          _exit(1);
+        }
         close(childout[1]);
       }
       /* stderr -- use /dev/null if we discard errors */
       if (childerr != 2) {
         if (kpse->make_tex_discard_errors) {
           close(2);
-          dup(childerr);
+          if (dup(childerr) != 2) {
+            perror("kpathsea: dup(2) failed for stderr");
+            close(childerr);
+            _exit(1);
+          }
         }
         close(childerr);
       }
@@ -443,7 +455,7 @@ kpathsea_make_tex (kpathsea kpse, kpse_file_format_type format,
      * No doubt some possibilities were overlooked.
      */
     if (base[0] == '-' /* || IS_DIR_SEP(base[0])  */) {
-      fprintf(stderr, "kpathsea:make_tex: Invalid fontname `%s', starts with '%c'\n",
+      fprintf(stderr, "kpathsea:make_tex: Invalid filename `%s', starts with '%c'\n",
               base, base[0]);
       return NULL;
     }
@@ -455,7 +467,7 @@ kpathsea_make_tex (kpathsea kpse, kpse_file_format_type format,
           && base[i] != '.'
           && !IS_DIR_SEP(base[i]))
       {
-        fprintf(stderr, "kpathsea:make_tex: Invalid fontname `%s', contains '%c'\n",
+        fprintf(stderr, "kpathsea:make_tex: Invalid filename `%s', contains '%c'\n",
                 base, base[i]);
         return NULL;
       }

@@ -9,14 +9,14 @@
 /* System directory for global .asy files */
 #undef ASYMPTOTE_SYSDIR
 
-/* Define if gluNurbsCallback expects a variadic function. */
-#undef GLU_TESS_CALLBACK_TRIPLEDOT
-
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
 
 /* Define to 1 if you have the `dup2' function. */
 #undef HAVE_DUP2
+
+/* Define to 1 if you have the `feenableexcept' function. */
+#undef HAVE_FEENABLEEXCEPT
 
 /* Define to 1 if you have the <fenv.h> header file. */
 #undef HAVE_FENV_H
@@ -45,11 +45,17 @@
 /* Define to 1 if you have the `fftw3' library (-lfftw3). */
 #undef HAVE_LIBFFTW3
 
+/* Define to 1 if you have the `gccpp' library (-lgccpp). */
+#undef HAVE_LIBGCCPP
+
 /* Define to 1 if you have the `GL' library (-lGL). */
 #undef HAVE_LIBGL
 
-/* Define to 1 if you have the `GLU' library (-lGLU). */
-#undef HAVE_LIBGLU
+/* Define if you have the `GLEW' library (-lGLEW). */
+#undef HAVE_LIBGLEW
+
+/* Define if you have the `OpenGL Mathematics' library. */
+#undef HAVE_LIBGLM
 
 /* Define to 1 if you have the `glut' library (-lglut). */
 #undef HAVE_LIBGLUT
@@ -111,7 +117,7 @@
 /* Define to 1 if the system has the type `ptrdiff_t'. */
 #undef HAVE_PTRDIFF_T
 
-/* Define if you have a working <rpc/rpc.h> header file */
+/* Define if you have a working <tirpc/rpc/rpc.h> header file */
 #undef HAVE_RPC_RPC_H
 
 /* Define to 1 if you have the `sqrt' function. */

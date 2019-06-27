@@ -468,7 +468,7 @@ section_text[0]= ' ';
 #line 98 "ctangle.w"
 ;
 common_init();
-if(show_banner)fprintf(stdout,banner);
+if(show_banner)printf(banner);
 phase_one();
 phase_two();
 return wrap_up();
@@ -573,7 +573,7 @@ else/*34:*/
 a-= 024000;
 if((a+name_dir)->equiv!=(char*)text_info)push_level(a+name_dir);
 else if(a!=0){
-fprintf(stdout,"\n! Not present: <");
+printf("\n! Not present: <");
 print_section_name(a+name_dir);err_print(">");
 
 }
@@ -598,8 +598,8 @@ flush_buffer()
 {
 C_putc('\n');
 if(cur_line%100==0&&show_progress){
-fprintf(stdout,".");
-if(cur_line%500==0)fprintf(stdout,"%d",cur_line);
+printf(".");
+if(cur_line%500==0)printf("%d",cur_line);
 update_terminal;
 }
 cur_line++;
@@ -631,19 +631,19 @@ output_defs();
 #line 542 "ctangle.w"
 ;
 if(text_info->text_link==0&&cur_out_file==end_output_files){
-fprintf(stdout,"\n! No program text was specified.");mark_harmless;
+printf("\n! No program text was specified.");mark_harmless;
 
 }
 else{
 if(cur_out_file==end_output_files){
 if(show_progress)
-fprintf(stdout,"\nWriting the output file (%s):",C_file_name);
+printf("\nWriting the output file (%s):",C_file_name);
 }
 else{
 if(show_progress){
-fprintf(stdout,"\nWriting the output files:");
+printf("\nWriting the output files:");
 
-fprintf(stdout," (%s)",C_file_name);
+printf(" (%s)",C_file_name);
 update_terminal;
 }
 if(text_info->text_link==0)goto writeloop;
@@ -660,7 +660,7 @@ fclose(C_file);
 C_file= fopen(output_file_name,"w");
 if(C_file==0)fatal("! Cannot open output file:",output_file_name);
 
-fprintf(stdout,"\n(%s)",output_file_name);update_terminal;
+printf("\n(%s)",output_file_name);update_terminal;
 cur_line= 1;
 stack_ptr= stack+1;
 cur_name= (*an_output_file);
@@ -674,7 +674,7 @@ flush_buffer();
 /*:43*/
 #line 563 "ctangle.w"
 ;
-if(show_happiness)fprintf(stdout,"\nDone.");
+if(show_happiness)printf("\nDone.");
 }
 }
 
@@ -977,7 +977,7 @@ c= *loc++;
 if(++id_loc<=section_text_end)*id_loc= c;
 }
 if(id_loc>=section_text_end){
-fprintf(stdout,"\n! String too long: ");
+printf("\n! String too long: ");
 
 term_write(section_text+1,25);
 err_print("...");
@@ -1061,10 +1061,10 @@ c= ' ';if(*(k-1)==' ')k--;
 *k= c;
 }
 if(k>=section_text_end){
-fprintf(stdout,"\n! Section name too long: ");
+printf("\n! Section name too long: ");
 
 term_write(section_text+1,25);
-fprintf(stdout,"...");mark_harmless;
+printf("...");mark_harmless;
 }
 if(*k==' '&&k> section_text)k--;
 
@@ -1388,7 +1388,7 @@ text_pointer q;
 sixteen_bits a;
 section_count++;no_where= 1;
 if(*(loc-1)=='*'&&show_progress){
-fprintf(stdout,"*%d",section_count);update_terminal;
+printf("*%d",section_count);update_terminal;
 }
 next_control= 0;
 while(1){
@@ -1565,14 +1565,14 @@ default:err_print("! Double @ should be used in limbo");
 
 void
 print_stats(){
-fprintf(stdout,"\nMemory usage statistics:\n");
-fprintf(stdout,"%ld names (out of %ld)\n",
+printf("\nMemory usage statistics:\n");
+printf("%ld names (out of %ld)\n",
 (long)(name_ptr-name_dir),(long)max_names);
-fprintf(stdout,"%ld replacement texts (out of %ld)\n",
+printf("%ld replacement texts (out of %ld)\n",
 (long)(text_ptr-text_info),(long)max_texts);
-fprintf(stdout,"%ld bytes (out of %ld)\n",
+printf("%ld bytes (out of %ld)\n",
 (long)(byte_ptr-byte_mem),(long)max_bytes);
-fprintf(stdout,"%ld tokens (out of %ld)\n",
+printf("%ld tokens (out of %ld)\n",
 (long)(tok_ptr-tok_mem),(long)max_toks);
 }
 

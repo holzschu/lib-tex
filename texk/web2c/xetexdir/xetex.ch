@@ -165,12 +165,17 @@ has been detected. It has five possible values: |spotless|, |warning_issued|,
 @d shorthand_def=97 {code definition ( \.{\\chardef}, \.{\\countdef}, etc.~)}
 @z
 
+@x [16.215] - e-TeX last_node_type
+last_glue:=max_halfword; last_penalty:=0; last_kern:=0;
+@y
+last_glue:=max_halfword; last_penalty:=0; last_kern:=0;
+last_node_type:=-1;
+@z
+
 @x [17.222] l.4523 - frozen_special, for source specials.
 @d frozen_null_font=frozen_control_sequence+11
 @y
-@d frozen_primitive=frozen_control_sequence+11
-  {permanent `\.{\\primitive}'}
-@d frozen_null_font=frozen_control_sequence+12
+@d frozen_null_font=frozen_control_sequence+12+prim_size
 @z
 
 @x [17.230] l.4731

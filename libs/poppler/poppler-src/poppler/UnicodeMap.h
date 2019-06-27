@@ -8,6 +8,22 @@
 //
 //========================================================================
 
+//========================================================================
+//
+// Modified under the Poppler project - http://poppler.freedesktop.org
+//
+// All changes made under the Poppler project to this file are licensed
+// under GPL version 2 or later
+//
+// Copyright (C) 2017 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2018 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2018 Adam Reichold <adam.reichold@t-online.de>
+//
+// To see a description of the changes please see the Changelog file that
+// came with your tarball or type make ChangeLog if you are building from git
+//
+//========================================================================
+
 #ifndef UNICODEMAP_H
 #define UNICODEMAP_H
 
@@ -18,10 +34,7 @@
 #include "poppler-config.h"
 #include "goo/gtypes.h"
 #include "CharTypes.h"
-
-#if MULTITHREADED
-#include "goo/GooMutex.h"
-#endif
+#include <atomic>
 
 class GooString;
 
@@ -60,7 +73,15 @@ public:
   UnicodeMap(const char *encodingNameA, GBool unicodeOutA,
 	     UnicodeMapFunc funcA);
 
+  UnicodeMap(UnicodeMap &&other) noexcept;
+  UnicodeMap& operator=(UnicodeMap &&other) noexcept;
+
+  void swap(UnicodeMap& other) noexcept;
+
   ~UnicodeMap();
+
+  UnicodeMap(const UnicodeMap &) = delete;
+  UnicodeMap& operator=(const UnicodeMap &) = delete;
 
   void incRefCnt();
   void decRefCnt();
@@ -93,10 +114,7 @@ private:
   int len;			// (user, resident)
   UnicodeMapExt *eMaps;		// (user)
   int eMapsLen;			// (user)
-  int refCnt;
-#if MULTITHREADED
-  GooMutex mutex;
-#endif
+  std::atomic_int refCnt;
 };
 
 //------------------------------------------------------------------------
@@ -108,6 +126,9 @@ public:
 
   UnicodeMapCache();
   ~UnicodeMapCache();
+
+  UnicodeMapCache(const UnicodeMapCache &) = delete;
+  UnicodeMapCache& operator=(const UnicodeMapCache &) = delete;
 
   // Get the UnicodeMap for <encodingName>.  Increments its reference
   // count; there will be one reference for the cache plus one for the

@@ -831,9 +831,9 @@ end;
    update_terminal;
    ready_already:=0;
    if (history <> spotless) and (history <> warning_issued) then
-       uexit_and_clear(1)
+       uexit(1)
    else
-       uexit_and_clear(0);
+       uexit(0);
    end
 
 @<Error hand...@>=

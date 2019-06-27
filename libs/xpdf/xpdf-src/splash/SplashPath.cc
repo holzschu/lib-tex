@@ -14,6 +14,7 @@
 
 #include <string.h>
 #include "gmem.h"
+#include "gmempp.h"
 #include "SplashErrorCodes.h"
 #include "SplashPath.h"
 
@@ -107,7 +108,7 @@ SplashError SplashPath::lineTo(SplashCoord x, SplashCoord y) {
   if (noCurrentPoint()) {
     return splashErrNoCurPt;
   }
-  flags[length-1] &= ~splashPathLast;
+  flags[length-1] &= (Guchar)~splashPathLast;
   grow(1);
   pts[length].x = x;
   pts[length].y = y;
@@ -122,7 +123,7 @@ SplashError SplashPath::curveTo(SplashCoord x1, SplashCoord y1,
   if (noCurrentPoint()) {
     return splashErrNoCurPt;
   }
-  flags[length-1] &= ~splashPathLast;
+  flags[length-1] &= (Guchar)~splashPathLast;
   grow(3);
   pts[length].x = x1;
   pts[length].y = y1;
@@ -156,7 +157,8 @@ SplashError SplashPath::close(GBool force) {
 }
 
 void SplashPath::addStrokeAdjustHint(int ctrl0, int ctrl1,
-				     int firstPt, int lastPt) {
+				     int firstPt, int lastPt,
+				     GBool projectingCap) {
   if (hintsLength == hintsSize) {
     hintsSize = hintsLength ? 2 * hintsLength : 8;
     hints = (SplashPathHint *)greallocn(hints, hintsSize,
@@ -166,6 +168,7 @@ void SplashPath::addStrokeAdjustHint(int ctrl0, int ctrl1,
   hints[hintsLength].ctrl1 = ctrl1;
   hints[hintsLength].firstPt = firstPt;
   hints[hintsLength].lastPt = lastPt;
+  hints[hintsLength].projectingCap = projectingCap;
   ++hintsLength;
 }
 
@@ -185,4 +188,26 @@ GBool SplashPath::getCurPt(SplashCoord *x, SplashCoord *y) {
   *x = pts[length - 1].x;
   *y = pts[length - 1].y;
   return gTrue;
+}
+
+GBool SplashPath::containsZeroLengthSubpaths() {
+  GBool zeroLength;
+  int i;
+
+  zeroLength = gTrue;  // make gcc happy
+  for (i = 0; i < length; ++i) {
+    if (flags[i] & splashPathFirst) {
+      zeroLength = gTrue;
+    } else {
+      if (pts[i].x != pts[i-1].x || pts[i].y != pts[i-1].y) {
+	zeroLength = gFalse;
+      }
+      if (flags[i] & splashPathLast) {
+	if (zeroLength) {
+	  return gTrue;
+	}
+      }
+    }
+  }
+  return gFalse;
 }

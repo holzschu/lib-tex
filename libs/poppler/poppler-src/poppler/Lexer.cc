@@ -13,7 +13,7 @@
 // All changes made under the Poppler project to this file are licensed
 // under GPL version 2 or later
 //
-// Copyright (C) 2006-2010, 2012-2014 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006-2010, 2012-2014, 2017, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2006 Krzysztof Kowalczyk <kkowalczyk@gmail.com>
 // Copyright (C) 2010 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2012, 2013 Adrian Johnson <ajohnson@redneon.com>
@@ -70,44 +70,41 @@ static const long long LongLongSafeLimit = (LLONG_MAX - 9) / 10;
 //------------------------------------------------------------------------
 
 Lexer::Lexer(XRef *xrefA, Stream *str) {
-  Object obj;
-
   lookCharLastValueCached = LOOK_VALUE_NOT_CACHED;
   xref = xrefA;
 
-  curStr.initStream(str);
+  curStr = Object(str);
   streams = new Array(xref);
-  streams->add(curStr.copy(&obj));
+  streams->add(curStr.copy());
   strPtr = 0;
   freeArray = gTrue;
   curStr.streamReset();
 }
 
 Lexer::Lexer(XRef *xrefA, Object *obj) {
-  Object obj2;
-
   lookCharLastValueCached = LOOK_VALUE_NOT_CACHED;
   xref = xrefA;
 
   if (obj->isStream()) {
     streams = new Array(xref);
     freeArray = gTrue;
-    streams->add(obj->copy(&obj2));
+    streams->add(obj->copy());
   } else {
     streams = obj->getArray();
     freeArray = gFalse;
   }
   strPtr = 0;
   if (streams->getLength() > 0) {
-    streams->get(strPtr, &curStr);
-    curStr.streamReset();
+    curStr = streams->get(strPtr);
+    if (curStr.isStream()) {
+      curStr.streamReset();
+    }
   }
 }
 
 Lexer::~Lexer() {
-  if (!curStr.isNone()) {
+  if (curStr.isStream()) {
     curStr.streamClose();
-    curStr.free();
   }
   if (freeArray) {
     delete streams;
@@ -124,16 +121,18 @@ int Lexer::getChar(GBool comesFromLook) {
   }
 
   c = EOF;
-  while (!curStr.isNone() && (c = curStr.streamGetChar()) == EOF) {
+  while (curStr.isStream() && (c = curStr.streamGetChar()) == EOF) {
     if (comesFromLook == gTrue) {
       return EOF;
     } else {
       curStr.streamClose();
-      curStr.free();
+      curStr = Object();
       ++strPtr;
       if (strPtr < streams->getLength()) {
-        streams->get(strPtr, &curStr);
-        curStr.streamReset();
+	curStr = streams->get(strPtr);
+	if (curStr.isStream()) {
+	  curStr.streamReset();
+	}
       }
     }
   }
@@ -154,7 +153,7 @@ int Lexer::lookChar() {
   }
 }
 
-Object *Lexer::getObj(Object *obj, int objNum) {
+Object Lexer::getObj(int objNum) {
   char *p;
   int c, c2;
   GBool comment, neg, done, overflownInteger, overflownLongLong;
@@ -169,7 +168,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
   comment = gFalse;
   while (1) {
     if ((c = getChar()) == EOF) {
-      return obj->initEOF();
+      return Object(objEOF);
     }
     if (comment) {
       if (c == '\r' || c == '\n')
@@ -207,7 +206,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
 	  xf = xf * 10.0 + (c - '0');
 	} else if (unlikely (overflownInteger)) {
 	  if (unlikely(xll > LongLongSafeLimit) &&
-	      (xll > (LLONG_MAX - (c - '0')) / 10.0)) {
+	      (xll > (LLONG_MAX - (c - '0')) / 10)) {
 	    overflownLongLong = gTrue;
 	    xf = xll * 10.0 + (c - '0');
 	  } else {
@@ -236,16 +235,16 @@ Object *Lexer::getObj(Object *obj, int objNum) {
     }
     if (unlikely(overflownInteger)) {
       if (overflownLongLong) {
-        obj->initReal(xf);
+        return Object(xf);
       } else {
         if (unlikely(xll == INT_MIN)) {
-          obj->initInt(INT_MIN);
+          return Object(static_cast<int>(INT_MIN));
         } else {
-          obj->initInt64(xll);
+          return Object(xll);
         }
       }
     } else {
-      obj->initInt(xi);
+      return Object(xi);
     }
     break;
   doReal:
@@ -274,7 +273,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
     if (neg) {
       xf = -xf;
     }
-    obj->initReal(xf);
+    return Object(xf);
     break;
 
   // string
@@ -283,7 +282,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
     n = 0;
     numParen = 1;
     done = gFalse;
-    s = NULL;
+    s = nullptr;
     do {
       c2 = EOF;
       switch (c = getChar()) {
@@ -380,7 +379,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
 	  n = 0;
 	  
 	  // we are growing see if the document is not malformed and we are growing too much
-	  if (objNum > 0 && xref != NULL)
+	  if (objNum > 0 && xref != nullptr)
 	  {
 	    int newObjNum = xref->getNumEntry(curStr.streamGetPos());
 	    if (newObjNum != objNum)
@@ -401,9 +400,9 @@ Object *Lexer::getObj(Object *obj, int objNum) {
         s = new GooString(tokBuf, n);
       else
         s->append(tokBuf, n);
-      obj->initString(s);
+      return Object(s);
     } else {
-      obj->initEOF();
+      return Object(objEOF);
     }
     break;
 
@@ -411,7 +410,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
   case '/':
     p = tokBuf;
     n = 0;
-    s = NULL;
+    s = nullptr;
     while ((c = lookChar()) != EOF && !specialChars[c]) {
       getChar();
       if (c == '#') {
@@ -455,10 +454,11 @@ Object *Lexer::getObj(Object *obj, int objNum) {
     }
     if (n < tokBufSize) {
       *p = '\0';
-      obj->initName(tokBuf);
+      return Object(objName, tokBuf);
     } else {
-      obj->initName(s->getCString());
+      Object obj(objName, s->getCString());
       delete s;
+      return obj;
     }
     break;
 
@@ -467,7 +467,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
   case ']':
     tokBuf[0] = c;
     tokBuf[1] = '\0';
-    obj->initCmd(tokBuf);
+    return Object(objCmd, tokBuf);
     break;
 
   // hex string or dict punctuation
@@ -479,14 +479,14 @@ Object *Lexer::getObj(Object *obj, int objNum) {
       getChar();
       tokBuf[0] = tokBuf[1] = '<';
       tokBuf[2] = '\0';
-      obj->initCmd(tokBuf);
+      return Object(objCmd, tokBuf);
 
     // hex string
     } else {
       p = tokBuf;
       m = n = 0;
       c2 = 0;
-      s = NULL;
+      s = nullptr;
       while (1) {
 	c = getChar();
 	if (c == '>') {
@@ -526,7 +526,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
 	s->append(tokBuf, n);
       if (m == 1)
 	s->append((char)(c2 << 4));
-      obj->initString(s);
+      return Object(s);
     }
     break;
 
@@ -537,10 +537,10 @@ Object *Lexer::getObj(Object *obj, int objNum) {
       getChar();
       tokBuf[0] = tokBuf[1] = '>';
       tokBuf[2] = '\0';
-      obj->initCmd(tokBuf);
+      return Object(objCmd, tokBuf);
     } else {
       error(errSyntaxError, getPos(), "Illegal character '>'");
-      obj->initError();
+      return Object(objError);
     }
     break;
 
@@ -549,7 +549,7 @@ Object *Lexer::getObj(Object *obj, int objNum) {
   case '{':
   case '}':
     error(errSyntaxError, getPos(), "Illegal character '{0:c}'", c);
-    obj->initError();
+    return Object(objError);
     break;
 
   // command
@@ -567,21 +567,21 @@ Object *Lexer::getObj(Object *obj, int objNum) {
     }
     *p = '\0';
     if (tokBuf[0] == 't' && !strcmp(tokBuf, "true")) {
-      obj->initBool(gTrue);
+      return Object(gTrue);
     } else if (tokBuf[0] == 'f' && !strcmp(tokBuf, "false")) {
-      obj->initBool(gFalse);
+      return Object(gFalse);
     } else if (tokBuf[0] == 'n' && !strcmp(tokBuf, "null")) {
-      obj->initNull();
+      return Object(objNull);
     } else {
-      obj->initCmd(tokBuf);
+      return Object(objCmd, tokBuf);
     }
     break;
   }
 
-  return obj;
+  return Object();
 }
 
-Object *Lexer::getObj(Object *obj, const char *cmdA, int objNum) {
+Object Lexer::getObj(const char *cmdA, int objNum) {
   char *p;
   int c;
   GBool comment;
@@ -594,7 +594,7 @@ Object *Lexer::getObj(Object *obj, const char *cmdA, int objNum) {
   while (strcmp(cmdA, cmd1) && (objNum < 0 || (xref && xref->getNumEntry(getPos()) == objNum))) {
     while (1) {
       if ((c = getChar()) == EOF) {
-        return obj->initEOF();
+        return Object(objEOF);
       }
       if (comment) {
         if (c == '\r' || c == '\n') {
@@ -618,9 +618,8 @@ Object *Lexer::getObj(Object *obj, const char *cmdA, int objNum) {
     }
     *p = '\0';
   }
-  obj->initCmd(tokBuf);
-  
-  return obj;
+
+  return Object(objCmd, tokBuf);
 }
 
 void Lexer::skipToNextLine() {

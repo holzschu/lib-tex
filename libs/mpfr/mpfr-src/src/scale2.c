@@ -1,6 +1,6 @@
 /* mpfr_scale2 -- multiply a double float by 2^exp
 
-Copyright 1999-2016 Free Software Foundation, Inc.
+Copyright 1999-2019 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,7 +17,7 @@ License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
+https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
 
 #include <float.h> /* for DBL_EPSILON */
@@ -30,9 +30,9 @@ http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 double
 mpfr_scale2 (double d, int exp)
 {
-#if _GMP_IEEE_FLOATS
+#if _MPFR_IEEE_FLOATS
   {
-    union ieee_double_extract x;
+    union mpfr_ieee_double_extract x;
 
     if (MPFR_UNLIKELY (d == 1.0))
       {
@@ -57,7 +57,7 @@ mpfr_scale2 (double d, int exp)
       }
     return x.d;
   }
-#else /* _GMP_IEEE_FLOATS */
+#else /* _MPFR_IEEE_FLOATS */
   {
     double factor;
 
@@ -87,5 +87,5 @@ mpfr_scale2 (double d, int exp)
       }
     return d;
   }
-#endif
+#endif /* _MPFR_IEEE_FLOATS */
 }

@@ -5,12 +5,13 @@
 // This file is licensed under the GPLv2 or later
 //
 // Copyright 2005 Jeff Muizelaar <jeff@infidigm.net>
-// Copyright 2005-2010, 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright 2005-2010, 2012, 2017 Albert Astals Cid <aacid@kde.org>
 // Copyright 2009 Ryszard Trojnacki <rysiek@menel.com>
 // Copyright 2010 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright 2011 Daiki Ueno <ueno@unixuser.org>
 // Copyright 2011 Tomas Hoger <thoger@redhat.com>
 // Copyright 2012, 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright 2017 Adrian Johnson <ajohnson@redneon.com>
 //
 //========================================================================
 
@@ -60,18 +61,14 @@ static void str_term_source(j_decompress_ptr cinfo)
 {
 }
 
-DCTStream::DCTStream(Stream *strA, int colorXformA, Object *dict, int recursion) :
+DCTStream::DCTStream(Stream *strA, int colorXformA, Dict *dict, int recursion) :
   FilterStream(strA) {
   colorXform = colorXformA;
-  if (dict != NULL) {
-    Object obj;
-
-    dict->dictLookup("Width", &obj, recursion);
+  if (dict != nullptr) {
+    Object obj = dict->lookup("Width", recursion);
     err.width = (obj.isInt() && obj.getInt() <= JPEG_MAX_DIMENSION) ? obj.getInt() : 0;
-    obj.free();
-    dict->dictLookup("Height", &obj, recursion);
+    obj = dict->lookup("Height", recursion);
     err.height = (obj.isInt() && obj.getInt() <= JPEG_MAX_DIMENSION) ? obj.getInt() : 0;
-    obj.free();
   } else
     err.height = err.width = 0;
   init();
@@ -103,18 +100,18 @@ void DCTStream::init()
   src.pub.resync_to_restart = jpeg_resync_to_restart;
   src.pub.term_source = str_term_source;
   src.pub.bytes_in_buffer = 0;
-  src.pub.next_input_byte = NULL;
+  src.pub.next_input_byte = nullptr;
   src.str = str;
   src.index = 0;
-  current = NULL;
-  limit = NULL;
+  current = nullptr;
+  limit = nullptr;
   
   cinfo.err = &err.pub;
   if (!setjmp(err.setjmp_buffer)) {
     jpeg_create_decompress(&cinfo);
     cinfo.src = (jpeg_source_mgr *)&src;
   }
-  row_buffer = NULL;
+  row_buffer = nullptr;
 }
 
 void DCTStream::reset() {
@@ -232,8 +229,10 @@ int DCTStream::getChar() {
 }
 
 int DCTStream::getChars(int nChars, Guchar *buffer) {
-  int c;
-  for (int i = 0; i < nChars; ++i) {
+  // Use volatile to prevent the compiler optimizing
+  // variables into registers. See setjmp man page.
+  volatile int i, c;
+  for (i = 0; i < nChars; ++i) {
     DO_GET_CHAR
     if (likely(c != EOF)) buffer[i] = c;
     else return i;
@@ -242,7 +241,7 @@ int DCTStream::getChars(int nChars, Guchar *buffer) {
 }
 
 int DCTStream::lookChar() {
-  if (unlikely(current == NULL)) {
+  if (unlikely(current == nullptr)) {
     return EOF;
   }
   return *current;
@@ -252,10 +251,10 @@ GooString *DCTStream::getPSFilter(int psLevel, const char *indent) {
   GooString *s;
 
   if (psLevel < 2) {
-    return NULL;
+    return nullptr;
   }
   if (!(s = str->getPSFilter(psLevel, indent))) {
-    return NULL;
+    return nullptr;
   }
   s->append(indent)->append("<< >> /DCTDecode filter\n");
   return s;

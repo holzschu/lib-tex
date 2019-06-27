@@ -1,3 +1,7 @@
+2017-12-18  Karl Berry  <karl@tug.org>
+
+	* texconfig.sh: more updates from Norbert to use tlmgr (from 45882).
+
 2017-04-24  Paul Vojta  <vojta@math.berkeley.edu>
 
 	* texconfig.sh: xdvi paper size updates (also in TLPaper.pm).
@@ -479,7 +483,7 @@
 	* fmtutil (--edit): disable.
 	(help): document this, other tweaks.
 
-2010-05-31  Manuel Pégourié-Gonnard <mpg@elzevir.fr>
+2010-05-31  Manuel P\'egouri\'e-Gonnard <mpg@elzevir.fr>
 
 	* fmtutil: allow more than one language file per format.
 
@@ -494,7 +498,7 @@
 
 	* Makefile.am (run_texlinks, run_texlinks): Respect DESTDIR.
 
-2010-04-28  Manuel Pégourié-Gonnard  <mpg@elzevir.fr>
+2010-04-28  Manuel P\'egouri\'e-Gonnard  <mpg@elzevir.fr>
 
 	* texlinks: Append exeext to engine names.
 	* Makefile.am (run_texlinks): Invoke texlinks with explicit dir.

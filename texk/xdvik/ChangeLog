@@ -1,3 +1,24 @@
+2019-03-25  Karl Berry  <karl@freefriends.org>
+
+	* xdvi.1.in: omit unused second font letter for option names.
+	From Debian.
+
+2018-01-17  Karl Berry  <karl@freefriends.org>
+
+	* xdvi.1.in: remove trailing whitespace to placate Debian.
+	Use \& instead of "," after end-of-line "e.g." for consistency.
+	Remove spurious doubled words.
+
+2018-01-17  Norbert Preining  <norbert@preining.info>
+
+	* add .desktop file
+	* Makefile.am: add desktop file installation
+
+2017-08-07  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* Makefile.am: config.xdvi is installed under
+	texmf-dist/dvips/xdvi, not texmf-dist/dvips/config.
+
 2016-04-06  Karl Berry  <karl@tug.org>
 
 	* Import xdvik-22.87.03.

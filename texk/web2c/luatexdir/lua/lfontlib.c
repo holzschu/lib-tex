@@ -155,15 +155,15 @@ static int frozenfont(lua_State * L)
 
 static int setfont(lua_State * L)
 {
-    int i = luaL_checkinteger(L, -2);
+    int t = lua_gettop(L);
+    int i = luaL_checkinteger(L,1);
     if (i) {
-        luaL_checktype(L, -1, LUA_TTABLE);
+        luaL_checktype(L, t, LUA_TTABLE);
         if (is_valid_font(i)) {
-            if (!(font_touched(i) || font_used(i))) {
+            if (! (font_touched(i) || font_used(i))) {
                 font_from_lua(L, i);
             } else {
-                luaL_error(L,
-                           "that font has been accessed already, changing it is forbidden");
+                luaL_error(L, "that font has been accessed already, changing it is forbidden");
             }
         } else {
             luaL_error(L, "that integer id is not a valid font");
@@ -172,10 +172,56 @@ static int setfont(lua_State * L)
     return 0;
 }
 
+static int addcharacters(lua_State * L)
+{
+    int t = lua_gettop(L);
+    int i = luaL_checkinteger(L,1);
+    if (i) {
+        luaL_checktype(L, t, LUA_TTABLE);
+        if (is_valid_font(i)) {
+            characters_from_lua(L, i);
+        } else {
+            luaL_error(L, "that integer id is not a valid font");
+        }
+    }
+    return 0;
+}
+
+static int setexpansion(lua_State * L)
+{
+    int f = luaL_checkinteger(L,1);
+    if (f) {
+        if (is_valid_font(f)) {
+            int fstretch = luaL_checkinteger(L,2);
+            int fshrink = luaL_checkinteger(L,3);
+            int fstep = luaL_checkinteger(L,4);
+            set_expand_params(f, fstretch, fshrink, fstep);
+        } else {
+            luaL_error(L, "that integer id is not a valid font");
+        }
+    }
+    return 0;
+}
+
+/* font.define(id,table) */
+/* font.define(table) */
 
 static int deffont(lua_State * L)
 {
-    int i = get_fontid();
+    int i = 0;
+    int t = lua_gettop(L);
+    if (t == 2) {
+        i = lua_tointeger(L,1);
+        if ((i <= 0) || ! is_valid_font(i)) {
+            lua_pop(L, 1);          /* pop the broken table */
+            luaL_error(L, "font creation failed, invalid id passed");
+        }
+    } else if (t == 1) {
+        i = get_fontid();
+    } else {
+        luaL_error(L, "font creation failed, no table passed");
+        return 0;
+    }
     luaL_checktype(L, -1, LUA_TTABLE);
     if (font_from_lua(L, i)) {
         lua_pushinteger(L, i);
@@ -183,20 +229,24 @@ static int deffont(lua_State * L)
     } else {
         lua_pop(L, 1);          /* pop the broken table */
         delete_font(i);
-        luaL_error(L, "font creation failed");
+        luaL_error(L, "font creation failed, error in table");
     }
     return 0;                   /* not reached */
 }
 
 /* this returns the expected (!) next fontid. */
+/* first arg true will keep the id */
+
 static int nextfontid(lua_State * L)
 {
+    int b = ((lua_gettop(L) == 1) && lua_toboolean(L,1));
     int i = get_fontid();
     lua_pushinteger(L, i);
-    delete_font(i);
+    if (b == 0) {
+        delete_font(i);
+    }
     return 1;
 }
-
 
 static int getfont(lua_State * L)
 {
@@ -207,6 +257,14 @@ static int getfont(lua_State * L)
     return 1;
 }
 
+static int getparameters(lua_State * L)
+{
+    int i = luaL_checkinteger(L, -1);
+    if (i && is_valid_font(i)) {
+        return font_parameters_to_lua(L,i);
+    }
+    return 0;
+}
 
 static int getfontid(lua_State * L)
 {
@@ -228,7 +286,6 @@ static int getfontid(lua_State * L)
     return 1;
 }
 
-
 static const struct luaL_Reg fontlib[] = {
     {"read_tfm", font_read_tfm},
     {"read_vf", font_read_vf},
@@ -236,7 +293,10 @@ static const struct luaL_Reg fontlib[] = {
     {"max", tex_max_font},
     {"each", tex_each_font},
     {"getfont", getfont},
+    {"getparameters", getparameters},
     {"setfont", setfont},
+    {"addcharacters", addcharacters},
+    {"setexpansion", setexpansion},
     {"define", deffont},
     {"nextid", nextfontid},
     {"id", getfontid},
@@ -246,7 +306,7 @@ static const struct luaL_Reg fontlib[] = {
 
 int luaopen_font(lua_State * L)
 {
-    luaL_register(L, "font", fontlib);
+    luaL_openlib(L, "font", fontlib, 0);
     make_table(L, "fonts", "tex.fonts", "getfont", "setfont");
     return 1;
 }
@@ -274,7 +334,9 @@ static int l_vf_char(lua_State * L)
     }
     mat_p = &(vsp->packet_stack[vsp->packet_stack_level]);
     w = char_width(lf, k);
-    mat_p->pos.h += round_xn_over_d(w, 1000 + ex_glyph, 1000);
+    if (ex_glyph != 0)
+        w = round_xn_over_d(w, 1000 + ex_glyph, 1000);
+    mat_p->pos.h += w;
     synch_pos_with_cur(static_pdf->posstruct, vsp->refpos, mat_p->pos);
     return 0;
 }
@@ -366,11 +428,14 @@ static int l_vf_right(lua_State * L)
 {
     scaled i;
     vf_struct *vsp = static_pdf->vfstruct;
+    int ex_glyph = vsp->ex_glyph/1000;
     packet_stack_record *mat_p;
     if (!vsp->vflua)
         normal_error("vf", "vf.right() outside virtual font");
     mat_p = &(vsp->packet_stack[vsp->packet_stack_level]);
     i = (scaled) luaL_checkinteger(L, 1);
+    if (ex_glyph != 0 && i != 0) /* new, experiment */
+        i = round_xn_over_d(i, 1000 + ex_glyph, 1000);
     i = store_scaled_f(i, vsp->fs_f);
     mat_p->pos.h += i;
     synch_pos_with_cur(static_pdf->posstruct, vsp->refpos, mat_p->pos);
@@ -381,11 +446,14 @@ static int l_vf_rule(lua_State * L)
 {
     scaledpos size;
     vf_struct *vsp = static_pdf->vfstruct;
+    int ex_glyph = vsp->ex_glyph/1000;
     packet_stack_record *mat_p;
     if (!vsp->vflua)
         normal_error("vf", "vf.rule() outside virtual font");
     size.h = (scaled) luaL_checkinteger(L, 1);
     size.v = (scaled) luaL_checkinteger(L, 2);
+    if (ex_glyph != 0 && size.h > 0) /* new, experiment */
+        size.h = round_xn_over_d(size.h, 1000 + ex_glyph, 1000);
     size.h = store_scaled_f(size.h, vsp->fs_f);
     size.v = store_scaled_f(size.v, vsp->fs_f);
     if (size.h > 0 && size.v > 0)
@@ -410,6 +478,16 @@ static int l_vf_special(lua_State * L)
     return 0;
 }
 
+static int l_vf_pdf(lua_State * L)
+{
+    vf_struct *vsp = static_pdf->vfstruct;
+    if (!vsp->vflua)
+        normal_error("vf", "vf.special() outside virtual font");
+    luapdfprint(L);
+    pdf_out(static_pdf, '\n');
+    return 0;
+}
+
 static const struct luaL_Reg vflib[] = {
     {"char", l_vf_char},
     {"down", l_vf_down},
@@ -426,11 +504,12 @@ static const struct luaL_Reg vflib[] = {
     /* {"scale", l_vf_scale}, */
     /* {"slot", l_vf_slot}, */
     {"special", l_vf_special},
+    {"pdf", l_vf_pdf},
     {NULL, NULL}                /* sentinel */
 };
 
 int luaopen_vf(lua_State * L)
 {
-    luaL_register(L, "vf", vflib);
+    luaL_openlib(L, "vf", vflib, 0);
     return 1;
 }

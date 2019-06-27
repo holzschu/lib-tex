@@ -1,3 +1,134 @@
+2019-03-30  Akira Kakuto  <kakuto@w32tex.org>
+
+	* texmfmp.c: Improve to record texmf.cnf. (ptex and friends,
+	and w32 only).
+	* openclose.c: Remove "static" in order to use relevant
+	functions externally. (w32 only).
+
+2019-03-23  Akira Kakuto  <kakuto@w32tex.org>
+
+	* texmfmp.c: On windows, xetex and pdftex did not record
+	texmf.cnf in the case of --recorder because of special
+	initializations. Fix this bug. It is not needed to rebuild
+	in other platforms.
+
+2019-01-01  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* printversion.c: Update copyright year.
+
+2018-12-17  Igor Liferenko  <igor.liferenko@gmail.com>
+
+	* texmfmp.c (maininit): default to guessing an explicit &dumpname
+	as the "preloaded" (not really) format, if one was specified.
+	tex-k msgs of 23 Sep 2018 12:13:06, 23 Sep 2018 18:36:52.
+	(With comment and formatting tinkering from karl.)
+
+2018-12-17  Andreas Scherer  <https://ascherer.github.io>
+
+	* printversion.c (printversionandexit): Search for PROGNAME
+	in banner independent of 'This is' prefix.
+
+2018-11-19  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c: Remove unused functions for XeTeX.
+	Check kpse_in_name_ok() in getfilesize(), getfiledump(),
+	and getmd5sum().
+
+2018-11-18  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c: Make necessary changes for XeTeX in
+	getcreationdate(), getfilemoddate(), getfilesize(),
+	and getfiledump().
+
+2018-11-17  Joseph Wright  <joseph.wright@morningstar2.co.uk>
+
+	* texmfmp.c: Support some primitives from pdfTeX in XeTeX.
+
+2018-11-14  Andreas Scherer  <https://ascherer.github.io>
+
+	* printversion.c: free xmalloc'd prog_name.
+
+2018-11-13  Karl Berry  <karl@freefriends.org>
+
+	* texmfmp.c (FORCE_SOURCE_DATE_set, SOURCE_DATE_EPOCH_set): new static.
+	(init_start_time, get_date_and_time): initialize them.
+	(getfilemoddate): use_utc if both vars set.
+	Original suggestion from Ulrike Fischer, tex-live 3 Nov 2018 23:00:48,
+	original patch from Akira Kakuto.
+	(getfilemoddate): also, return nothing if ! kpse_in_name_ok.
+
+2018-11-04  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* openclose.c: cleanup for non-ascii file names (w32 only)
+
+2018-06-28  Karl Berry  <karl@freefriends.org>
+
+	* openclose.c (open_input_with_dirname): do not prepend the
+	top-level directory name if the subsidiary aux file being searched
+	for is alrady absolute. Private report from John Collins
+	(22 Jun 2018 14:01:31).
+
+2018-06-14  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c: remove sjisterminal (w32 only).
+
+2018-06-10  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* texmfmp.c: Allow non-ascii file names for pdfTeX
+	with UTF-8 source files (w32 only).
+
+2018-06-09  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* texmfmp.c, openclose.c: Support UTF-8 file names
+	on UTF-8 locale in pTeX (Unix-like platform only).
+
+2018-05-29  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c: Discard the changes for pdfTeX on 2018-05-11,
+	since 'command_line_encoding=utf-8' is not so natural
+	for pdfTeX (w32 only).
+
+2018-05-12  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c: Allow non-ascii file names for pdfTeX (w32 only).
+	Changes on 2018-05-11 were incomplete.
+
+2018-05-11  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c: Allow non-ascii file names for pdfTeX (w32 only).
+
+2018-03-16  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c: Remove support of short 8.3 names (w32 only).
+
+2018-01-01  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* printversion.c: 2017 ---> 2018.
+
+2017-10-21  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* openclose.c: If opened fname is a directory in
+	output_directory, discard it in Unix platforms.
+	Report from Duncan Steele,
+	http://tug.org/pipermail/tex-live/2017-October/040731.html
+	
+	In Windows, fopen (fname, mode) is always NULL, in the case
+	where fname is a directory, thus it is discarded automatically.
+	Thanks to Hironobu Yamashita,
+	http://tug.org/pipermail/tex-live/2017-October/040735.html
+
+2017-09-05  Karl Berry  <karl@tug.org>
+        and Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.c (IS_SPC_OR_EOL): new macro.
+	(topenin): use it, instead of ISBLANK.
+	(parse_first_line): doc fix.
+	(input_line): remove only trailing space characters
+	instead of using ISBLANK.
+	See also analogous change in xetexdir/XeTeX_ext.c.
+	Original bug report from Evan Aad,
+	http://tug.org/pipermail/tex-k/2017-August/002801.html
+
 2017-03-12  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
 
 	* texmfmp.c: Adopt Jonathan's solution for the Change on 2017-02-01.
@@ -673,7 +804,7 @@
 	to 'const char *'.
 	(runsystem, runpopen): Constify string params.
 
-2009-07-24  Martin Schröder  <martin@oneiros.de>
+2009-07-24  Martin Schr\"oder  <martin@oneiros.de>
 
 	* printversion.c: don't nest extern declarations
 
@@ -785,7 +916,7 @@
 	* openclose.c (recorder_record_name): fflush the recorder file,
 	since this is for debugging.  Suggested by George White.
 
-2006-12-28  Martin Schröder <martin@oneiros.de>
+2006-12-28  Martin Schr\"oder <martin@oneiros.de>
 
 	* texmfmp.c: fixed some warnings raised by gcc for unused variables
 	and different signedness of arguments

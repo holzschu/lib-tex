@@ -1,9 +1,9 @@
 #!/usr/bin/env perl
-# $Id: fmtutil.pl 44190 2017-05-04 21:38:43Z preining $
+# $Id: fmtutil.pl 48129 2018-07-03 22:15:38Z karl $
 # fmtutil - utility to maintain format files.
 # (Maintained in TeX Live:Master/texmf-dist/scripts/texlive.)
 # 
-# Copyright 2014-2017 Norbert Preining
+# Copyright 2014-2018 Norbert Preining
 # This file is licensed under the GNU General Public License version 2
 # or any later version.
 #
@@ -24,11 +24,11 @@ BEGIN {
   TeX::Update->import();
 }
 
-my $svnid = '$Id: fmtutil.pl 44190 2017-05-04 21:38:43Z preining $';
-my $lastchdate = '$Date: 2017-05-04 23:38:43 +0200 (Thu, 04 May 2017) $';
+my $svnid = '$Id: fmtutil.pl 48129 2018-07-03 22:15:38Z karl $';
+my $lastchdate = '$Date: 2018-07-04 00:15:38 +0200 (Wed, 04 Jul 2018) $';
 $lastchdate =~ s/^\$Date:\s*//;
 $lastchdate =~ s/ \(.*$//;
-my $svnrev = '$Revision: 44190 $';
+my $svnrev = '$Revision: 48129 $';
 $svnrev =~ s/^\$Revision:\s*//;
 $svnrev =~ s/\s*\$$//;
 my $version = "r$svnrev ($lastchdate)";
@@ -436,9 +436,12 @@ sub callback_build_formats {
     }
   }
 
-  # if the user asked to rebuild something, but we did nothing, report.
-  if ($err + $suc == 0) {
-    print_info("did not find entry for $what=$whatarg, skipped\n");
+  # if the user asked to rebuild something, but we did nothing, report
+  # unless we tried to rebuild only missing formats.
+  if ($what ne "missing") {
+    if ($err + $suc == 0) {
+      print_info("did not find entry for $what=$whatarg, skipped\n");
+    }
   }
   my $stdo = ($mktexfmtMode ? \*STDERR : \*STDOUT);
   for (@deferred_stdout) { print $stdo $_; }
@@ -467,12 +470,15 @@ sub select_and_rebuild_format {
   my ($fmt, $eng, $what, $whatarg) = @_;
   return $FMT_DISABLED
       if ($alldata->{'merged'}{$fmt}{$eng}{'status'} eq 'disabled');
+
+  my ($kpsefmt, $destdir, $fmtfile, $logfile) = compute_format_destination($fmt, $eng);
+
   my $doit = 0;
   # we just identify 'all', 'refresh', 'missing'
   # I don't see much point in keeping all of them
   $doit = 1 if ($what eq 'all');
-  $doit = 1 if ($what eq 'refresh');
-  $doit = 1 if ($what eq 'missing');
+  $doit = 1 if ($what eq 'refresh' && -r "$destdir/$fmtfile");
+  $doit = 1 if ($what eq 'missing' && ! -r "$destdir/$fmtfile");
   $doit = 1 if ($what eq 'byengine' && $eng eq $whatarg);
   $doit = 1 if ($what eq 'byfmt' && $fmt eq $whatarg);
   # TODO
@@ -510,18 +516,52 @@ sub select_and_rebuild_format {
     }
   }
   if ($doit) {
-    return rebuild_one_format($fmt,$eng);
+    return rebuild_one_format($fmt, $eng, $kpsefmt, $destdir, $fmtfile, $logfile);
   } else {
     return $FMT_NOTSELECTED;
   }
 }
+
+#  compute_format_destination
+# takes fmt/eng and returns the location where format and log files should be saved
+# return value (dump file full path, log file full path)
+sub compute_format_destination {
+  my ($fmt, $eng) = @_;
+  my $enginedir;
+  my $fmtfile = $fmt;
+  my $kpsefmt;
+  my $destdir;
+
+  if ($eng eq "mpost") {
+    $fmtfile .= ".mem" ;
+    $kpsefmt = "mp" ;
+    $enginedir = "metapost"; # the directory, not the executable
+  } elsif ($eng =~ m/^mf(lua(jit)?)?(w|-nowin)?$/) {
+    $fmtfile .= ".base" ;
+    $kpsefmt = "mf" ;
+    $enginedir = "metafont" ;
+  } else {
+    $fmtfile .= ".fmt" ;
+    $kpsefmt = "tex" ;
+    $enginedir = $eng;
+    # strip final -dev from enginedir to support engines like luatex-dev
+    $enginedir =~ s/-dev$//;
+  }
+  if ($opts{'no-engine-subdir'}) {
+    $destdir = $opts{'fmtdir'};
+  } else {
+    $destdir = "$opts{'fmtdir'}/$enginedir";
+  }
+  return($kpsefmt, $destdir, $fmtfile, "$fmt.log");
+}
+
 
 #  rebuild_one_format
 # takes fmt/eng and rebuilds it, irrelevant of any setting
 # return value FMT_*
 #
 sub rebuild_one_format {
-  my ($fmt, $eng) = @_;
+  my ($fmt, $eng, $kpsefmt, $destdir, $fmtfile, $logfile) = @_;
   print_info("--- remaking $fmt with $eng\n");
 
   # get variables
@@ -529,12 +569,9 @@ sub rebuild_one_format {
   my $addargs = $alldata->{'merged'}{$fmt}{$eng}{'args'};
 
   # running parameters
-  my $enginedir;
   my $jobswitch = "-jobname=$fmt";
   my $prgswitch = "-progname=" ;
   my $recorderswitch = ($opts{'recorder'} ? "-recorder" : "");
-  my $fmtfile = $fmt;
-  my $kpsefmt;
   my $pool;
   my $tcx = "";
   my $tcxflag = "";
@@ -557,22 +594,6 @@ sub rebuild_one_format {
   elsif ($fmt =~ m/^cont-..$/) { $prgswitch .= "context"; }
   else                         { $prgswitch .= $fmt; }
 
-  if ($eng eq "mpost") { 
-    $fmtfile .= ".mem" ; 
-    $kpsefmt = "mp" ; 
-    $enginedir = "metapost"; # the directory, not the executable
-  } elsif ($eng =~ m/^mf(lua(jit)?)?(w|-nowin)?$/) {
-    $fmtfile .= ".base" ; 
-    $kpsefmt = "mf" ; 
-    $enginedir = "metafont";
-  } else {
-    $fmtfile .= ".fmt" ; 
-    $kpsefmt = "tex" ; 
-    $enginedir = $eng;
-    # strip final -dev from enginedir to support engines like luatex-dev
-    $enginedir =~ s/-dev$//;
-  }
-  
   # check for existence of ini file before doing anything else
   if (system("kpsewhich -progname=$fmt -format=$kpsefmt $inifile >$nul 2>&1") != 0) {
     # we didn't find the ini file, skip
@@ -607,7 +628,7 @@ sub rebuild_one_format {
     if ($poolfile && -f $poolfile) {
       print_verbose("attempting to create localized format "
                     . "using pool=$pool and tcx=$tcx.\n");
-      File::Copy($poolfile, "$eng.pool");
+      File::Copy::copy($poolfile, "$eng.pool");
       $tcxflag = "-translate-file=$tcx" if ($tcx);
       $localpool = 1;
     }
@@ -683,42 +704,40 @@ sub rebuild_one_format {
     return $FMT_FAILURE;
   }
 
-  if (! -f "$fmt.log") {
+  if (! -f $logfile) {
     print_deferred_error("no log file generated for $fmt/$eng, strange\n");
     return $FMT_FAILURE;
   }
 
-  open (LOGFILE, "<$fmt.log")
-    || print_deferred_warning("cannot open $fmt.log, strange: $!\n");
+  open (LOGFILE, "<$logfile")
+    || print_deferred_warning("cannot open $logfile, strange: $!\n");
   my @logfile = <LOGFILE>;
   close LOGFILE;
   if (grep(/^!/, @logfile) > 0) {
     print_deferred_error("\`$cmdline' had errors.\n");
   }
 
-  my $fulldestdir;
-  if ($opts{'no-engine-subdir'}) {
-    $fulldestdir = $opts{'fmtdir'};
-  } else {
-    $fulldestdir = "$opts{'fmtdir'}/$enginedir";
-  }
-  TeXLive::TLUtils::mkdirhier($fulldestdir);
+  TeXLive::TLUtils::mkdirhier($destdir);
   
-  if (!File::Copy::move( "$fmt.log", "$fulldestdir/$fmt.log")) {
-    print_deferred_error("Cannot move $fmt.log to $fulldestdir.\n");
+  # here and in the following we use copy instead of move
+  # to make sure that in SElinux enabled cases the rules of
+  # the destination directory are applied.]
+  # See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=900580
+  if (!File::Copy::copy( $logfile, "$destdir/$logfile")) {
+    print_deferred_error("Cannot copy $logfile to $destdir.\n");
   }
   if ($opts{'recorder'}) {
     # the recorder output is used by check-fmttriggers to determine
     # package dependencies for each format.  Unfortunately omega-based
     # engines gratuitiously changed the extension from .fls to .ofl.
     my $recfile = $fmt . ($fmt =~ m/^(aleph|lamed)$/ ? ".ofl" : ".fls");
-    if (!File::Copy::move( $recfile, "$fulldestdir/$recfile")) {
-      print_deferred_error("Cannot move $recfile to $fulldestdir.\n");
+    if (!File::Copy::copy( $recfile, "$destdir/$recfile")) {
+      print_deferred_error("Cannot copy $recfile to $destdir.\n");
     }
   }
 
-  my $destfile = "$fulldestdir/$fmtfile";
-  if (File::Copy::move( $fmtfile, $destfile )) {
+  my $destfile = "$destdir/$fmtfile";
+  if (File::Copy::copy( $fmtfile, $destfile )) {
     print_info("$destfile installed.\n");
     #
     # original fmtutil.sh did some magic trick for mplib-luatex.mem
@@ -765,10 +784,10 @@ sub rebuild_one_format {
     return $FMT_SUCCESS;
 
   } else {
-    print_deferred_error("Cannot move $fmtfile to $destfile.\n");
+    print_deferred_error("Cannot copy $fmtfile to $destfile.\n");
     if (-f $destfile) {
       # remove the empty file possibly left over if near-full file system.
-      print_verbose("Removing partial file after move failure: $destfile\n");
+      print_verbose("Removing partial file after copy failure: $destfile\n");
       unlink($destfile)
         || print_deferred_error("unlink($destfile) failed: $!\n");
     }
@@ -890,6 +909,8 @@ sub callback_list_cfg {
   @lines = map { $_->[1] } sort { $a->[0] cmp $b->[0] } @lines;
   print "List of all formats:\n";
   print @lines;
+  
+  return @lines == 0; # only return failure if no formats.
 }
 
 
@@ -931,27 +952,46 @@ sub read_fmtutil_file {
   my $fn = shift;
   open(FN, "<$fn") || die "Cannot read $fn: $!";
   #
-  # we count lines from 0 ..!!!!
+  # we count lines from 0 ..!!!!?
   my $i = -1;
+  my $printline = 0; # but not in error messages
   my @lines = <FN>;
   chomp(@lines);
   $alldata->{'fmtutil'}{$fn}{'lines'} = [ @lines ];
   close(FN) || warn("$prg: Cannot close $fn: $!");
   for (@lines) {
     $i++;
+    $printline++;
     chomp;
+    my $orig_line = $_;
     next if /^\s*#?\s*$/; # ignore empty and all-blank and just-# lines
     next if /^\s*#[^!]/;  # ignore whole-line comment that is not a disable
     s/#[^!].*//;          # remove within-line comment that is not a disable
     s/#$//;               # remove # at end of line
     my ($a,$b,$c,@rest) = split (' '); # special split rule, leading ws ign
+    if (! $b) { # as in: "somefmt"
+      print_warning("no engine specified for format $a, ignoring "
+                    . "(file $fn, line $printline)\n");
+      next;
+    }
+    if (! $c) { # as in: "somefmt someeng"
+      print_warning("no pattern argument specified for $a/$b, ignoring line: "
+                    . "$orig_line (file $fn, line $printline)\n");
+      next;
+    }
+    if (@rest == 0) { # as in: "somefmt someeng somepat"
+      print_warning("no inifile argument(s) specified for $a/$b, ignoring line: "
+                    . "$orig_line (file $fn, line $printline)\n");
+      next;
+    }
     my $disabled = 0;
     if ($a eq "#!") {
-      # we cannot determine whether a line is a proper fmtline or
-      # not, so we have to assume that it is
+      # we cannot feasibly determine whether a line is a proper fmtline or
+      # not, so we have to assume that it is as long as we have four args.
       my $d = shift @rest;
       if (!defined($d)) {
-        print_warning("apparently not a real disable line, ignored: $_\n");
+        print_warning("apparently not a real disable line, ignoring: "
+                      . "$orig_line (file $fn, line $printline)\n");
         next;
       } else {
         $disabled = 1;

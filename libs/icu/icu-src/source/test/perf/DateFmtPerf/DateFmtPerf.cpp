@@ -1,6 +1,6 @@
 /*
 ***********************************************************************
-* Copyright (C) 2016 and later: Unicode, Inc. and others.
+* © 2016 and later: Unicode, Inc. and others.
 * License & terms of use: http://www.unicode.org/copyright.html#License
 ***********************************************************************
 ***********************************************************************
@@ -278,7 +278,7 @@ int main(int argc, const char* argv[]){
 
 
     if(U_FAILURE(status)){   // ERROR HERE!!!
-		cout << "initialize failed! " << status << endl;
+		cout << "initialize failed! " << u_errorName(status) << endl;
         return status;
     }
 	//cout << "Done initializing!\n" << endl;

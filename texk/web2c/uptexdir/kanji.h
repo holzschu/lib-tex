@@ -19,10 +19,6 @@
 #define not_kanji_char_seq(a,b) (1)
 #define notkanjicharseq not_kanji_char_seq
 
-#if !defined(WIN32)
-extern int sjisterminal;
-#endif
-
 /* functions */
 #define XXHi(x) BYTE1(x)
 #define XHi(x) BYTE2(x)
@@ -54,6 +50,11 @@ extern void init_default_kanji (const_string file_str, const_string internal_str
 #undef putc
 #define putc(c,fp) putc2(c,fp)
 #endif /* !PRESERVE_PUTC */
+
+#ifndef PRESERVE_FPUTS
+#undef fputs
+#define fputs(c,fp) fputs2(c,fp)
+#endif /* !PRESERVE_FPUTS */
 
 #ifdef UPBIBTEX
 #define inputline2(fp,buff,pos,size,ptr) input_line2(fp,buff,pos,size,ptr)

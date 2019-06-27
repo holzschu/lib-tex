@@ -8,6 +8,7 @@
 #include <zlib.h> /* crc32 */
 
 #include <zzip/memdisk.h>
+#include <zzip/__fnmatch.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,16 +21,6 @@
 #endif
 
 #include <time.h>
-
-#ifdef ZZIP_HAVE_FNMATCH_H
-#include <fnmatch.h>
-#else
-#define fnmatch(x,y,z) strcmp(x,y)
-#endif
-
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
 
 #define ___ {
 #define ____ }

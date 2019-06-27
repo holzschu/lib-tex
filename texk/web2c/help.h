@@ -10,7 +10,7 @@
    thing, the messages have a lot in common, so it's nice to have them
    in one place.)
 
-Copyright 1995, 1996, 2009, 2011, 2012 Karl Berry.
+Copyright 1995, 1996, 2009, 2011-2019 Karl Berry.
 Copyright 2008 Taco Hoekwater.
 Copyright 2001, 2003, 2004 Olaf Weber.
 
@@ -56,9 +56,11 @@ const_string CTANGLEHELP[] = {
     "  unless otherwise specified by OUTFILE; in this case, '-' specifies",
     "  a null CHANGEFILE.",
     "",
-    "-b          suppress banner line on terminal",
-    "-h          suppress success message on completion",
-    "-p          suppress progress report messages",
+    "+b          print banner line on terminal",
+    "+h          print success message on completion",
+    "+p          print progress report messages",
+    "+/-q        shortcut for '-bhp'; also '--quiet' (default)",
+    "+/-v        shortcut for '+bhp'; also '--verbose'",
     "+s          print usage statistics",
     "--help      display this help and exit",
     "--version   output version information and exit",
@@ -73,12 +75,43 @@ const_string CWEAVEHELP[] = {
     "  unless otherwise specified by OUTFILE; in this case, '-' specifies",
     "  a null CHANGEFILE.",
     "",
-    "-b          suppress banner line on terminal",
+    "+b          print banner line on terminal",
+    "+h          print success message on completion",
+    "+p          print progress report messages",
+    "+/-q        shortcut for '-bhp'; also '--quiet' (default)",
+    "+/-v        shortcut for '+bhp'; also '--verbose'",
+    "-e          do not enclose C material in \\PB{...}",
     "-f          do not force a newline after every C statement in output",
-    "-h          suppress success message on completion",
-    "-p          suppress progress report messages",
+    "-i          suppress indentation of parameter declarations",
+    "-o          suppress separation of declarations and statements",
     "-x          omit indices, section names, table of contents",
-    "+e          enclose C material in \\PB{...}",
+    "+lX         use macros for language X as of Xcwebmac.tex",
+    "+s          print usage statistics",
+    "--help      display this help and exit",
+    "--version   output version information and exit",
+    NULL
+};
+
+const_string CTWILLHELP[] = {
+    "Usage: ctwill [OPTIONS] WEBFILE[.w] [{CHANGEFILE[.ch]|-} [OUTFILE[.tex]]]",
+    "  Weave WEBFILE with CHANGEFILE into a TeX document with mini-indexes.",
+    "  Default CHANGEFILE is " DEV_NULL ";",
+    "  TeX output goes to the basename of WEBFILE extended with `.tex'",
+    "  unless otherwise specified by OUTFILE; in this case, '-' specifies",
+    "  a null CHANGEFILE.",
+    "",
+    "+b          print banner line on terminal",
+    "+h          print success message on completion",
+    "+p          print progress report messages",
+    "+/-q        shortcut for '-bhp'; also '--quiet' (default)",
+    "+/-v        shortcut for '+bhp'; also '--verbose'",
+    "-e          do not enclose C material in \\PB{...}",
+    "-f          do not force a newline after every C statement in output",
+    "-i          suppress indentation of parameter declarations",
+    "-o          suppress separation of declarations and statements",
+    "-x          omit indices, section names, table of contents",
+    "+P          \\input ctproofmac.tex instead of ctwimac.tex",
+    "+/-lX       use macros for language X as of Xct{wi|proof}mac.tex",
     "+s          print usage statistics",
     "--help      display this help and exit",
     "--version   output version information and exit",
@@ -333,9 +366,6 @@ const_string PBIBTEXHELP[] = {
     "",
     "-kanji=STRING          set Japanese encoding (STRING=euc|jis|sjis|utf8)",
     "-min-crossrefs=NUMBER  include item after NUMBER cross-refs; default 2",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-terse                 do not print progress reports",
     "-help                  display this help and exit",
     "-version               output version information and exit",
@@ -357,9 +387,6 @@ const_string PDVITYPEHELP[] = {
     "-output-level=NUMBER   verbosity level, from 0 to 4; default 4",
     "-page-start=PAGE-SPEC  start at PAGE-SPEC, for example `2' or `5.*.-2'",
     "-show-opcodes          show numeric opcodes (in decimal)",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-help                  display this help and exit",
     "-version               output version information and exit",
     NULL
@@ -423,9 +450,6 @@ const_string PPLTOTFHELP[] = {
     "  Default TFMFILE is basename of PLFILE extended with `.tfm'.",
     "",
     "-kanji=STRING          set Japanese encoding (STRING=euc|jis|sjis|utf8)",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-help                  print this message and exit.",
     "-verbose               output progress reports.",
     "-version               print version information and exit.",
@@ -444,9 +468,6 @@ const_string PTFTOPLHELP[] = {
     "                        either `octal' or `ascii'; default is ascii for",
     "                        letters and digits, octal for all else",
     "-kanji=STRING          set Japanese encoding (STRING=euc|jis|sjis|utf8)",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-help                  display this help and exit",
     "-verbose               display progress reports",
     "-version               output version information and exit",
@@ -504,9 +525,6 @@ const_string UPBIBTEXHELP[] = {
     "-kanji=STRING          set Japanese encoding (STRING=euc|jis|sjis|utf8|uptex)",
     "-kanji-internal=STRING set Japanese internal encoding (STRING=euc|uptex)",
     "-min-crossrefs=NUMBER  include item after NUMBER cross-refs; default 2",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-terse                 do not print progress reports",
     "-help                  display this help and exit",
     "-version               output version information and exit",
@@ -528,9 +546,6 @@ const_string UPDVITYPEHELP[] = {
     "-output-level=NUMBER   verbosity level, from 0 to 4; default 4",
     "-page-start=PAGE-SPEC  start at PAGE-SPEC, for example `2' or `5.*.-2'",
     "-show-opcodes          show numeric opcodes (in decimal)",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-help                  display this help and exit",
     "-version               output version information and exit",
     NULL
@@ -545,9 +560,6 @@ const_string UPPLTOTFHELP[] = {
     "  Default TFMFILE is basename of PLFILE extended with `.tfm'.",
     "",
     "-kanji=STRING          set Japanese encoding (STRING=euc|jis|sjis|utf8|uptex)",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-help                  print this message and exit.",
     "-verbose               output progress reports.",
     "-version               print version information and exit.",
@@ -566,9 +578,6 @@ const_string UPTFTOPLHELP[] = {
     "                        either `octal' or `ascii'; default is ascii for",
     "                        letters and digits, octal for all else",
     "-kanji=STRING          set Japanese encoding (STRING=euc|jis|sjis|utf8|uptex)",
-#if defined(WIN32)
-    "-sjis-terminal         always output to stdout and stderr by CP932",
-#endif
     "-help                  display this help and exit",
     "-verbose               display progress reports",
     "-version               output version information and exit",

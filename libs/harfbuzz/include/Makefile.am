@@ -1,4 +1,4 @@
-## $Id: Makefile.am 43048 2017-01-25 07:36:33Z kakuto $
+## $Id: Makefile.am 49473 2018-12-22 00:39:38Z kakuto $
 ## Proxy Makefile.am to install harfbuzz headers for TeX Live.
 ##
 ##   Copyright 2015-2016 Karl Berry <tex-live@tug.org>
@@ -14,12 +14,16 @@ HARFBUZZ_BLD = $(top_builddir)
 ## common
 hdr_links = \
 	$(HARFBUZZ_SRC)/hb.h \
+	$(HARFBUZZ_SRC)/hb-aat-layout.h \
+	$(HARFBUZZ_SRC)/hb-aat.h \
 	$(HARFBUZZ_SRC)/hb-blob.h \
 	$(HARFBUZZ_SRC)/hb-buffer.h \
 	$(HARFBUZZ_SRC)/hb-common.h \
 	$(HARFBUZZ_SRC)/hb-deprecated.h \
 	$(HARFBUZZ_SRC)/hb-face.h \
 	$(HARFBUZZ_SRC)/hb-font.h \
+	$(HARFBUZZ_SRC)/hb-map.h \
+	$(HARFBUZZ_SRC)/hb-ot-deprecated.h \
 	$(HARFBUZZ_SRC)/hb-set.h \
 	$(HARFBUZZ_SRC)/hb-shape.h \
 	$(HARFBUZZ_SRC)/hb-shape-plan.h \
@@ -29,11 +33,12 @@ hdr_links = \
 ## native OpenType Layout backend
 hdr_links += \
 	$(HARFBUZZ_SRC)/hb-ot.h \
+	$(HARFBUZZ_SRC)/hb-ot-color.h \
 	$(HARFBUZZ_SRC)/hb-ot-font.h \
 	$(HARFBUZZ_SRC)/hb-ot-layout.h \
 	$(HARFBUZZ_SRC)/hb-ot-math.h \
+	$(HARFBUZZ_SRC)/hb-ot-name.h \
 	$(HARFBUZZ_SRC)/hb-ot-shape.h \
-	$(HARFBUZZ_SRC)/hb-ot-tag.h \
 	$(HARFBUZZ_SRC)/hb-ot-var.h
 
 ## ICU library

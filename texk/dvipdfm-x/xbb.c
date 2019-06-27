@@ -1,5 +1,5 @@
 /* This is extractbb, a bounding box extraction program.
-    Copyright (C) 2008-2017 by Jin-Hwan Cho and Matthias Franz
+    Copyright (C) 2008-2019 by Jin-Hwan Cho and Matthias Franz
     and the dvipdfmx project team.
 
     This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,9 @@
 #include <time.h>
 #include <string.h>
 
+#include "dpxconf.h"
+#include "dpxutil.h"
+
 #include "numbers.h"
 #include "system.h"
 #include "mem.h"
@@ -32,6 +35,7 @@
 #include "pdfobj.h"
 #include "pdfdoc.h"
 #include "pdfparse.h"
+#include "pdfdraw.h"
 
 #include "bmpimage.h"
 #include "jpegimage.h"
@@ -41,22 +45,14 @@
 #include "dvipdfmx.h"
 #include "pdflimits.h"
 
-static int PageBox = 0;
-/*
- PageBox=0 :default
- PageBox=1 :cropbox
- PageBox=2 :mediabox
- PageBox=3 :artbox
- PageBox=4 :trimbox
- PageBox=5 :bleedbox
-*/
+static enum pdf_page_boundary PageBox = pdf_page_boundary__auto;
 
 static int Include_Page = 1;
 
 static void show_version(void)
 {
   fprintf (stdout, "\nThis is %s Version " VERSION "\n", my_name);
-  fprintf (stdout, "\nCopyright (C) 2008-2017 by Jin-Hwan Cho and Matthias Franz\n");
+  fprintf (stdout, "\nCopyright (C) 2008-2019 by Jin-Hwan Cho and Matthias Franz\n");
   fprintf (stdout, "\nThis is free software; you can redistribute it and/or modify\n");
   fprintf (stdout, "it under the terms of the GNU General Public License as published by\n");
   fprintf (stdout, "the Free Software Foundation; either version 2 of the License, or\n");
@@ -87,14 +83,12 @@ static void usage(void)
   exit(1);
 }
 
-static char verbose = 0;
-
 static void do_time(FILE *file)
 {
   time_t current_time;
   struct tm *bd_time;
 
-  current_time = get_unique_time_if_given();
+  current_time = dpx_util_get_unique_time_if_given();
   if (current_time == INVALID_EPOCH_VALUE) {
     time(&current_time);
     bd_time = localtime(&current_time);
@@ -130,7 +124,7 @@ static char *make_xbb_filename(const char *name)
     strncpy(result, name, strlen(name)-strlen(extensions[i]));
     result[strlen(name)-strlen(extensions[i])] = 0;
   }
-  strcat(result, (compat_mode ? ".bb" : ".xbb"));
+  strcat(result, ((dpx_conf.compat_mode == dpx_mode_compat_mode) ? ".bb" : ".xbb"));
   return result;
 }
 
@@ -157,7 +151,7 @@ static void write_xbb(char *fname,
 #endif
   }
 
-  if (verbose) {
+  if (dpx_conf.verbose_level > 0) {
     MESG("Writing to %s: ", xbb_to_file ? outname : "stdout");
     MESG("Bounding box: %d %d %d %d\n", bbllx, bblly, bburx, bbury);
   }
@@ -166,7 +160,7 @@ static void write_xbb(char *fname,
   fprintf(fp, "%%%%Creator: extractbb %s\n", VERSION);
   fprintf(fp, "%%%%BoundingBox: %d %d %d %d\n", bbllx, bblly, bburx, bbury);
 
-  if (!compat_mode) {
+  if (dpx_conf.compat_mode != dpx_mode_compat_mode) {
     /* Note:
      * According to Adobe Technical Note #5644, the arguments to
      * "%%HiResBoundingBox:" must be of type real. And according
@@ -177,7 +171,7 @@ static void write_xbb(char *fname,
     fprintf(fp, "%%%%HiResBoundingBox: %f %f %f %f\n",
             bbllx_f, bblly_f, bburx_f, bbury_f);
     if (pdf_version >= 0) {
-      fprintf(fp, "%%%%PDFVersion: 1.%d\n", pdf_version);
+      fprintf(fp, "%%%%PDFVersion: %d.%d\n", pdf_version/10, pdf_version%10);
       fprintf(fp, "%%%%Pages: %d\n", pagecount);
     }
   }
@@ -255,6 +249,8 @@ static void do_pdf (FILE *fp, char *filename)
   int page_no = Include_Page;
   int count;
   pdf_rect bbox;
+  pdf_tmatrix matrix;
+  pdf_coord   p1, p2, p3, p4;
 
   pf = pdf_open(filename, fp);
   if (!pf) {
@@ -262,7 +258,7 @@ static void do_pdf (FILE *fp, char *filename)
     return;
   }
   count = pdf_doc_get_page_count(pf);
-  page  = pdf_doc_get_page(pf, page_no, PageBox, &bbox, NULL);
+  page  = pdf_doc_get_page(pf, page_no, PageBox, &bbox, &matrix, NULL);
 
   pdf_close(pf);
 
@@ -270,6 +266,24 @@ static void do_pdf (FILE *fp, char *filename)
     return;
 
   pdf_release_obj(page);
+
+  /* Image's attribute "bbox" here is affected by /Rotate entry of included
+   * PDF page.
+   */
+  p1.x = bbox.llx; p1.y = bbox.lly;
+  pdf_dev_transform(&p1, &matrix);
+  p2.x = bbox.urx; p2.y = bbox.lly;
+  pdf_dev_transform(&p2, &matrix);
+  p3.x = bbox.urx; p3.y = bbox.ury;
+  pdf_dev_transform(&p3, &matrix);
+  p4.x = bbox.llx; p4.y = bbox.ury;
+  pdf_dev_transform(&p4, &matrix);
+
+  bbox.llx = min4(p1.x, p2.x, p3.x, p4.x);
+  bbox.lly = min4(p1.y, p2.y, p3.y, p4.y);
+  bbox.urx = max4(p1.x, p2.x, p3.x, p4.x);
+  bbox.ury = max4(p1.y, p2.y, p3.y, p4.y);
+
   write_xbb(filename, bbox.llx, bbox.lly, bbox.urx, bbox.ury,
             pdf_file_get_version(pf), count);
 }
@@ -303,11 +317,11 @@ int extractbb (int argc, char *argv[])
       exit(0);
 
     case 'B':
-      if (strcasecmp (optarg, "cropbox") == 0) PageBox = 1;
-      else if (strcasecmp (optarg, "mediabox") == 0) PageBox = 2;
-      else if (strcasecmp (optarg, "artbox") == 0) PageBox = 3; 
-      else if (strcasecmp (optarg, "trimbox") == 0) PageBox = 4;
-      else if (strcasecmp (optarg, "bleedbox") == 0) PageBox = 5;
+      if (strcasecmp (optarg, "cropbox") == 0) PageBox = pdf_page_boundary_cropbox;
+      else if (strcasecmp (optarg, "mediabox") == 0) PageBox = pdf_page_boundary_mediabox;
+      else if (strcasecmp (optarg, "artbox") == 0) PageBox = pdf_page_boundary_artbox; 
+      else if (strcasecmp (optarg, "trimbox") == 0) PageBox = pdf_page_boundary_trimbox;
+      else if (strcasecmp (optarg, "bleedbox") == 0) PageBox = pdf_page_boundary_bleedbox;
       else {
         fprintf(stderr, "%s: Invalid argument \"-B %s\"", my_name, optarg);
         usage();
@@ -320,8 +334,11 @@ int extractbb (int argc, char *argv[])
         Include_Page = 1;
       break;
 
-    case 'q': case 'v':
-      verbose = c == 'v';
+    case 'q':
+      dpx_conf.verbose_level = 0;
+      break;
+    case 'v':
+      dpx_conf.verbose_level++;
       break;
 
     case 'O':
@@ -329,8 +346,11 @@ int extractbb (int argc, char *argv[])
     case 'b':  /* Ignored for backward compatibility */
       break;
 
-    case 'm': case 'x':
-      compat_mode = c == 'm';
+    case 'm':
+      dpx_conf.compat_mode = dpx_mode_compat_mode;
+      break;
+    case 'x':
+      dpx_conf.compat_mode = dpx_mode_normal_mode;
       break;
 
     default:
@@ -398,179 +418,3 @@ int extractbb (int argc, char *argv[])
 
   return 0;
 }
-
-#if defined(LIBDPX)
-static void do_aptex_bmp (FILE *fp, char *filename, pdf_rect * box)
-{
-  int    width, height;
-  double xdensity, ydensity;
-
-  if (bmp_get_bbox(fp, &width, &height, &xdensity, &ydensity) < 0) {
-    WARN("%s does not look like a BMP file...\n", filename);
-    return;
-  }
-
-  box->llx = 0.0;
-  box->lly = 0.0;
-  box->urx = xdensity*width;
-  box->ury = ydensity*height;
-  return;
-}
-
-static void do_aptex_jpeg (FILE *fp, char *filename, pdf_rect * box)
-{
-  int    width, height;
-  double xdensity, ydensity;
-
-  if (jpeg_get_bbox(fp, &width, &height, &xdensity, &ydensity) < 0) {
-    WARN("%s does not look like a JPEG file...\n", filename);
-    return;
-  }
-
-  box->llx = 0.0;
-  box->lly = 0.0;
-  box->urx = xdensity*width;
-  box->ury = ydensity*height;
-  return;
-}
-
-static void do_aptex_jp2 (FILE *fp, char *filename, pdf_rect * box)
-{
-  int    width, height;
-  double xdensity, ydensity;
-
-  if (jp2_get_bbox(fp, &width, &height, &xdensity, &ydensity) < 0) {
-    WARN("%s does not look like a JP2/JPX file...\n", filename);
-    return;
-  }
-
-  box->llx = 0.0;
-  box->lly = 0.0;
-  box->urx = xdensity*width;
-  box->ury = ydensity*height;
-  return;
-}
-
-#ifdef HAVE_LIBPNG
-static void do_aptex_png (FILE *fp, char *filename, pdf_rect * box)
-{
-  uint32_t width, height;
-  double xdensity, ydensity;
-
-  if (png_get_bbox(fp, &width, &height, &xdensity, &ydensity) < 0) {
-    WARN("%s does not look like a PNG file...\n", filename);
-    return;
-  }
-
-  box->llx = 0.0;
-  box->lly = 0.0;
-  box->urx = xdensity*width;
-  box->ury = ydensity*height;
-  return;
-}
-#endif /* HAVE_LIBPNG */
-
-static void do_aptex_pdf (FILE *fp, char *filename, pdf_rect * box)
-{
-  pdf_obj *page;
-  pdf_file *pf;
-  int page_no = Include_Page;
-  int count;
-  pdf_rect bbox;
-
-  pf = pdf_open(filename, fp);
-  if (!pf) {
-    WARN("%s does not look like a PDF file...\n", filename);
-    return;
-  }
-  count = pdf_doc_get_page_count(pf);
-  page  = pdf_doc_get_page(pf, page_no, PageBox, &bbox, NULL);
-
-  pdf_close(pf);
-
-  if (!page)
-    return;
-
-  pdf_release_obj(page);
-
-  box->llx = bbox.llx;
-  box->lly = bbox.lly;
-  box->urx = bbox.urx;
-  box->ury = bbox.ury;
-}
-
-void aptex_extractbb (char * pict, uint32_t page, uint32_t rect, pdf_rect * bbox)
-{
-  FILE *infile = NULL;
-  char *kpse_file_name = NULL;
-  int    pictwd, pictht;
-  double xdensity, ydensity;
-
-  if (page == 0)
-    Include_Page = 1;
-  else
-    Include_Page = page;
-
-  PageBox = rect;
-
-  if (kpse_in_name_ok(pict))
-  {
-    infile = MFOPEN(pict, FOPEN_RBIN_MODE);
-    if (infile)
-    {
-      kpse_file_name = xstrdup(pict);
-    }
-    else
-    {
-      kpse_file_name = kpse_find_pict(pict);
-      if (kpse_file_name && kpse_in_name_ok(kpse_file_name))
-        infile = MFOPEN(kpse_file_name, FOPEN_RBIN_MODE);
-    }
-  }
-  if (infile == NULL)
-  {
-    WARN("Can't find file (%s), or it is forbidden to read ...skipping\n", pict);
-    goto cont;
-  }
-  if (check_for_bmp(infile))
-  {
-    do_aptex_bmp(infile, kpse_file_name, bbox);
-    goto cont;
-  }
-  if (check_for_jpeg(infile))
-  {
-    do_aptex_jpeg(infile, kpse_file_name, bbox);
-    goto cont;
-  }
-  if (check_for_jp2(infile))
-  {
-    do_aptex_jp2(infile, kpse_file_name, bbox);
-    goto cont;
-  }
-  if (check_for_pdf(infile))
-  {
-    pdf_files_init();
-    pdf_set_version(PDF_VERSION_MAX);
-    do_aptex_pdf(infile, kpse_file_name, bbox);
-    pdf_files_close();
-    goto cont;
-  }
-#ifdef HAVE_LIBPNG
-  if (check_for_png(infile))
-  {
-    do_aptex_png(infile, kpse_file_name, bbox);
-    goto cont;
-  }
-#endif /* HAVE_LIBPNG */
-  WARN("Can't handle file type for file named %s\n", pict);
-  bbox->llx = 0.0;
-  bbox->lly = 0.0;
-  bbox->urx = 0.0;
-  bbox->ury = 0.0;
-cont:
-  if (kpse_file_name)
-    RELEASE(kpse_file_name);
-  if (infile)
-    MFCLOSE(infile);
-}
-#endif /* LIBDPX */

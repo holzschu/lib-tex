@@ -16,13 +16,16 @@
 // Copyright (C) 2005 Jonathan Blandford <jrb@redhat.com>
 // Copyright (C) 2006 Thorkild Stray <thorkild@ifi.uio.no>
 // Copyright (C) 2007 Jeff Muizelaar <jeff@infidigm.net>
-// Copyright (C) 2007, 2011 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2007, 2011, 2017 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2009-2013, 2015 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2009, 2011 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2009, 2012, 2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2010 Christian Feuersänger <cfeuersaenger@googlemail.com>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012 William Bader <williambader@hotmail.com>
+// Copyright (C) 2017, 2018 Oliver Sander <oliver.sander@tu-dresden.de>
+// Copyright (C) 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
+// Copyright (C) 2018 Adam Reichold <adam.reichold@t-online.de>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -41,10 +44,13 @@
 #include "CharTypes.h"
 #include "Object.h"
 #include "PopplerCache.h"
+#include "ProfileData.h"
+#include <memory>
+#include <unordered_map>
+#include <string>
 
 class Annot;
 class Dict;
-class GooHash;
 class GooString;
 class GfxState;
 class Gfx;
@@ -78,7 +84,6 @@ public:
  : iccColorSpaceCache(5)
 #endif
   {
-      profileHash = NULL;
   }
 
   // Destructor.
@@ -167,6 +172,12 @@ public:
 
   //----- update graphics state
   virtual void updateAll(GfxState *state);
+
+  // Update the Current Transformation Matrix (CTM), i.e., the new matrix
+  // given in m11, ..., m32 is combined with the current value of the CTM.
+  // At the same time, when this method is called, state->getCTM() already
+  // contains the correct new CTM, so one may as well replace the
+  // CTM of the renderer with that.
   virtual void updateCTM(GfxState * /*state*/, double /*m11*/, double /*m12*/,
 			 double /*m21*/, double /*m22*/, double /*m31*/, double /*m32*/) {}
   virtual void updateLineDash(GfxState * /*state*/) {}
@@ -240,13 +251,23 @@ public:
   //----- text drawing
   virtual void beginStringOp(GfxState * /*state*/) {}
   virtual void endStringOp(GfxState * /*state*/) {}
-  virtual void beginString(GfxState * /*state*/, GooString * /*s*/) {}
+  virtual void beginString(GfxState * /*state*/, const GooString * /*s*/) {}
   virtual void endString(GfxState * /*state*/) {}
+
+  // Draw one glyph at a specified position
+  //
+  // Arguments are:
+  // CharCode code: This is the character code in the content stream. It needs to be mapped back to a glyph index.
+  // int nBytes: The text strings in the content stream can consists of either 8-bit or 16-bit
+  //             character codes depending on the font. nBytes is the number of bytes in the character code.
+  // Unicode *u: The UCS-4 mapping used for text extraction (TextOutputDev).
+  // int uLen: The number of unicode entries in u.  Usually '1', for a single character,
+  //           but it may also have larger values, for example for ligatures.
   virtual void drawChar(GfxState * /*state*/, double /*x*/, double /*y*/,
 			double /*dx*/, double /*dy*/,
 			double /*originX*/, double /*originY*/,
 			CharCode /*code*/, int /*nBytes*/, Unicode * /*u*/, int /*uLen*/) {}
-  virtual void drawString(GfxState * /*state*/, GooString * /*s*/) {}
+  virtual void drawString(GfxState * /*state*/, const GooString * /*s*/) {}
   virtual GBool beginType3Char(GfxState * /*state*/, double /*x*/, double /*y*/,
 			       double /*dx*/, double /*dy*/,
 			       CharCode /*code*/, Unicode * /*u*/, int /*uLen*/);
@@ -254,10 +275,15 @@ public:
   virtual void beginTextObject(GfxState * /*state*/) {}
   virtual void endTextObject(GfxState * /*state*/) {}
   virtual void incCharCount(int /*nChars*/) {}
-  virtual void beginActualText(GfxState * /*state*/, GooString * /*text*/ ) {}
+  virtual void beginActualText(GfxState * /*state*/, const GooString * /*text*/ ) {}
   virtual void endActualText(GfxState * /*state*/) {}
 
   //----- image drawing
+  // Draw an image mask.  An image mask is a one-bit-per-pixel image, where each pixel
+  // can only be 'fill color' or 'transparent'.
+  //
+  // If 'invert' is false, a sample value of 0 marks the page with the current color,
+  // and a 1 leaves the previous contents unchanged. If 'invert' is true, these meanings are reversed.
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			     int width, int height, GBool invert, GBool interpolate,
 			     GBool inlineImg);
@@ -286,13 +312,13 @@ public:
   //----- grouping operators
 
   virtual void endMarkedContent(GfxState *state);
-  virtual void beginMarkedContent(char *name, Dict *properties);
-  virtual void markPoint(char *name);
-  virtual void markPoint(char *name, Dict *properties);
+  virtual void beginMarkedContent(const char *name, Dict *properties);
+  virtual void markPoint(const char *name);
+  virtual void markPoint(const char *name, Dict *properties);
 
 
 
-#if OPI_SUPPORT
+#ifdef OPI_SUPPORT
   //----- OPI functions
   virtual void opiBegin(GfxState *state, Dict *opiDict);
   virtual void opiEnd(GfxState *state, Dict *opiDict);
@@ -310,9 +336,9 @@ public:
   virtual void psXObject(Stream * /*psStream*/, Stream * /*level1Stream*/) {}
 
   //----- Profiling
-  virtual void startProfile();
-  virtual GooHash *getProfileHash() {return profileHash; }
-  virtual GooHash *endProfile();
+  void startProfile();
+  std::unordered_map<std::string, ProfileData>* getProfileHash() const { return profileHash.get(); }
+  std::unique_ptr<std::unordered_map<std::string, ProfileData>> endProfile();
 
   //----- transparency groups and soft masks
   virtual GBool checkTransparencyGroup(GfxState * /*state*/, GBool /*knockout*/) { return gTrue; }
@@ -342,7 +368,7 @@ private:
 
   double defCTM[6];		// default coordinate transform matrix
   double defICTM[6];		// inverse of default CTM
-  GooHash *profileHash;
+  std::unique_ptr<std::unordered_map<std::string, ProfileData>> profileHash;
 
 #ifdef USE_CMS
   PopplerCache iccColorSpaceCache;

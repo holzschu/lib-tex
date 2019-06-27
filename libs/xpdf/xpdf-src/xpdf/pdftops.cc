@@ -15,9 +15,10 @@
 #  include <fenv.h>
 #  include <fpu_control.h>
 #endif
+#include "gmem.h"
+#include "gmempp.h"
 #include "parseargs.h"
 #include "GString.h"
-#include "gmem.h"
 #include "GlobalParams.h"
 #include "Object.h"
 #include "Stream.h"
@@ -36,8 +37,10 @@ static int lastPage = 0;
 static GBool level1 = gFalse;
 static GBool level1Sep = gFalse;
 static GBool level2 = gFalse;
+static GBool level2Gray = gFalse;
 static GBool level2Sep = gFalse;
 static GBool level3 = gFalse;
+static GBool level3Gray = gFalse;
 static GBool level3Sep = gFalse;
 static GBool doEPS = gFalse;
 static GBool doForm = gFalse;
@@ -57,6 +60,7 @@ static GBool expand = gFalse;
 static GBool noShrink = gFalse;
 static GBool noCenter = gFalse;
 static GBool pageCrop = gFalse;
+static GBool userUnit = gFalse;
 static GBool duplex = gFalse;
 static char ownerPassword[33] = "\001";
 static char userPassword[33] = "\001";
@@ -76,10 +80,14 @@ static ArgDesc argDesc[] = {
    "generate Level 1 separable PostScript"},
   {"-level2",     argFlag,     &level2,         0,
    "generate Level 2 PostScript"},
+  {"-level2gray", argFlag,     &level2Gray,     0,
+   "generate Level 2 grayscale PostScript"},
   {"-level2sep",  argFlag,     &level2Sep,      0,
    "generate Level 2 separable PostScript"},
   {"-level3",     argFlag,     &level3,         0,
    "generate Level 3 PostScript"},
+  {"-level3gray", argFlag,     &level3Gray,     0,
+   "generate Level 3 grayscale PostScript"},
   {"-level3sep",  argFlag,     &level3Sep,      0,
    "generate Level 3 separable PostScript"},
   {"-eps",        argFlag,     &doEPS,          0,
@@ -116,6 +124,8 @@ static ArgDesc argDesc[] = {
    "don't center pages smaller than the paper size"},
   {"-pagecrop",   argFlag,     &pageCrop,       0,
    "treat the CropBox as the page size"},
+  {"-userunit",   argFlag,     &userUnit,       0,
+   "honor the UserUnit"},
   {"-duplex",     argFlag,     &duplex,         0,
    "enable duplex printing"},
   {"-opw",        argString,   ownerPassword,   sizeof(ownerPassword),
@@ -141,7 +151,7 @@ static ArgDesc argDesc[] = {
 
 int main(int argc, char *argv[]) {
   PDFDoc *doc;
-  GString *fileName;
+  char *fileName;
   GString *psFileName;
   PSLevel level;
   PSOutMode mode;
@@ -160,18 +170,16 @@ int main(int argc, char *argv[]) {
   // emulation (yes, this is a kludge; but it's pretty much
   // unavoidable given the x87 instruction set; see gcc bug 323 for
   // more info)
-  fpu_control_t cw; 
+  fpu_control_t cw;
   _FPU_GETCW(cw);
-  cw = (cw & ~_FPU_EXTENDED) | _FPU_DOUBLE;
+  cw = (fpu_control_t)((cw & ~_FPU_EXTENDED) | _FPU_DOUBLE);
   _FPU_SETCW(cw);
 #endif
 
   exitCode = 99;
 
-#ifdef _MSC_VER
-  (void)kpse_set_program_name(argv[0], NULL);
-#endif
   // parse args
+  fixCommandLine(&argc, &argv);
   ok = parseArgs(argDesc, &argc, argv);
   if (!ok || argc < 2 || argc > 3 || printVersion || printHelp) {
     fprintf(stderr, "pdftops version %s\n", xpdfVersion);
@@ -184,8 +192,10 @@ int main(int argc, char *argv[]) {
   if ((level1 ? 1 : 0) +
       (level1Sep ? 1 : 0) +
       (level2 ? 1 : 0) +
+      (level2Gray ? 1 : 0) +
       (level2Sep ? 1 : 0) +
       (level3 ? 1 : 0) +
+      (level3Gray ? 1 : 0) +
       (level3Sep ? 1 : 0) > 1) {
     fprintf(stderr, "Error: use only one of the 'level' options.\n");
     exit(1);
@@ -198,10 +208,14 @@ int main(int argc, char *argv[]) {
     level = psLevel1;
   } else if (level1Sep) {
     level = psLevel1Sep;
+  } else if (level2Gray) {
+    level = psLevel2Gray;
   } else if (level2Sep) {
     level = psLevel2Sep;
   } else if (level3) {
     level = psLevel3;
+  } else if (level3Gray) {
+    level = psLevel3Gray;
   } else if (level3Sep) {
     level = psLevel3Sep;
   } else {
@@ -214,7 +228,7 @@ int main(int argc, char *argv[]) {
   mode = doEPS ? psModeEPS
                : doForm ? psModeForm
                         : psModePS;
-  fileName = new GString(argv[1]);
+  fileName = argv[1];
 
   // read config file
   globalParams = new GlobalParams(cfgFileName);
@@ -224,7 +238,6 @@ int main(int argc, char *argv[]) {
   if (paperSize[0]) {
     if (!globalParams->setPSPaperSize(paperSize)) {
       fprintf(stderr, "Invalid paper size\n");
-      delete fileName;
       goto err0;
     }
   } else {
@@ -253,7 +266,9 @@ int main(int argc, char *argv[]) {
   if (duplex) {
     globalParams->setPSDuplex(duplex);
   }
-  if (level1 || level1Sep || level2 || level2Sep || level3 || level3Sep) {
+  if (level1 || level1Sep ||
+      level2 || level2Gray || level2Sep ||
+      level3 || level3Gray || level3Sep) {
     globalParams->setPSLevel(level);
   }
   if (noEmbedT1Fonts) {
@@ -314,12 +329,11 @@ int main(int argc, char *argv[]) {
   if (argc == 3) {
     psFileName = new GString(argv[2]);
   } else {
-    p = fileName->getCString() + fileName->getLength() - 4;
-    if (!strcmp(p, ".pdf") || !strcmp(p, ".PDF")) {
-      psFileName = new GString(fileName->getCString(),
-			       fileName->getLength() - 4);
+    p = fileName + strlen(fileName) - 4;
+    if (strlen(fileName) > 4 && (!strcmp(p, ".pdf") || !strcmp(p, ".PDF"))) {
+      psFileName = new GString(fileName, (int)strlen(fileName) - 4);
     } else {
-      psFileName = fileName->copy();
+      psFileName = new GString(fileName);
     }
     psFileName->append(doEPS ? ".eps" : ".ps");
   }
@@ -340,16 +354,16 @@ int main(int argc, char *argv[]) {
 
   // write PostScript file
   psOut = new PSOutputDev(psFileName->getCString(), doc,
-			  firstPage, lastPage, mode);
-  if (psOut->isOk()) {
-    doc->displayPages(psOut, firstPage, lastPage, 72, 72,
-		      0, !globalParams->getPSUseCropBoxAsPage(),
-		      globalParams->getPSCrop(), gTrue);
-  } else {
+			  firstPage, lastPage, mode,
+			  0, 0, 0, 0, gFalse, NULL, NULL, userUnit);
+  if (!psOut->isOk()) {
     delete psOut;
     exitCode = 2;
     goto err2;
   }
+  doc->displayPages(psOut, firstPage, lastPage, 72, 72,
+		    0, !globalParams->getPSUseCropBoxAsPage(),
+		    globalParams->getPSCrop(), gTrue);
   exitCode = 0;
   if (!psOut->checkIO()) {
     exitCode = 2;

@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************
  * COPYRIGHT:
@@ -261,6 +261,7 @@ public:
     void TestDayPeriodWithLocales();
     void TestMinuteSecondFieldsInOddPlaces();
     void TestDayPeriodParsing();
+    void TestParseRegression13744();
 
 private:
     UBool showParse(DateFormat &format, const UnicodeString &formattedString);

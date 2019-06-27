@@ -1,3 +1,12 @@
+2018-11-11  Andreas Scherer  <https://ascherer.github.io>
+
+	* fixwrites.c (main): check return value from fgets.
+	(tex-k 11 Nov 2018 11:53:24)
+
+2018-06-08  Karl Berry  <karl@freefriends.org>
+
+	* common.defines (aopeninwithdirname): add.
+
 2016-04-06  Karl Berry  <karl@tug.org>
 
 	* convert: remove $pascalfile if it is empty,
@@ -398,19 +407,19 @@
 
 	* convert.bat: New file, .bat version of convert script.
 
-	* texmf.defines: Add secondsandmicros defn.  From Martin Schröder
+	* texmf.defines: Add secondsandmicros defn.  From Martin Schr\"oder
 	<martin@oneiros.de>.
 
-	* coerce.h: Remove support for pdfxtex.  From Martin Schröder
+	* coerce.h: Remove support for pdfxtex.  From Martin Schr\"oder
 	<martin@oneiros.de>.
 
 	* common.defines: Remove support for pdfxtex.  From Martin
-	Schröder <martin@oneiros.de>.
+	Schr\"oder <martin@oneiros.de>.
 
-	* splitup.c: Remove support for pdfxtex.  From Martin Schröder
+	* splitup.c: Remove support for pdfxtex.  From Martin Schr\"oder
 	<martin@oneiros.de>.
 
-	* convert: Remove support for pdfxtex.  From Martin Schröder
+	* convert: Remove support for pdfxtex.  From Martin Schr\"oder
 	<martin@oneiros.de>.
 
 2005-06-26  Olaf Weber  <olaf@infovore.xs4all.nl>
@@ -588,7 +597,7 @@
 
 	* splitup.c: Generate a temporary filename from the name of the
 	program we're splitting, as we do for all other output files.
-	This allows parallel makes.  Reported by Martin Schröder
+	This allows parallel makes.  Reported by Martin Schr\"oder
 	<ms@artcom-gmbh.de>.
 
 2001-11-18  Olaf Weber  <olaf@infovore.xs4all.nl>

@@ -6,13 +6,18 @@
 //
 // Copyright 2006 Julien Rebetez <julienr@svn.gnome.org>
 // Copyright 2007, 2008, 2011 Carlos Garcia Campos <carlosgc@gnome.org>
-// Copyright 2007-2010, 2012, 2015, 2016 Albert Astals Cid <aacid@kde.org>
+// Copyright 2007-2010, 2012, 2015-2018 Albert Astals Cid <aacid@kde.org>
 // Copyright 2010 Mark Riedesel <mark@klowner.com>
 // Copyright 2011 Pino Toscano <pino@kde.org>
 // Copyright 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright 2013 Adrian Johnson <ajohnson@redneon.com>
 // Copyright 2015 André Guerreiro <aguerreiro1985@gmail.com>
 // Copyright 2015 André Esser <bepandre@hotmail.com>
+// Copyright 2017 Roland Hieber <r.hieber@pengutronix.de>
+// Copyright 2017 Hans-Ulrich Jüttner <huj@froreich-bioscientia.de>
+// Copyright 2018 Andre Heinecke <aheinecke@intevation.de>
+// Copyright 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
+// Copyright 2018 Chinmoy Ranjan Pradhan <chinmoyrp65@protonmail.com>
 //
 //========================================================================
 
@@ -23,10 +28,15 @@
 #pragma interface
 #endif
 
+#include "goo/GooList.h"
 #include "Object.h"
 #include "Annot.h"
 
+#include <time.h>
+
 #include <set>
+#include <vector>
+#include <ctime>
 
 class GooString;
 class Array;
@@ -58,6 +68,12 @@ enum VariableTextQuadding {
   quaddingLeftJustified,
   quaddingCentered,
   quaddingRightJustified
+};
+
+enum FormSignatureType {
+  adbe_pkcs7_sha1,
+  adbe_pkcs7_detached,
+  ETSI_CAdES_detached
 };
 
 class Form;
@@ -95,17 +111,16 @@ public:
   void setChildNum (unsigned i) { childNum = i; }
   unsigned getChildNum () { return childNum; }
 
-  double getFontSize() const;
-
-  GooString *getPartialName() const;
+  const GooString *getPartialName() const;
   void setPartialName(const GooString &name);
-  GooString *getAlternateUiName() const;
-  GooString *getMappingName() const;
+  const GooString *getAlternateUiName() const;
+  const GooString *getMappingName() const;
   GooString *getFullyQualifiedName();
 
   GBool isModified () const;
 
   bool isReadOnly() const;
+  void setReadOnly(bool value);
 
   LinkAction *getActivationAction(); // The caller should not delete the result
   LinkAction *getAdditionalAction(Annot::FormAdditionalActionsType type); // The caller should delete the result
@@ -165,7 +180,7 @@ public:
 
   char* getOnStr();
   void setAppearanceState(const char *state);
-  void updateWidgetAppearance();
+  void updateWidgetAppearance() override;
 
 protected:
   FormFieldButton *parent() const;
@@ -180,14 +195,12 @@ class FormWidgetText: public FormWidget {
 public:
   FormWidgetText(PDFDoc *docA, Object *dict, unsigned num, Ref ref, FormField *p);
   //return the field's content (UTF16BE)
-  GooString* getContent() ;
-  //return a copy of the field's content (UTF16BE)
-  GooString* getContentCopy();
+  const GooString* getContent() const;
 
-  //except a UTF16BE string
-  void setContent(GooString* new_content);
+  //expects a UTF16BE string
+  void setContent(const GooString* new_content);
 
-  void updateWidgetAppearance();
+  void updateWidgetAppearance() override;
 
   bool isMultiline () const; 
   bool isPassword () const; 
@@ -197,6 +210,11 @@ public:
   bool isComb () const; 
   bool isRichText () const;
   int getMaxLen () const;
+  //return the font size of the field's text
+  double getTextFontSize();
+  //set the font size of the field's text (currently only integer values)
+  void setTextFontSize(int fontSize);
+
 protected:
   FormFieldText *parent() const;
 };
@@ -210,9 +228,9 @@ public:
   FormWidgetChoice(PDFDoc *docA, Object *dict, unsigned num, Ref ref, FormField *p);
   ~FormWidgetChoice();
 
-  int getNumChoices();
+  int getNumChoices() const;
   //return the display name of the i-th choice (UTF16BE)
-  GooString* getChoice(int i);
+  const GooString* getChoice(int i) const;
   //select the i-th choice
   void select (int i); 
 
@@ -224,12 +242,12 @@ public:
 
   //except a UTF16BE string
   //only work for editable combo box, set the user-entered text as the current choice
-  void setEditChoice(GooString* new_content);
+  void setEditChoice(const GooString* new_content);
 
-  GooString* getEditChoice ();
+  const GooString* getEditChoice () const;
 
-  void updateWidgetAppearance();
-  bool isSelected (int i);
+  void updateWidgetAppearance() override;
+  bool isSelected (int i) const;
 
   bool isCombo () const; 
   bool hasEdit () const; 
@@ -238,7 +256,7 @@ public:
   bool commitOnSelChange () const; 
   bool isListBox () const;
 protected:
-  bool _checkRange (int i);
+  bool _checkRange (int i) const;
   FormFieldChoice *parent() const;
 };
 
@@ -249,9 +267,22 @@ protected:
 class FormWidgetSignature: public FormWidget {
 public:
   FormWidgetSignature(PDFDoc *docA, Object *dict, unsigned num, Ref ref, FormField *p);
-  void updateWidgetAppearance();
+  void updateWidgetAppearance() override;
 
-  SignatureInfo *validateSignature(bool doVerifyCert, bool forceRevalidation);
+  FormSignatureType signatureType();
+  // Use -1 for now as validationTime
+  SignatureInfo *validateSignature(bool doVerifyCert, bool forceRevalidation, time_t validationTime);
+
+  // returns a list with the boundaries of the signed ranges
+  // the elements of the list are of type Goffset
+  std::vector<Goffset> getSignedRangeBounds();
+
+  // checks the length encoding of the signature and returns the hex encoded signature
+  // if the check passed (and the checked file size as output parameter in checkedFileSize)
+  // otherwise a nullptr is returned
+  GooString* getCheckedSignature(Goffset *checkedFileSize);
+
+  const GooString *getSignature() const;
 };
 
 //------------------------------------------------------------------------
@@ -268,21 +299,21 @@ public:
   virtual ~FormField();
 
   // Accessors.
-  FormFieldType getType() { return type; }
+  FormFieldType getType() const { return type; }
   Object* getObj() { return &obj; }
   Ref getRef() { return ref; }
 
-  void setReadOnly (bool b) { readOnly = b; }
+  void setReadOnly (bool b);
   bool isReadOnly () const { return readOnly; }
 
   GooString* getDefaultAppearance() const { return defaultAppearance; }
   GBool hasTextQuadding() const { return hasQuadding; }
   VariableTextQuadding getTextQuadding() const { return quadding; }
 
-  GooString *getPartialName() const { return partialName; }
+  const GooString *getPartialName() const { return partialName; }
   void setPartialName(const GooString &name);
-  GooString *getAlternateUiName() const { return alternateUiName; }
-  GooString *getMappingName() const { return mappingName; }
+  const GooString *getAlternateUiName() const { return alternateUiName; }
+  const GooString *getMappingName() const { return mappingName; }
   GooString *getFullyQualifiedName();
 
   FormWidget* findWidgetByRef (Ref aref);
@@ -340,17 +371,17 @@ class FormFieldButton: public FormField {
 public:
   FormFieldButton(PDFDoc *docA, Object *dict, const Ref& ref, FormField *parent, std::set<int> *usedParents);
 
-  FormButtonType getButtonType () { return btype; }
+  FormButtonType getButtonType () const { return btype; }
 
   bool noToggleToOff () const { return noAllOff; }
 
   // returns gTrue if the state modification is accepted
   GBool setState (char *state);
-  GBool getState(char *state);
+  GBool getState(const char *state) const;
 
-  char *getAppearanceState() { return appearanceState.isName() ? appearanceState.getName() : NULL; }
+  const char *getAppearanceState() const { return appearanceState.isName() ? appearanceState.getName() : nullptr; }
 
-  void fillChildrenSiblingsID ();
+  void fillChildrenSiblingsID () override;
   
   void setNumSiblings (int num);
   void setSibling (int i, FormFieldButton *id) { siblings[i] = id; }
@@ -363,7 +394,7 @@ public:
   void print(int indent = 0);
 #endif
 
-  virtual ~FormFieldButton();
+  ~FormFieldButton();
 protected:
   void updateState(char *state);
 
@@ -386,10 +417,9 @@ class FormFieldText: public FormField {
 public:
   FormFieldText(PDFDoc *docA, Object *dict, const Ref& ref, FormField *parent, std::set<int> *usedParents);
   
-  GooString* getContent () { return content; }
-  GooString* getContentCopy ();
-  void setContentCopy (GooString* new_content);
-  virtual ~FormFieldText();
+  const GooString* getContent () const { return content; }
+  void setContentCopy (const GooString* new_content);
+  ~FormFieldText();
 
   bool isMultiline () const { return multiline; }
   bool isPassword () const { return password; }
@@ -401,10 +431,20 @@ public:
 
   int getMaxLen () const { return maxLen; }
 
+  //return the font size of the field's text
+  double getTextFontSize();
+  //set the font size of the field's text (currently only integer values)
+  void setTextFontSize(int fontSize);
+
 #ifdef DEBUG_FORMS
   void print(int indent = 0);
 #endif
+
+  static int tokenizeDA(const GooString* daString, GooList* daToks, const char* searchTok);
+
 protected:
+  int parseDA(GooList* daToks);
+
   GooString* content;
   bool multiline;
   bool password;
@@ -424,13 +464,13 @@ class FormFieldChoice: public FormField {
 public:
   FormFieldChoice(PDFDoc *docA, Object *aobj, const Ref& ref, FormField *parent, std::set<int> *usedParents);
 
-  virtual ~FormFieldChoice();
+  ~FormFieldChoice();
 
-  int getNumChoices() { return numChoices; }
-  GooString* getChoice(int i) { return choices ? choices[i].optionName : NULL; }
-  GooString* getExportVal (int i) { return choices ? choices[i].exportVal : NULL; }
+  int getNumChoices() const { return numChoices; }
+  const GooString* getChoice(int i) const { return choices ? choices[i].optionName : NULL; }
+  const GooString* getExportVal (int i) const  { return choices ? choices[i].exportVal : NULL; }
   // For multi-select choices it returns the first one
-  GooString* getSelectedChoice();
+  const GooString* getSelectedChoice() const;
 
   //select the i-th choice
   void select (int i); 
@@ -442,11 +482,11 @@ public:
   void deselectAll ();
 
   //only work for editable combo box, set the user-entered text as the current choice
-  void setEditChoice(GooString* new_content);
+  void setEditChoice(const GooString* new_content);
 
-  GooString* getEditChoice ();
+  const GooString* getEditChoice () const;
 
-  bool isSelected (int i) { return choices[i].selected; }
+  bool isSelected (int i) const { return choices[i].selected; }
 
   int getNumSelected ();
 
@@ -490,16 +530,22 @@ protected:
 //------------------------------------------------------------------------
 
 class FormFieldSignature: public FormField {
+  friend class FormWidgetSignature;
 public:
   FormFieldSignature(PDFDoc *docA, Object *dict, const Ref& ref, FormField *parent, std::set<int> *usedParents);
 
-  SignatureInfo *validateSignature(bool doVerifyCert, bool forceRevalidation);
+  // Use -1 for now as validationTime
+  SignatureInfo *validateSignature(bool doVerifyCert, bool forceRevalidation, time_t validationTime);
 
-  virtual ~FormFieldSignature();
+  ~FormFieldSignature();
+  Object* getByteRange() { return &byte_range; }
+  const GooString* getSignature() const { return signature; }
 
 private:
   void parseInfo();
   void hashSignedDataBlock(SignatureHandler *handler, Goffset block_len);
+
+  FormSignatureType signature_type;
   Object byte_range;
   GooString *signature;
   SignatureInfo *signature_info;
@@ -521,8 +567,11 @@ public:
 
   ~Form();
 
+  Form(const Form &) = delete;
+  Form& operator=(const Form &) = delete;
+
   // Look up an inheritable field dictionary entry.
-  static Object *fieldLookup(Dict *field, const char *key, Object *obj);
+  static Object fieldLookup(Dict *field, const char *key);
   
   /* Creates a new Field of the type specified in obj's dict.
      used in Form::Form and FormField::FormField */
@@ -532,7 +581,7 @@ public:
   GBool getNeedAppearances () const { return needAppearances; }
   int getNumFields() const { return numFields; }
   FormField* getRootField(int i) const { return rootFields[i]; }
-  GooString* getDefaultAppearance() const { return defaultAppearance; }
+  const GooString* getDefaultAppearance() const { return defaultAppearance; }
   VariableTextQuadding getTextQuadding() const { return quadding; }
   GfxResources* getDefaultResources() const { return defaultResources; }
   Object* getDefaultResourcesObj() { return &resDict; }
@@ -540,6 +589,9 @@ public:
   FormWidget* findWidgetByRef (Ref aref);
 
   void postWidgetsLoad();
+
+  const std::vector<Ref> &getCalculateOrder() const { return calculateOrder; }
+
 private:
   FormField** rootFields;
   int numFields;
@@ -550,6 +602,7 @@ private:
   GBool needAppearances;
   GfxResources *defaultResources;
   Object resDict;
+  std::vector<Ref> calculateOrder;
 
   // Variable Text
   GooString *defaultAppearance;
@@ -565,6 +618,9 @@ public:
   FormPageWidgets (Annots* annots, unsigned int page, Form *form);
   ~FormPageWidgets();
   
+  FormPageWidgets(const FormPageWidgets &) = delete;
+  FormPageWidgets& operator=(const FormPageWidgets &) = delete;
+
   int getNumWidgets() const { return numWidgets; }
   FormWidget* getWidget(int i) const { return widgets[i]; }
 

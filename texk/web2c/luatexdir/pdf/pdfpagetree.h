@@ -24,6 +24,5 @@
 int output_pages_tree(PDF);
 int pdf_do_page_divert(PDF, int, int);
 void pdf_do_page_undivert(int, int);
-void destroy_divert_list_tree();
 
 #endif

@@ -2,7 +2,7 @@
 ** BgColorSpecialHandler.hpp                                            **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -26,20 +26,19 @@
 #include "SpecialHandler.hpp"
 
 
-class BgColorSpecialHandler : public SpecialHandler, public DVIBeginPageListener
-{
+class BgColorSpecialHandler : public SpecialHandler {
 	public:
-		void preprocess (const char *prefix, std::istream &is, SpecialActions &actions) override;
-		bool process (const char *prefix, std::istream &is, SpecialActions &actions) override;
+		void preprocess (const std::string &prefix, std::istream &is, SpecialActions &actions) override;
+		bool process (const std::string &prefix, std::istream &is, SpecialActions &actions) override;
 		const char* info () const override {return "background color special";}
 		const char* name () const override {return "bgcolor";}
-		const char**  prefixes () const override;
+		std::vector<const char*> prefixes() const override;
 
 	protected:
 		void dviBeginPage (unsigned pageno, SpecialActions &actions) override;
 
 	private:
-		typedef std::pair<unsigned,Color> PageColor;  // page number and color
+		using PageColor = std::pair<unsigned,Color>;  // page number and color
 		std::vector<PageColor> _pageColors;
 };
 

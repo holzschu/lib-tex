@@ -4,7 +4,7 @@
 //
 // Copyright 2007 Brad Hards <bradh@kde.org>
 // Copyright 2008 Carlos Garcia Campos <carlosgc@gnome.org>
-// Copyright 2013 Albert Astals Cid <aacid@kde.org>
+// Copyright 2013, 2018 Albert Astals Cid <aacid@kde.org>
 //
 // Released under the GPL (version 2, or later, at your option)
 //
@@ -35,10 +35,13 @@ public:
   OCGs(Object *ocgObject, XRef *xref);
   ~OCGs();
 
+  OCGs(const OCGs &) = delete;
+  OCGs& operator=(const OCGs &) = delete;
+
   // Is OCGS valid?
-  GBool isOk() { return ok; }
+  GBool isOk() const { return ok; }
   
-  bool hasOCGs();
+  bool hasOCGs() const;
   GooList *getOCGs() const { return optionalContentGroups; }
 
   OptionalContentGroup* findOcgByRef( const Ref &ref);
@@ -90,7 +93,10 @@ public:
 
   ~OptionalContentGroup();
 
-  GooString* getName() const;
+  OptionalContentGroup(const OptionalContentGroup &) = delete;
+  OptionalContentGroup& operator=(const OptionalContentGroup &) = delete;
+
+  const GooString* getName() const;
 
   Ref getRef() const;
   void setRef(const Ref ref);
@@ -118,14 +124,17 @@ public:
   OCDisplayNode();
   ~OCDisplayNode();
 
-  GooString *getName() { return name; }
-  OptionalContentGroup *getOCG() { return ocg; }
-  int getNumChildren();
-  OCDisplayNode *getChild(int idx);
+  OCDisplayNode(const OCDisplayNode &) = delete;
+  OCDisplayNode& operator=(const OCDisplayNode &) = delete;
+
+  const GooString *getName() const { return name; }
+  const OptionalContentGroup *getOCG() const { return ocg; }
+  int getNumChildren() const;
+  OCDisplayNode *getChild(int idx) const;
 
 private:
 
-  OCDisplayNode(GooString *nameA);
+  OCDisplayNode(const GooString *nameA);
   OCDisplayNode(OptionalContentGroup *ocgA);
   void addChild(OCDisplayNode *child);
   void addChildren(GooList *childrenA);

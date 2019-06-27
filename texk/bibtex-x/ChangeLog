@@ -1,3 +1,34 @@
+2019-03-15  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* Makefile.am: Add bibtex8.1 and bibtexu.1.
+	* bibtex8.1, bibtexu.1: New man pages.
+
+2019-03-06  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* bibtex-2.c: Check error status for every call of
+	u_strFromUTF8WithSub().
+
+2019-03-05  Akira Kakuto  <kakuto@w32tex.org>
+
+	* bibtex-2.c: Use u_strFromUTF8WithSub() with a substitution
+	character 0xfffd, instead of u_strFromUTF8().
+
+2019-03-04  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	Both BibTeX8 and BibTeXu:
+	* bibtex-2.c: Add trace for sorting. (There is no related
+	code in the original BibTeX, but can be useful.)
+	Suppress compiler warnings.
+	* bibtex.c, utils.c: Print ICU version in BibTeXu.
+	* version.h: Bump version (04 mar 2019).
+
+	BibTeXu only:
+	* bibtex-2.c: Use u_strFromUTF8() instead of icu_toUChars()
+	while sorting for BibTeXu. Close UConverter properly.
+	* bibtex-4.c: Fix x_purify() for BibTeXu.
+	* utils.c: Default to Flag_8bit in BibTeXu. We should NOT
+	read any csf file in BibTeXu. (BibTeX8 is unaffected)
+
 2017-04-27  Karl Berry  <karl@tug.org>
 
 	* Makefile.am (bibtexu_LDADD): add $(ICU_LIBS_EXTRA).

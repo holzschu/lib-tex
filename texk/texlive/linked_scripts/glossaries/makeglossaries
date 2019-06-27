@@ -2,7 +2,7 @@
 
 # File    : makeglossaries
 # Author  : Nicola Talbot
-# Version : 2.21
+# Version : 4.41
 # Description: simple Perl script that calls makeindex or xindy.
 # Intended for use with "glossaries.sty" (saves having to remember
 # all the various switches)
@@ -22,14 +22,36 @@
 # The Current Maintainer of this work is Nicola Talbot.
 
 # This work consists of the files glossaries.dtx and glossaries.ins 
-# and the derived files glossaries.sty, mfirstuc.sty,
-# glossary-hypernav.sty, glossary-list.sty, glossary-long.sty,
-# glossary-super.sty, glossaries.perl.
+# and the derived files glossaries.sty, glossaries-prefix.sty,
+# glossary-hypernav.sty, glossary-inline.sty, glossary-list.sty, 
+# glossary-long.sty, glossary-longbooktabs.sty, glossary-longragged.sty,
+# glossary-mcols.sty, glossary-super.sty, glossary-superragged.sty, 
+# glossary-tree.sty, glossaries-compatible-207.sty, 
+# glossaries-compatible-307.sty, glossaries-accsupp.sty, 
+# glossaries-babel.sty, glossaries-polyglossia.sty, glossaries.perl.
 # Also makeglossaries and makeglossaries-lite.lua.
 
-my $version="2.21 (2017-05-11)";
+my $version="4.41 (2018-07-23)";
 
 # History:
+# v4.41:
+#   * No change.
+# v4.40:
+#   * No change.
+# v4.39:
+#   * No change.
+# v4.38:
+#   * No change.
+# v4.37:
+#   * No change.
+# v4.36:
+#   * No change.
+# v4.35:
+#   * No change.
+# v4.34:
+#   * Added check for \glsxtr@resource
+# v4.33:
+#   * Version number synchronized with glossaries.sty
 # v2.21:
 #   * Fixed spelling of \GlsAddXdyLocation
 #   * Adjusted range encap clash
@@ -313,18 +335,30 @@ my $letterordering = defined($opt_l);
 # v2.19 added:
 my $extramkidxopts = '';
 
-# check aux file for other glossary types
-# and for ist file name
+# v4.34 added:
+my $foundbib2glsresource = '';
+
+# Check aux file for other glossary types,
+# style file name and various other bits of information.
 
 &scan_aux($name);
 
 # has the style file been specified?
 unless ($istfile)
 {
-   die "No \\\@istfilename found in '$name.aux'.\n",
-       "Did your LaTeX run fail?\n",
-       "Did your LaTeX run produce any output?\n",
-       "Did you remember to use \\makeglossaries?\n";
+   if ($foundbib2glsresource)
+   {
+      die "Found \\glsxtr\@resource in '$name.aux',\n",
+          "but not found \\\@istfilename.\n",
+          "You need to run bib2gls not makeglossaries.\n";
+   }
+   else
+   {
+      die "No \\\@istfilename found in '$name.aux'.\n",
+          "Did your LaTeX run fail?\n",
+          "Did your LaTeX run produce any output?\n",
+          "Did you remember to use \\makeglossaries?\n";
+   }
 }
 
 # v2.08 added $xindyapp and $makeindexapp
@@ -656,17 +690,6 @@ sub scan_aux{
   {
      while (<AUXFILE>)
      {
-        #v2.20 added
-        if (m/\\glsxtr\@makeglossaries\{(.*)\}/)
-        {
-           $glslist = $1;
-
-           unless ($opt_q)
-           {
-              print "only processing subset '$glslist'\n";
-           }
-        }
-
         #v2.14 added
         if (m/\\\@gls\@reference/ and not $glslist)
         {
@@ -674,20 +697,31 @@ sub scan_aux{
                "You don't need makeindex or xindy.\n";
         }
 
-        # v1.9 added
-        # v2.17 escaped { in regex
-        if (m/\\\@input\{(.+)\.aux\}/)
+        if (m/\\glsxtr\@makeglossaries\{(.*)\}/)
         {
+           #v2.20 added
+
+           $glslist = $1;
+
+           unless ($opt_q)
+           {
+              print "only processing subset '$glslist'\n";
+           }
+        }
+        elsif (m/\\\@input\{(.+)\.aux\}/)
+        {
+           # v1.9 added
+           # v2.17 escaped { in regex
            &scan_aux($1);
 
            # v2.04 added
            # (Fix provided by Daniel Grund) 
            next;
         }
-
-        # v2.17 escaped { in regex
-        if (m/\\\@newglossary\s*\{(.*)\}\{(.*)\}\{(.*)\}\{(.*)\}/)
+        elsif (m/\\\@newglossary\s*\{(.*)\}\{(.*)\}\{(.*)\}\{(.*)\}/)
         {
+           # v2.17 escaped { in regex
+
            $exttype{$1}{'log'} = $2;
            $exttype{$1}{'out'} = $3;
            $exttype{$1}{'in'}  = $4;
@@ -697,10 +731,10 @@ sub scan_aux{
               print "added glossary type '$1' ($2,$3,$4)\n";
            }
         }
-
-        # v2.17 escaped { in regex
-        if (m/\\\@istfilename\s*\{([^}]*)\}/)
+        elsif (m/\\\@istfilename\s*\{([^}]*)\}/)
         {
+           # v2.17 escaped { in regex
+
            $istfile = $1;
 
            # check if double quotes were added to \jobname
@@ -716,25 +750,34 @@ sub scan_aux{
               $istfile=~tr/\*/ /;
            }
         }
-
-        # v1.5 added
-        # v2.17 escaped { in regex
-        if (m/\\\@xdylanguage\s*\{([^}]+)\}\{([^}]*)\}/)
+        elsif (m/\\\@xdylanguage\s*\{([^}]+)\}\{([^}]*)\}/)
         {
+           # v1.5 added
+           # v2.17 escaped { in regex
+
            $language{$1} = $2;
         }
-
-        # v1.5 added
-        # v2.17 escaped { in regex
-        if (m/\\\@gls\@codepage\s*\{([^}]+)\}\{([^}]*)\}/)
+        elsif (m/\\\@gls\@codepage\s*\{([^}]+)\}\{([^}]*)\}/)
         {
+           # v1.5 added
+           # v2.17 escaped { in regex
+
            $codepage{$1} = $2;
         }
-
-        # v2.19 added
-        if (m/\\\@gls\@extramakeindexopts\{(.*)\}/)
+        elsif (m/\\\@gls\@extramakeindexopts\{(.*)\}/)
         {
+           # v2.19 added
+
            $extramkidxopts .= $1;
+        }
+        elsif (m/\\glsxtr\@resource/)
+        {
+           # v4.34 added
+
+           # No error at this point as a hybrid method is allowed.
+           # Error only occurs if no \@istfilename found.
+
+           $foundbib2glsresource = 1;
         }
 
         # v1.5 added
@@ -1484,8 +1527,16 @@ sub HELP_MESSAGE{
 }
 
 sub VERSION_MESSAGE{
+
+   my $verYear = '';
+
+   if ($version=~/(\d{4})-\d{2}-\d{2}/)
+   {
+      $verYear = "-$1";
+   }
+
    print "Makeglossaries Version $version\n";
-   print "Copyright (C) 2007 Nicola L C Talbot\n";
+   print "Copyright (C) 2007$verYear Nicola L C Talbot\n";
    print "This material is subject to the LaTeX Project Public License.\n";
 }
 
@@ -1497,15 +1548,15 @@ makeglossaries  - Calls makeindex/xindy for LaTeX documents using glossaries pac
 
 =head1 SYNOPSIS
 
-B<makeglossaries> [B<-o> I<file>] [B<-q>] [B<-Q>] [B<-s> I<file>]
-[B<-t> I<file>] [B<-L> I<language>] [B<-c>] [B<-g>] [B<-l>]
+B<makeglossaries> [B<-o> I<file>] [B<-q>] [B<-Q>] [B<-k>] [B<-n>]
+[B<-s> I<file>] [B<-t> I<file>] [B<-L> I<language>] [B<-c>] [B<-g>] [B<-l>]
 [B<-p> I<num>] [B<-r>] [B<-d> I<aux dir>] [B<-m> I<file>] [B<-x> I<file>]
-[B<--version>] [B<--help>] I<filename>
+[B<--version>] [B<--help>] I<basename>
 
 =head1 DESCRIPTION
 
 B<makeglossaries> is designed for use with LaTeX documents that
-use the glossaries package. The mandatory argument I<filename> should
+use the glossaries package. The mandatory argument I<basename> should
 be the name of the LaTeX document without the .tex extension. 
 B<makeglossaries> will read the auxiliary file to determine whether
 B<makeindex> or B<xindy> should be called. All the information
@@ -1529,6 +1580,10 @@ Silences warning about being unable to fork.
 
 Don't try forking with piped redirection. (Lessens the
 effect of -q)
+
+=item B<-n>
+
+Print the commands that would normally be executed but don't run them.
 
 =item B<-o> I<file>
 

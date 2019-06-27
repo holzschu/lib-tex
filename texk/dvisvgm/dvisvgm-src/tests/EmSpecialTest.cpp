@@ -2,7 +2,7 @@
 ** EmSpecialTest.cpp                                                    **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -28,24 +28,22 @@
 using namespace std;
 
 
-class EmSpecialTest : public ::testing::Test
-{
+class EmSpecialTest : public ::testing::Test {
 	protected:
-		class ActionsRecorder : public EmptySpecialActions
-		{
+		class ActionsRecorder : public EmptySpecialActions {
 			public:
-				ActionsRecorder () : page("page") {}
-				void appendToPage (XMLNode *node)         {page.append(node);}
-				void embed (const BoundingBox &bb)        {bbox.embed(bb);}
-				void setX (double xx)                     {x = xx;}
-				void setY (double yy)                     {x = yy;}
-				double getX () const                      {return x;}
-				double getY () const                      {return y;}
-				Color getColor () const                   {return color;}
-				void setColor (const Color &c)            {color = c;}
-				void clear ()                             {page.clear(); bbox=BoundingBox(0, 0, 0, 0);}
-				string getPageXML () const                {ostringstream oss; oss << page; return oss.str();}
-				const Matrix& getMatrix () const          {static Matrix m(1); return m;}
+				ActionsRecorder () : x(), y(), page("page") {}
+				void appendToPage(unique_ptr<XMLNode> &&node) {page.append(std::move(node));}
+				void embed (const BoundingBox &bb)            {bbox.embed(bb);}
+				void setX (double xx)                         {x = xx;}
+				void setY (double yy)                         {x = yy;}
+				double getX () const                          {return x;}
+				double getY () const                          {return y;}
+				Color getColor () const                       {return color;}
+				void setColor (const Color &c)                {color = c;}
+				void clear ()                                 {page.clear(); bbox=BoundingBox(0, 0, 0, 0);}
+				string getPageXML () const                    {ostringstream oss; oss << page; return oss.str();}
+				const Matrix& getMatrix () const              {static Matrix m(1); return m;}
 
 				void write (ostream &os) const {
 					os << "page: " << page << '\n'
@@ -60,8 +58,7 @@ class EmSpecialTest : public ::testing::Test
 		};
 
 
-		class MyEmSpecialHandler : public EmSpecialHandler
-		{
+		class MyEmSpecialHandler : public EmSpecialHandler {
 			public:
 				MyEmSpecialHandler (SpecialActions &a) : actions(a) {}
 				void finishPage () {dviEndPage(0, actions);}
@@ -105,10 +102,10 @@ TEST_F(EmSpecialTest, lines1) {
 		handler.processSpecial(string("line ")+XMLString(i)+", "+XMLString((i+1)%n));
 	EXPECT_EQ(recorder.getPageXML(),
 		"<page>\n"
-		"<line stroke='#000000' stroke-width='2' x1='0' x2='10' y1='0' y2='0'/>\n"
-		"<line stroke='#000000' stroke-width='2' x1='10' x2='10' y1='0' y2='0'/>\n"
-		"<line stroke='#000000' stroke-width='2' x1='10' x2='0' y1='0' y2='0'/>\n"
-		"<line stroke='#000000' stroke-width='2' x1='0' x2='0' y1='0' y2='0'/>\n"
+		"<line x1='0' y1='0' x2='10' y2='0' stroke-width='2' stroke='#000'/>\n"
+		"<line x1='10' y1='0' x2='10' y2='0' stroke-width='2' stroke='#000'/>\n"
+		"<line x1='10' y1='0' x2='0' y2='0' stroke-width='2' stroke='#000'/>\n"
+		"<line x1='0' y1='0' x2='0' y2='0' stroke-width='2' stroke='#000'/>\n"
 		"</page>"
 	);
 }
@@ -130,10 +127,10 @@ TEST_F(EmSpecialTest, lines2) {
 	handler.finishPage();
 	EXPECT_EQ(recorder.getPageXML(),
 		"<page>\n"
-		"<line stroke='#000000' stroke-width='2' x1='0' x2='10' y1='0' y2='0'/>\n"
-		"<line stroke='#000000' stroke-width='2' x1='10' x2='10' y1='0' y2='0'/>\n"
-		"<line stroke='#000000' stroke-width='2' x1='10' x2='0' y1='0' y2='0'/>\n"
-		"<line stroke='#000000' stroke-width='2' x1='0' x2='0' y1='0' y2='0'/>\n"
+		"<line x1='0' y1='0' x2='10' y2='0' stroke-width='2' stroke='#000'/>\n"
+		"<line x1='10' y1='0' x2='10' y2='0' stroke-width='2' stroke='#000'/>\n"
+		"<line x1='10' y1='0' x2='0' y2='0' stroke-width='2' stroke='#000'/>\n"
+		"<line x1='0' y1='0' x2='0' y2='0' stroke-width='2' stroke='#000'/>\n"
 		"</page>"
 	);
 }
@@ -143,7 +140,7 @@ TEST_F(EmSpecialTest, pline) {
 	handler.processSpecial("point 1, 10, 10");
 	handler.processSpecial("point 2, 100, 100");
 	handler.processSpecial("line 1, 2, 10bp");
-	EXPECT_EQ(recorder.getPageXML(), "<page>\n<line stroke='#000000' stroke-width='10' x1='10' x2='100' y1='10' y2='100'/>\n</page>");
+	EXPECT_EQ(recorder.getPageXML(), "<page>\n<line x1='10' y1='10' x2='100' y2='100' stroke-width='10' stroke='#000'/>\n</page>");
 }
 
 
@@ -174,7 +171,7 @@ TEST_F(EmSpecialTest, hvline) {
 	handler.processSpecial("point 1, 10, 10");
 	handler.processSpecial("point 2, 100, 100");
 	handler.processSpecial("line 1v, 2h, 10bp");  // cut line ends horizontally
-	EXPECT_EQ(recorder.getPageXML(), "<page>\n<polygon fill='#0000ff' points='10,17.07 10,2.93 107.07,100 92.93,100'/>\n</page>");
+	EXPECT_EQ(recorder.getPageXML(), "<page>\n<polygon points='10,17.07 10,2.93 107.07,100 92.93,100' fill='#00f'/>\n</page>");
 }
 
 
@@ -190,10 +187,10 @@ TEST_F(EmSpecialTest, lineto) {
 	}
 	EXPECT_EQ(recorder.getPageXML(),
 		"<page>\n"
-		"<line stroke='#ff0000' stroke-width='2' x1='0' x2='10' y1='0' y2='0'/>\n"
-		"<line stroke='#ff0000' stroke-width='4' x1='10' x2='10' y1='0' y2='0'/>\n"
-		"<line stroke='#ff0000' stroke-width='6' x1='10' x2='0' y1='0' y2='0'/>\n"
-		"<line stroke='#ff0000' stroke-width='8' x1='0' x2='0' y1='0' y2='0'/>\n"
+		"<line x1='0' y1='0' x2='10' y2='0' stroke-width='2' stroke='#f00'/>\n"
+		"<line x1='10' y1='0' x2='10' y2='0' stroke-width='4' stroke='#f00'/>\n"
+		"<line x1='10' y1='0' x2='0' y2='0' stroke-width='6' stroke='#f00'/>\n"
+		"<line x1='0' y1='0' x2='0' y2='0' stroke-width='8' stroke='#f00'/>\n"
 		"</page>"
 	);
 }

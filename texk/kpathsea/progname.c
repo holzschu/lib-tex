@@ -1,6 +1,6 @@
 /* progname.c: the executable name we were invoked as; general initialization.
 
-   Copyright 1994, 1996, 1997, 2008-2013, 2016 Karl Berry.
+   Copyright 1994, 1996, 1997, 2008-2013, 2016-2018 Karl Berry.
    Copyright 1998-2005 Olaf Weber.
 
    This library is free software; you can redistribute it and/or
@@ -153,10 +153,12 @@ CopyFirst (register char *a, char *b)
   strcat (a, StripFirst (b));
 }
 
-/* Returns NULL on error.  Prints intermediate results if global
-   `ll_verbose' is nonzero.  */
+/* Returns NULL on error, such as an unresolvable symlink.  Prints
+   intermediate results if global `ll_verbose' is nonzero.  Otherwise,
+   returns a pointer to a static buffer (sorry).  */
 
-#define EX(s)           (strlen (s) && strcmp (s, "/") ? "/" : "")
+#define EMPTY_STRING(s) (*(s) == 0)
+#define EX(s)           (!EMPTY_STRING (s) && strcmp (s, "/") ? "/" : "")
 #define EXPOS           EX(post)
 #define EXPRE           EX(pre)
 
@@ -170,30 +172,14 @@ expand_symlinks (kpathsea kpse, char *s)
   struct stat st;
   int done;
 
-  /* Check for symlink loops.  It's difficult to check for all the
-     possibilities ourselves, so let the kernel do it.  And make it
-     conditional so that people can see where the infinite loop is
-     being caused (see engtools#1536).  */
-  /* There used to be a test for a variable |ll_loop| here, but
-     it was initialized to zero and never updated */
-  if (0) {
-    FILE *f = fopen (s, "r");
-    if (!f && errno == ELOOP) {
-      /* Not worried about other errors, we'll get to them in due course.  */
-      perror (s);
-      return NULL;
-    }
-    if (f) fclose (f);
-  }
-
   strcpy (post, s);
   strcpy (pre, "");
 
-  while (strlen (post) != 0) {
+  while (!EMPTY_STRING (post)) {
     CopyFirst (pre, post);
 
     if (lstat (pre, &st) != 0) {
-      fprintf (stderr, "lstat(%s) failed ...\n", pre);
+      fprintf (stderr, "lstat(%s) failed: ", pre);
       perror (pre);
       return NULL;
     }
@@ -203,18 +189,18 @@ expand_symlinks (kpathsea kpse, char *s)
 
       if (!strncmp (sym, "/", 1)) {
         if (kpse->ll_verbose)
-          fprintf (stdout, "[%s]%s%s -> [%s]%s%s\n", pre, EXPOS, post, sym, EXPOS,post);
+          printf ("[%s]%s%s -> [%s]%s%s\n", pre, EXPOS, post, sym, EXPOS,post);
         strcpy (pre, "");
 
       } else {
         a = pre[0];     /* handle links through the root */
         strcpy (tmp, StripLast (pre));
-        if (!strlen (pre) && a == '/')
+        if (EMPTY_STRING (pre) && a == '/')
           strcpy (pre, "/");
 
         if (kpse->ll_verbose) {
           sprintf (before, "%s%s[%s]%s%s", pre, EXPRE, tmp, EXPOS, post);
-          fprintf (stdout, "%s -> %s%s[%s]%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
+          printf ("%s -> %s%s[%s]%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
         }
 
         /* Strip "../" path elements from the front of sym; print
@@ -223,7 +209,7 @@ expand_symlinks (kpathsea kpse, char *s)
         a = pre[0];     /* handle links through the root */
         while (!strncmp (sym, "..", 2)
                && (sym[2] == 0 || sym[2] == '/')
-               && strlen (pre) != 0
+               && !EMPTY_STRING (pre)
                && strcmp (pre, ".")
                && strcmp (pre, "..")
                && (strlen (pre) < 3
@@ -237,15 +223,15 @@ expand_symlinks (kpathsea kpse, char *s)
           for (cp = before; *cp;)
             *cp++ = ' ';
           if (strlen (sym))
-            fprintf (stdout, "%s == %s%s%s%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
+            printf ("%s == %s%s%s%s%s\n", before, pre, EXPRE, sym, EXPOS,post);
           else
-            fprintf (stdout, "%s == %s%s%s\n", before, pre, EXPOS, post);
+            printf ("%s == %s%s%s\n", before, pre, EXPOS, post);
         }
-        if (!strlen (pre) && a == '/')
+        if (EMPTY_STRING (pre) && a == '/')
           strcpy (pre, "/");
       }
 
-      if (strlen (post) != 0 && strlen (sym) != 0)
+      if (!EMPTY_STRING (post) && !EMPTY_STRING (sym))
         strcat (sym, "/");
 
       strcat (sym, post);
@@ -326,19 +312,19 @@ remove_dots (kpathsea kpse, string dir)
 }
 
 /* Return directory ARGV0 comes from.  Check PATH if ARGV0 is not
-   absolute.  */
+   absolute.  If ARGV0 cannot be found (e.g., --progname=nonesuch), quit.  */
 
 string
 kpathsea_selfdir (kpathsea kpse, const_string argv0)
 {
-  string self = NULL;
   string name;
   string ret;
+  string self = NULL;
 
 #ifdef __IPHONE__
   // The binaries don't exist for real, but this is the directory where they should be:
   // Use of texlive/YYYY/architecture/bin/argv0 ensures most config files are happy.
-  // TODO: change 2017 to 2018 next year
+  // TODO: change 2019 to 2020 next year
   // TODO: make this user configureable. 
   name = xstrdup(getenv("HOME"));
   // if ($HOME) ends with "/Documents", remove "/Documents" before adding "/Library"
@@ -347,7 +333,7 @@ kpathsea_selfdir (kpathsea kpse, const_string argv0)
   if (nameDocuments) {
   	  nameDocuments[0] = 0x0; // end the string here.
   }
-  name = concat3 (name, DIR_SEP_STRING, "Library/texlive/2017/bin/arm-darwin") ; 
+  name = concat3 (name, DIR_SEP_STRING, "Library/texlive/2019/bin/arm-darwin") ; 
   name = concat3 (name, DIR_SEP_STRING, argv0) ; 
 #else   
   if (kpathsea_absolute_p (kpse, argv0, true)) {
@@ -408,7 +394,16 @@ kpathsea_selfdir (kpathsea kpse, const_string argv0)
   if (!self)
     self = concat3 (".", DIR_SEP_STRING, argv0);
 
-  name = remove_dots (kpse, expand_symlinks (kpse, self));
+  /* If we can't expand symlinks (--progname=nonesuch), give up.  */
+  name = expand_symlinks (kpse, self);
+  if (!name) {
+    fprintf (stderr, "kpathsea: Can't get directory of program name: %s\n",
+             self);
+    exit (1);
+  }
+
+  /* If we have something real, we can resolve ./ and ../ elements.  */
+  name = remove_dots (kpse, name);
 
 #ifndef AMIGA
   free (self);
@@ -499,7 +494,6 @@ void
 kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
                            const_string progname)
 {
-#ifdef __IPHONE__
 	// Library / iOS version: if kpse was already started, we need to reinitialize:
 	if (kpse->program_name && progname) {
 		// kpathsea is already initialized 
@@ -507,7 +501,6 @@ kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
 		// if progname & kpse->program_name are identical, does nothing, which is good
 		return;
 	}
-#endif /* __IPHONE__ */
   const_string ext;
   string sdir, sdir_parent, sdir_grandparent, sdir_greatgrandparent;
   string s = getenv ("KPATHSEA_DEBUG");
@@ -524,9 +517,10 @@ kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
   }
 
 #if defined(WIN32)
+  cp = AreFileApisANSI() ? GetACP() : GetOEMCP();
   if (!kpse->File_system_codepage)
-    kpse->File_system_codepage = AreFileApisANSI() ? GetACP() : GetOEMCP();
-  cp = kpse->File_system_codepage;
+    kpse->File_system_codepage = cp;
+  kpse->Win32_codepage = cp;
   if (cp == 932 || cp == 936 || cp == 950) {
     kpse->Is_cp932_system = cp;
   }
@@ -724,7 +718,6 @@ kpathsea_set_program_name (kpathsea kpse,  const_string argv0,
       kpse->program_name = xstrdup (kpse->invocation_short_name);
     }
   }
-    
 
   /* Runtime check that snprintf always writes a trailing NUL byte.  */
   {

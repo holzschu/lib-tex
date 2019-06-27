@@ -2,7 +2,7 @@
 ** DvisvgmSpecialTest.cpp                                               **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -19,6 +19,7 @@
 *************************************************************************/
 
 #include <gtest/gtest.h>
+#include <array>
 #include <sstream>
 #include "DvisvgmSpecialHandler.hpp"
 #include "SpecialActions.hpp"
@@ -26,8 +27,7 @@
 
 using namespace std;
 
-class MyDvisvgmSpecialHandler : public DvisvgmSpecialHandler
-{
+class MyDvisvgmSpecialHandler : public DvisvgmSpecialHandler {
 	public:
 		void finishPreprocessing () {dviPreprocessingFinished();}
 		void finishPage ()          {dviEndPage(0, emptyActions);}
@@ -37,23 +37,23 @@ class MyDvisvgmSpecialHandler : public DvisvgmSpecialHandler
 };
 
 
-class DvisvgmSpecialTest : public ::testing::Test
-{
+class DvisvgmSpecialTest : public ::testing::Test {
 	protected:
-		class ActionsRecorder : public EmptySpecialActions
-		{
+		class ActionsRecorder : public EmptySpecialActions {
 			public:
 				ActionsRecorder () : defs(""), page("") {}
-				void appendToDefs (XMLNode *node)         {defs.append(node);}
-				void appendToPage (XMLNode *node)         {page.append(node);}
-				void embed (const BoundingBox &bb)        {bbox.embed(bb);}
-				double getX () const                      {return 0;}
-				double getY () const                      {return 0;}
-				void clear ()                             {defs.clear(); page.clear(); bbox=BoundingBox(0, 0, 0, 0);}
-				bool defsEquals (const string &str) const {return defs.getText() == str;}
-				bool pageEquals (const string &str) const {return page.getText() == str;}
-				bool bboxEquals (const string &str) const {return bbox.toSVGViewBox() == str;}
-				const Matrix& getMatrix () const          {static Matrix m(1); return m;}
+				void appendToDefs(unique_ptr<XMLNode> &&node) override {defs.append(std::move(node));}
+				void appendToPage(unique_ptr<XMLNode> &&node) override {page.append(std::move(node));}
+				void embed (const BoundingBox &bb) override            {bbox.embed(bb);}
+				double getX () const override                          {return 0;}
+				double getY () const override                          {return 0;}
+				void clear ()                                          {defs.clear(); page.clear(); bbox=BoundingBox(0, 0, 0, 0);}
+				bool defsEquals (const string &str) const              {return defs.getText() == str;}
+				bool pageEquals (const string &str) const              {return page.getText() == str;}
+				bool bboxEquals (const string &str) const              {return bbox.toSVGViewBox() == str;}
+				const Matrix& getMatrix () const override              {static Matrix m(1); return m;}
+				string bboxString () const                             {return bbox.toSVGViewBox();}
+				string pageString () const                             {return page.getText();}
 
 				void write (ostream &os) const {
 					os << "defs: " << defs.getText() << '\n'
@@ -83,12 +83,12 @@ TEST_F(DvisvgmSpecialTest, basic) {
 
 TEST_F(DvisvgmSpecialTest, raw) {
 	istringstream iss("raw first{?nl}");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.defsEquals(""));
 	EXPECT_TRUE(recorder.pageEquals("first\n"));
 
 	iss.clear(); iss.str("raw \t second {?bbox dummy} \t");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.defsEquals(""));
 	EXPECT_TRUE(recorder.pageEquals("first\nsecond 0 0 0 0"));
 }
@@ -96,19 +96,19 @@ TEST_F(DvisvgmSpecialTest, raw) {
 
 TEST_F(DvisvgmSpecialTest, rawdef) {
 	std::istringstream iss("rawdef first");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.defsEquals("first"));
 	EXPECT_TRUE(recorder.pageEquals(""));
 
 	iss.clear(); iss.str("rawdef \t second \t");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.defsEquals("firstsecond"));
 	EXPECT_TRUE(recorder.pageEquals(""));
 }
 
 
 TEST_F(DvisvgmSpecialTest, pattern1) {
-	const char *cmds[] = {
+	const auto cmds = {
 		"rawset pat1",
 		"raw text1",
 		"raw text2",
@@ -117,14 +117,14 @@ TEST_F(DvisvgmSpecialTest, pattern1) {
 		"rawput pat1",
 		"rawput pat1",
 	};
-	for (size_t i=0; i < sizeof(cmds)/sizeof(char*); i++) {
-		std::istringstream iss(cmds[i]);
-		handler.preprocess(0, iss, recorder);
+	for (const char *cmd : cmds) {
+		std::istringstream iss(cmd);
+		handler.preprocess("", iss, recorder);
 	}
 	handler.finishPreprocessing();
-	for (size_t i=0; i < sizeof(cmds)/sizeof(char*); i++) {
-		std::istringstream iss(cmds[i]);
-		handler.process(0, iss, recorder);
+	for (const char *cmd : cmds) {
+		std::istringstream iss(cmd);
+		handler.process("", iss, recorder);
 	}
 	handler.finishPage();
 	EXPECT_TRUE(recorder.defsEquals(""));
@@ -133,7 +133,7 @@ TEST_F(DvisvgmSpecialTest, pattern1) {
 
 
 TEST_F(DvisvgmSpecialTest, pattern2) {
-	const char *cmds[] = {
+	const auto cmds = {
 		"rawset pat2",
 		"rawdef text1",
 		"rawdef text2",
@@ -142,14 +142,14 @@ TEST_F(DvisvgmSpecialTest, pattern2) {
 		"rawput pat2",
 		"rawput pat2",
 	};
-	for (size_t i=0; i < sizeof(cmds)/sizeof(char*); i++) {
-		std::istringstream iss(cmds[i]);
-		handler.preprocess(0, iss, recorder);
+	for (const char *cmd : cmds) {
+		std::istringstream iss(cmd);
+		handler.preprocess("", iss, recorder);
 	}
 	handler.finishPreprocessing();
-	for (size_t i=0; i < sizeof(cmds)/sizeof(char*); i++) {
-		std::istringstream iss(cmds[i]);
-		handler.process(0, iss, recorder);
+	for (const char *cmd : cmds) {
+		std::istringstream iss(cmd);
+		handler.process("", iss, recorder);
 	}
 	handler.finishPage();
 	EXPECT_TRUE(recorder.defsEquals("firsttext1text2"));
@@ -158,7 +158,7 @@ TEST_F(DvisvgmSpecialTest, pattern2) {
 
 
 TEST_F(DvisvgmSpecialTest, pattern3) {
-	const char *cmds[] = {
+	const auto cmds = {
 		"rawset pat3",
 		"raw text1",
 		"rawdef text2",
@@ -168,14 +168,14 @@ TEST_F(DvisvgmSpecialTest, pattern3) {
 		"rawput pat3",
 		"rawput pat3",
 	};
-	for (size_t i=0; i < sizeof(cmds)/sizeof(char*); i++) {
-		std::istringstream iss(cmds[i]);
-		handler.preprocess(0, iss, recorder);
+	for (const char *cmd : cmds) {
+		std::istringstream iss(cmd);
+		handler.preprocess("", iss, recorder);
 	}
 	handler.finishPreprocessing();
-	for (size_t i=0; i < sizeof(cmds)/sizeof(char*); i++) {
-		std::istringstream iss(cmds[i]);
-		handler.process(0, iss, recorder);
+	for (const char *cmd : cmds) {
+		std::istringstream iss(cmd);
+		handler.process("", iss, recorder);
 	}
 	EXPECT_TRUE(recorder.defsEquals("firsttext2"));
 	EXPECT_TRUE(recorder.pageEquals("secondtext1text1"));
@@ -185,29 +185,41 @@ TEST_F(DvisvgmSpecialTest, pattern3) {
 
 TEST_F(DvisvgmSpecialTest, fail1) {
 	std::istringstream iss("rawset");  // pattern name missing
-	EXPECT_THROW(handler.preprocess(0, iss, recorder), SpecialException);
+	EXPECT_THROW(handler.preprocess("", iss, recorder), SpecialException);
 	handler.finishPreprocessing();
 }
 
 
 TEST_F(DvisvgmSpecialTest, fail2) {
 	std::istringstream iss("rawset pat");  // endrawset missing
-	handler.preprocess(0, iss, recorder);
+	handler.preprocess("", iss, recorder);
 	EXPECT_THROW(handler.finishPreprocessing(), SpecialException);
 }
 
 
 TEST_F(DvisvgmSpecialTest, processImg) {
 	std::istringstream iss("img 72.27 72.27 test.png");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.defsEquals(""));
-	EXPECT_TRUE(recorder.pageEquals("&lt;image height=&apos;72&apos; width=&apos;72&apos; x=&apos;0&apos; xlink:href=&apos;test.png&apos; y=&apos;0&apos;/>"));
+	EXPECT_TRUE(recorder.pageEquals("&lt;image x=&apos;0&apos; y=&apos;0&apos; width=&apos;72&apos; height=&apos;72&apos; xlink:href=&apos;test.png&apos;/>"));
+
+	recorder.clear();
+	iss.clear();
+	iss.str("img 10bp 20bp test2.png");
+	handler.process("", iss, recorder);
+	EXPECT_TRUE(recorder.pageEquals("&lt;image x=&apos;0&apos; y=&apos;0&apos; width=&apos;10&apos; height=&apos;20&apos; xlink:href=&apos;test2.png&apos;/>"));
+}
+
+
+TEST_F(DvisvgmSpecialTest, fail3) {
+	std::istringstream iss("img 10 20xy test.png");  // unknown unit
+	EXPECT_THROW(handler.process("", iss, recorder), SpecialException);
 }
 
 
 TEST_F(DvisvgmSpecialTest, processBBox) {
 	std::istringstream iss("bbox abs 0 0 72.27 72.27");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.defsEquals(""));
 	EXPECT_TRUE(recorder.pageEquals(""));
 	EXPECT_TRUE(recorder.bboxEquals("0 0 72 72"));
@@ -215,12 +227,30 @@ TEST_F(DvisvgmSpecialTest, processBBox) {
 	recorder.clear();
 	iss.clear();
 	iss.str("bbox 72.27 72.27");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
+	EXPECT_TRUE(recorder.bboxEquals("0 -72 72 72"));
+
+	recorder.clear();
+	iss.clear();
+	iss.str("bbox 72bp 72bp");
+	handler.process("", iss, recorder);
+	EXPECT_TRUE(recorder.bboxEquals("0 -72 72 72"));
+
+	recorder.clear();
+	iss.clear();
+	iss.str("bbox rel 72.27 72.27");
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.bboxEquals("0 -72 72 72"));
 
 	recorder.clear();
 	iss.clear();
 	iss.str("bbox new name");
-	handler.process(0, iss, recorder);
+	handler.process("", iss, recorder);
 	EXPECT_TRUE(recorder.bboxEquals("0 0 0 0"));
+}
+
+
+TEST_F(DvisvgmSpecialTest, fail4) {
+	std::istringstream iss("bbox abs 0 0 72.27xx 72.27");  // unknown unit
+	EXPECT_THROW(handler.process("", iss, recorder), SpecialException);
 }

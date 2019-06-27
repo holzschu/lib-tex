@@ -24,15 +24,11 @@
 #endif
 #define notkanjicharseq not_kanji_char_seq
 
-#if !defined(WIN32)
-extern int sjisterminal;
-#endif
-
 /* functions */
 #define Hi(x) (((x) >> 8) & 0xff)
 #define Lo(x) ((x) & 0xff)
 
-extern int check_kanji (integer c);
+extern boolean check_kanji (integer c);
 #define checkkanji check_kanji
 extern boolean is_char_ascii (integer c);
 #define ischarascii is_char_ascii
@@ -43,6 +39,7 @@ extern integer calc_pos (integer c);
 #define calcpos calc_pos
 extern integer kcatcodekey (integer c);
 
+extern void init_kanji (const_string file_str, const_string internal_str);
 extern void init_default_kanji (const_string file_str, const_string internal_str);
 #ifdef PBIBTEX
 /* pBibTeX is EUC only */
@@ -61,10 +58,20 @@ extern void init_default_kanji (const_string file_str, const_string internal_str
 #define putc(c,fp) putc2(c,fp)
 #endif /* !PRESERVE_PUTC */
 
+#ifndef PRESERVE_FPUTS
+#undef fputs
+#define fputs(c,fp) fputs2(c,fp)
+#endif /* !PRESERVE_FPUTS */
+
 #ifdef PBIBTEX
 #define inputline2(fp,buff,pos,size,ptr) input_line2(fp,buff,pos,size,ptr)
 #else
 #define inputline2(fp,buff,pos,size) input_line2(fp,buff,pos,size,NULL)
 #endif
+
+extern void dump_kanji (FILE *fp);
+extern void undump_kanji (FILE *fp);
+#define dumpkanji dump_kanji
+#define undumpkanji undump_kanji
 
 #endif /* not KANJI_H */

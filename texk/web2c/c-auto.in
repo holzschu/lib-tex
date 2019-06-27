@@ -55,6 +55,9 @@
 /* Define to 1 if you have the `atoi' function. */
 #undef HAVE_ATOI
 
+/* define if the compiler supports basic C++11 syntax */
+#undef HAVE_CXX11
+
 /* Define to 1 if you have the declaration of `isascii', and to 0 if you
    don't. */
 #undef HAVE_DECL_ISASCII
@@ -72,6 +75,9 @@
 
 /* Define to 1 if you have the <errno.h> header file. */
 #undef HAVE_ERRNO_H
+
+/* Define to 1 if you have the `fabs' function. */
+#undef HAVE_FABS
 
 /* Define to 1 if you have the <float.h> header file. */
 #undef HAVE_FLOAT_H
@@ -99,6 +105,9 @@
 
 /* Define to 1 if you have the <iostream> header file. */
 #undef HAVE_IOSTREAM
+
+/* Define to 1 if you have the `labs' function. */
+#undef HAVE_LABS
 
 /* Define to 1 if you have the <langinfo.h> header file. */
 #undef HAVE_LANGINFO_H

@@ -1,3 +1,94 @@
+2019-02-23  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* uptex-m.ch, upbibtex.ch, updvitype.ch, uppltotf.ch, uptftopl.ch,
+	uptex_version.h: upTeX version u1.24.
+	* uptex-m.ch, kanji.c:
+	Update reference of Unicode blocks to
+	"Blocks-12.0.0.txt Date: 2018-07-30, 19:40:00 GMT [KW]".
+	Set kcatcode of "Latin Extended-B",
+	"Latin Extended Additional" 15 (not_cjk).
+	* COPYRIGHT, COPYRIGHT.ja:
+	Update copyright year.
+
+2019-02-03  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* kanji.h: Use fputs2() to benefit from kanji encoding conversion.
+	https://github.com/texjporg/tex-jp-build/issues/34
+
+2019-01-23  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* kanji_dump.c: Throw a warning when kanji internal encoding
+	is incompatible with the preloaded format.
+	https://github.com/texjporg/tex-jp-build/issues/55
+
+2018-09-16  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* upbibtex.ch: Fix bug of substring$
+	from Takashi Sakai:
+	https://github.com/texjporg/tex-jp-build/issues/64
+	https://github.com/texjporg/tex-jp-build/pull/66
+
+2018-09-09  Karl Berry  <karl@tug.org>
+
+	* uptriptest.test: LC_ALL=LANGUAGE=C.
+
+2018-09-03  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* gkhuge.test: Export TEXMFCNF beforehand, instead of setting
+	it at each one-line command execution. This should avoid test
+	failure on some platforms.
+	http://tug.org/pipermail/tlbuild/2018q3/004244.html
+	http://tug.org/pipermail/tlbuild/2018q3/004250.html
+
+2018-08-18  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* gkhuge.test: More strict test.
+	* tests/gkhugeng.err: Added.
+	* am/uptex.am: Adjust.
+
+2018-06-14  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* ksnji.h, kanji.c, uptex.defines:
+	remove sjisterminal (w32 only).
+
+2018-02-25  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* uptex-m.ch, kanji.c:
+	Update reference of Unicode blocks to
+	"Blocks-10.0.0.txt Date: 2017-04-12, 17:30:00 GMT [KW]".
+	Exclude Latin-1 letters from "Latin-1 Supplement" block.
+	Set kcatcode of "Latin-1 letters", "Latin Extended-A" 15 (not_cjk).
+	* uptex-m.ch, upbibtex.ch, updvitype.ch, uppltotf.ch, uptftopl.ch,
+	uptex_version.h: upTeX version u1.23.
+	* COPYRIGHT, COPYRIGHT.ja:
+	Update copyright year.
+
+2018-02-02  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* uppltotf.ch: Adapt to changes in ptexdir/ppltotf.ch.
+	* am/uptex.am: Add new tests.
+	* gkhuge.test, tests/gkhuge.tex, tests/gkhuge{ok,ng}.tfm,
+	  uparse.test, tests/uparse.{pl,tfm} : New test files.
+
+2018-01-31  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* uptex-m.ch: Adapt to changes in ptexdir/ptex-base.ch (disp_node).
+
+2018-01-27  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* uppltotf.ch, uptftopl.ch, uptex-m.ch: Adapt to the new JFM spec.
+	* am/uptex.am: Add new tests.
+	* newjfm.test, tests/testnewu.{pl,tfm}: New test files.
+
+2018-01-21  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* yokotate.test, tests/{,u}[,t]min10.[pl,tfm], am/uptex.am:
+	More suitable tests.
+
+2018-01-21  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* uptex-m.ch: New primitives: \uptexversion and \uptexrevision.
+
 2017-04-24  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
 
 	* uptex-m.ch: Adapt to changes in ptexdir/ptex-base.ch (p\TeX -> \pTeX).

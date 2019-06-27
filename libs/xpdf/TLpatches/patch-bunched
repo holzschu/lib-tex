@@ -1,0 +1,284 @@
+diff -ur xpdf-4.01/goo/gfile.cc xpdf-src/goo/gfile.cc
+--- xpdf-4.01/goo/gfile.cc	Tue Feb 19 03:24:19 2019
++++ xpdf-src/goo/gfile.cc	Mon Feb 25 11:09:32 2019
+@@ -7,6 +7,9 @@
+ // Copyright 1996-2003 Glyph & Cog, LLC
+ //
+ //========================================================================
++//  Modified for TeX Live by Peter Breitenlohner <tex-live@tug.org>
++//  See top-level ChangeLog for a list of all modifications
++//========================================================================
+ 
+ #include <aconf.h>
+ 
+@@ -52,7 +55,11 @@
+   char *s;
+   GString *ret;
+ 
++#ifdef _WIN32
++  if ((s = getenv("USERPROFILE")))
++#else
+   if ((s = getenv("HOME")))
++#endif
+     ret = new GString(s);
+   else
+     ret = new GString(".");
+@@ -401,6 +408,7 @@
+ #endif
+ }
+ 
++#ifndef PDF_PARSER_ONLY
+ GBool openTempFile(GString **name, FILE **f,
+ 		   const char *mode, const char *ext) {
+ #if defined(_WIN32)
+@@ -515,10 +523,11 @@
+   return gTrue;
+ #endif
+ }
++#endif /* !PDF_PARSER_ONLY */
+ 
+ GBool createDir(char *path, int mode) {
+ #ifdef _WIN32
+-  return !mkdir(path);
++  return !_mkdir(path);
+ #else
+   return !mkdir(path, mode);
+ #endif
+@@ -572,6 +581,8 @@
+ 
+ FILE *openFile(const char *path, const char *mode) {
+ #if defined(_WIN32)
++  return fopen(path, mode);
++#if 0
+   OSVERSIONINFO version;
+   wchar_t wPath[_MAX_PATH + 1];
+   char nPath[_MAX_PATH + 1];
+@@ -628,6 +639,7 @@
+     nPath[i] = '\0';
+     return fopen(nPath, mode);
+   }
++#endif /* 0 */
+ #elif defined(VMS)
+   return fopen(path, mode, "ctx=stm");
+ #else
+@@ -688,6 +700,7 @@
+ #endif
+ }
+ 
++#ifndef PDF_PARSER_ONLY
+ void fixCommandLine(int *argc, char **argv[]) {
+ #ifdef _WIN32
+   int argcw;
+@@ -713,3 +726,4 @@
+   LocalFree(argvw);
+ #endif
+ }
++#endif /* !PDF_PARSER_ONLY */
+diff -ur xpdf-4.01/goo/gfile.h xpdf-src/goo/gfile.h
+--- xpdf-4.01/goo/gfile.h	Tue Feb 19 03:24:19 2019
++++ xpdf-src/goo/gfile.h	Mon Feb 25 11:07:26 2019
+@@ -114,6 +114,8 @@
+ 
+ // On Windows, this gets the Unicode command line and converts it to
+ // UTF-8.  On other systems, this is a nop.
++#ifndef PDF_PARSER_ONLY
+ extern void fixCommandLine(int *argc, char **argv[]);
++#endif /* !PDF_PARSER_ONLY */
+ 
+ #endif
+diff -ur xpdf-4.01/xpdf/GlobalParams.cc xpdf-src/xpdf/GlobalParams.cc
+--- xpdf-4.01/xpdf/GlobalParams.cc	Tue Feb 19 03:24:19 2019
++++ xpdf-src/xpdf/GlobalParams.cc	Mon Feb 25 08:01:11 2019
+@@ -5,6 +5,9 @@
+ // Copyright 2001-2003 Glyph & Cog, LLC
+ //
+ //========================================================================
++//  Modified for TeX Live by Peter Breitenlohner <tex-live@tug.org>
++//  See top-level ChangeLog for a list of all modifications
++//========================================================================
+ 
+ #include <aconf.h>
+ 
+@@ -39,8 +42,12 @@
+ #include "GlobalParams.h"
+ 
+ #ifdef _WIN32
+-#  define strcasecmp stricmp
+-#  define strncasecmp strnicmp
++#  undef strcasecmp
++#  undef strncasecmp
++#  define strcasecmp _stricmp
++#  define strncasecmp _strnicmp
++#else
++#  include <strings.h>
+ #endif
+ 
+ #if MULTITHREADED
+@@ -684,6 +691,7 @@
+   f = NULL;
+   fileName = NULL;
+   if (cfgFileName && cfgFileName[0]) {
++#ifndef PDF_PARSER_ONLY
+     fileName = new GString(cfgFileName);
+     if (!(f = fopen(fileName->getCString(), "r"))) {
+       delete fileName;
+@@ -716,6 +724,7 @@
+     parseFile(fileName, f);
+     delete fileName;
+     fclose(f);
++#endif /* !PDF_PARSER_ONLY */
+   }
+ }
+ 
+@@ -2092,8 +2101,11 @@
+ 				   base14->fontNum,
+ 				   displayFontTab[i].obliqueFactor));
+       } else {
++// Do not display unnecessary looking message on W32
++#ifndef _WIN32
+ 	error(errConfig, -1, "No display font for '{0:s}'",
+ 	      displayFontTab[i].name);
++#endif
+       }
+     }
+   }
+diff -ur xpdf-4.01/xpdf/GlobalParams.h xpdf-src/xpdf/GlobalParams.h
+--- xpdf-4.01/xpdf/GlobalParams.h	Tue Feb 19 03:24:19 2019
++++ xpdf-src/xpdf/GlobalParams.h	Mon Feb 25 08:02:36 2019
+@@ -5,6 +5,9 @@
+ // Copyright 2001-2003 Glyph & Cog, LLC
+ //
+ //========================================================================
++//  Modified for TeX Live by Peter Breitenlohner <tex-live@tug.org>
++//  See top-level ChangeLog for a list of all modifications
++//========================================================================
+ 
+ #ifndef GLOBALPARAMS_H
+ #define GLOBALPARAMS_H
+@@ -218,7 +221,7 @@
+ 
+   // Initialize the global parameters by attempting to read a config
+   // file.
+-  GlobalParams(const char *cfgFileName);
++  GlobalParams(const char *cfgFileName = NULL);
+ 
+   ~GlobalParams();
+ 
+diff -ur xpdf-4.01/xpdf/PDFDoc.cc xpdf-src/xpdf/PDFDoc.cc
+--- xpdf-4.01/xpdf/PDFDoc.cc	Tue Feb 19 03:24:19 2019
++++ xpdf-src/xpdf/PDFDoc.cc	Mon Feb 25 08:16:35 2019
+@@ -147,20 +147,25 @@
+ 
+ PDFDoc::PDFDoc(char *fileNameA, GString *ownerPassword,
+ 	       GString *userPassword, PDFCore *coreA) {
++/*
+ #ifdef _WIN32
+   OSVERSIONINFO version;
+ #endif
++*/
+   Object obj;
++/*
+ #ifdef _WIN32
+   Unicode u;
+   int n, i, j;
+ #endif
++*/
+ 
+   init(coreA);
+ 
+   fileName = new GString(fileNameA);
+ 
+ #if defined(_WIN32)
++#if 0
+   n = 0;
+   i = 0;
+   while (getUTF8(fileName, &i, &u)) {
+@@ -178,8 +183,12 @@
+   if (version.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+     file = _wfopen(fileNameU, L"rb");
+   } else {
++#endif /* 0 */
+     file = fopen(fileName->getCString(), "rb");
++#if 0
+   }
++#endif /* 0 */
++
+ #elif defined(VMS)
+   file = fopen(fileName->getCString(), "rb", "ctx=stm");
+ #else
+@@ -571,6 +580,7 @@
+   GBool ret;
+ 
+   // NB: _wfopen is only available in NT
++/*
+   version.dwOSVersionInfoSize = sizeof(version);
+   GetVersionEx(&version);
+   if (version.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+@@ -580,12 +590,15 @@
+     path2w[i] = 0;
+     f = _wfopen(path2w, L"wb");
+   } else {
++*/
+     for (i = 0; i < pathLen && i < _MAX_PATH; ++i) {
+       path2c[i] = (char)path[i];
+     }
+     path2c[i] = 0;
+     f = fopen(path2c, "wb");
++/*
+   }
++*/
+   if (!f) {
+     return gFalse;
+   }
+diff -ur xpdf-4.01/xpdf/Page.cc xpdf-src/xpdf/Page.cc
+--- xpdf-4.01/xpdf/Page.cc	Tue Feb 19 03:24:19 2019
++++ xpdf-src/xpdf/Page.cc	Mon Feb 25 08:19:00 2019
+@@ -480,9 +480,9 @@
+   delete links;
+ }
+ 
+-#ifndef PDF_PARSER_ONLY
+ void Page::getDefaultCTM(double *ctm, double hDPI, double vDPI,
+ 			 int rotate, GBool useMediaBox, GBool upsideDown) {
++#ifndef PDF_PARSER_ONLY
+   GfxState *state;
+   int i;
+ 
+@@ -499,5 +499,5 @@
+     ctm[i] = state->getCTM()[i];
+   }
+   delete state;
+-}
+ #endif
++}
+diff -ur xpdf-4.01/xpdf/XFAForm.cc xpdf-src/xpdf/XFAForm.cc
+--- xpdf-4.01/xpdf/XFAForm.cc	Tue Feb 19 03:24:19 2019
++++ xpdf-src/xpdf/XFAForm.cc	Mon Feb 25 08:20:00 2019
+@@ -28,8 +28,10 @@
+ #include "XFAForm.h"
+ 
+ #ifdef _WIN32
+-#  define strcasecmp stricmp
+-#  define strncasecmp strnicmp
++#  undef strcasecmp
++#  undef strncasecmp
++#  define strcasecmp _stricmp
++#  define strncasecmp _strnicmp
+ #endif
+ 
+ //------------------------------------------------------------------------
+diff -ur xpdf-4.01/xpdf/config.h xpdf-src/xpdf/config.h
+--- xpdf-4.01/xpdf/config.h	Tue Feb 19 03:24:19 2019
++++ xpdf-src/xpdf/config.h	Mon Feb 25 08:21:02 2019
+@@ -78,11 +78,6 @@
+ // popen
+ //------------------------------------------------------------------------
+ 
+-#if defined(_MSC_VER) || defined(__BORLANDC__)
+-#define popen _popen
+-#define pclose _pclose
+-#endif
+-
+ #if defined(VMS) || defined(VMCMS) || defined(DOS) || defined(OS2) || defined(__EMX__) || defined(_WIN32) || defined(__DJGPP__)
+ #define POPEN_READ_MODE "rb"
+ #else

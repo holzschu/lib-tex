@@ -1,6 +1,7 @@
 #include <kpathsea/config.h>
 #include "makejvf.h"
 #include "uniblock.h"
+#include "usrtable.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -85,7 +86,8 @@ void writevf(int code, FILE *fp)
 {
 	int cc,cc2,cc3,cc4,w,skip=0,skip2=0,height=1000;
 	char buf[256],buf2[256];
-	int fidshift=0;
+	int fidshift=0,l;
+	int outcode=code;
 
 	if (fidzero) fidshift=-1;
 
@@ -122,7 +124,7 @@ void writevf(int code, FILE *fp)
 				skip2+=-(int)((0.65)*zh);
 			}
 			else {
-				skip2+=-(int)((0.6)*zh);
+				skip2+=-(int)(zh*3/5.0); /* skip2+=-(int)((0.6)*zh); */
 			}
 
 			if (kanatfm)
@@ -190,7 +192,7 @@ void writevf(int code, FILE *fp)
 				skip2+=(int)((0.65)*zh);
 			}
 			else {
-				skip2+=(int)((0.6)*zh);
+				skip2+=(int)(zh*3/5.0); /* skip2+=(int)((0.6)*zh); */
 			}
 
 			if (kanatfm)
@@ -306,14 +308,33 @@ void writevf(int code, FILE *fp)
 		break;
 	}
 
-	if (skip != -rightamount && enhanced) {
-		fprintf(stderr,
-			"[Warning] Conflicting MOVERIGHT value for code %x,\n"
-			"[Warning]   makejvf default:    %08x\n"
-			"[Warning]   suggested from JFM: %08x <= I'll use this ...\n",
-			code, skip, -rightamount);
+	for (l = 0; l < usertable_replace_max; l++) {
+		if (code == usertable_replace[l].codepoint) {
+			outcode = usertable_replace[l].newcodepoint;
+			break;
+		}
+	}
+	for (l = 0; l < usertable_move_max; l++) {
+		if (code == usertable_move[l].codepoint) {
+			skip = usertable_move[l].moveright * zw;
+			skip2 = usertable_move[l].movedown * zh;
+			goto outputj;
+		}
+	}
+	if (enhanced) {
+#ifdef DEBUG
+		if (skip != -rightamount) {
+			fprintf(stderr,
+				"[DEBUG] Conflicting MOVERIGHT value for code %x,\n"
+				"[DEBUG]   makejvf default:    %08x\n"
+				"[DEBUG]   suggested from JFM: %08x <= I'll use this ...\n",
+				code, skip, -rightamount);
+		}
+#endif
 		skip=-rightamount;
 	}
+
+outputj:
 	if (kanatfm)
 		cc=4;
 	else
@@ -340,14 +361,15 @@ void writevf(int code, FILE *fp)
 			fputc(172+fidshift,fp); /* FONT_NUM_1 */
 	}
 	fputc(129,fp); /* SET2 */
-	fputnum(code,2,fp); /* char code */
+	fputnum(outcode,2,fp); /* char code */
 }
 
 void writevfu(int code, FILE *fp)
 {
 	int cc,cc2,cc3,cc4,w,skip=0,skip2=0,height=1000;
 	char buf[256],buf2[256];
-	int fidshift=0;
+	int fidshift=0,l;
+	int outcode=code;
 
 	if (fidzero) fidshift=-1;
 
@@ -379,13 +401,8 @@ void writevfu(int code, FILE *fp)
 				}
 			}
 			else
-				skip=(int)((0.1)*zw);
-			if (code == 0x2018) {
-				skip2+=-(int)((0.65)*zh);
-			}
-			else {
-				skip2+=-(int)((0.6)*zh);
-			}
+				skip = -(zw-w); /* changed */
+			/* no correction needed for skip2 */
 
 			if (kanatfm)
 				cc=4;
@@ -473,10 +490,16 @@ void writevfu(int code, FILE *fp)
 	case 0x300C: /* 「 */
 	case 0x300E: /* 『 */
 	case 0x3010: /* 【 */
-	case 0xFF5F: /* JIS X 0213  1-02-54 始め二重バーレーン */
+	case 0xFF5F: /* JIS X 0213  1-02-54 始め二重パーレン */
 	case 0x3018: /* JIS X 0213  1-02-56 始め二重亀甲括弧 */
 	case 0x3016: /* JIS X 0213  1-02-58 始めすみ付き括弧(白) */
+	case 0x00AB: /* JIS X 0213  1-09-08 始め二重山括弧引用記号/始めギュメ */
 	case 0x301D: /* JIS X 0213  1-13-64 始めダブルミニュート */
+	case 0x2329: /* LEFT-POINTING ANGLE BRACKET */
+	case 0x301A: /* LEFT WHITE SQUARE BRACKET */
+	case 0xFE59: /* SMALL LEFT PARENTHESIS */
+	case 0xFE5B: /* SMALL LEFT CURLY BRACKET */
+	case 0xFE5D: /* SMALL LEFT TORTOISE SHELL BRACKET */
 		if (ucs != ENTRY_JQ)
 			skip = -(zw-w);
 		break;
@@ -502,13 +525,8 @@ void writevfu(int code, FILE *fp)
 				}
 			}
 			else
-				skip=(int)((0.4)*zw);
-			if (code == 0x2019) {
-				skip2+=(int)((0.65)*zh);
-			}
-			else {
-				skip2+=(int)((0.6)*zh);
-			}
+				skip = zw; /* changed */
+			/* no correction needed for skip2 */
 
 			if (kanatfm)
 				cc=4;
@@ -595,30 +613,31 @@ void writevfu(int code, FILE *fp)
 	case 0x300D: /* 」 */
 	case 0x300F: /* 』 */
 	case 0x3011: /* 】 */
-	case 0xFF60: /* JIS X 0213  1-02-55 終わり二重バーレーン */
+	case 0xFF60: /* JIS X 0213  1-02-55 終わり二重パーレン */
 	case 0x3019: /* JIS X 0213  1-02-57 終わり二重亀甲括弧 */
 	case 0x3017: /* JIS X 0213  1-02-59 終わりすみ付き括弧(白) */
+	case 0x00BB: /* JIS X 0213  1-09-18 終わり二重山括弧引用記号/終わりギュメ */
 	case 0x301F: /* JIS X 0213  1-13-65 終わりダブルミニュート */
+	case 0x301E: /* --- - ----  ------- 上付き終わりダブルミニュート */
+	case 0x232A: /* RIGHT-POINTING ANGLE BRACKET */
+	case 0x301B: /* RIGHT WHITE SQUARE BRACKET */
+	case 0xFE5A: /* SMALL RIGHT PARENTHESIS */
+	case 0xFE5C: /* SMALL RIGHT CURLY BRACKET */
+	case 0xFE5E: /* SMALL RIGHT TORTOISE SHELL BRACKET */
 	case 0x00B0: /* ° */
 	case 0x2032: /* ′ */
 	case 0x2033: /* ″ */
 		break;
-	case 0xFF61: case 0xFF62: case 0xFF63: case 0xFF64: case 0xFF65: case 0xFF66: case 0xFF67:
-	case 0xFF68: case 0xFF69: case 0xFF6A: case 0xFF6B: case 0xFF6C: case 0xFF6D: case 0xFF6E: case 0xFF6F:
-	case 0xFF70: case 0xFF71: case 0xFF72: case 0xFF73: case 0xFF74: case 0xFF75: case 0xFF76: case 0xFF77:
-	case 0xFF78: case 0xFF79: case 0xFF7A: case 0xFF7B: case 0xFF7C: case 0xFF7D: case 0xFF7E: case 0xFF7F:
-	case 0xFF80: case 0xFF81: case 0xFF82: case 0xFF83: case 0xFF84: case 0xFF85: case 0xFF86: case 0xFF87:
-	case 0xFF88: case 0xFF89: case 0xFF8A: case 0xFF8B: case 0xFF8C: case 0xFF8D: case 0xFF8E: case 0xFF8F:
-	case 0xFF90: case 0xFF91: case 0xFF92: case 0xFF93: case 0xFF94: case 0xFF95: case 0xFF96: case 0xFF97:
-	case 0xFF98: case 0xFF99: case 0xFF9A: case 0xFF9B: case 0xFF9C: case 0xFF9D: case 0xFF9E: case 0xFF9F:
-		if (jfm_id == 11 && hankana) { /* 半角片仮名、横書き時 */
-			pstfm_codes[pstfm_nt-1]=code;
-			pstfm_nt+=1;
-			rightamount=0; /* discard jfmread() result */
-			break;
-		}
 	default:
 		if (w != zw) {
+			if ((code >= 0xFF61 && code <= 0xFFDC) || (code >= 0xFFE8 && code <= 0xFFEE)) {
+				if (jfm_id == 11 && hankana) { /* 半角片仮名など、横書き時 */
+					pstfm_codes[pstfm_nt-1]=code;
+					pstfm_nt+=1;
+					rightamount=0; /* discard jfmread() result */
+					break;
+				}
+			}
 			if (!uniblock_iskanji && kanatume>=0) {
 				sprintf(buf2,"CH <%X>",code);
 				rewind(afp);
@@ -695,19 +714,38 @@ void writevfu(int code, FILE *fp)
 		break;
 	}
 
-	if (skip != -rightamount && enhanced) {
-		fprintf(stderr,
-			"[Warning] Conflicting MOVERIGHT value for code %x,\n"
-			"[Warning]   makejvf default:    %08x\n"
-			"[Warning]   suggested from JFM: %08x <= I'll use this ...\n",
-			code, skip, -rightamount);
+	for (l = 0; l < usertable_replace_max; l++) {
+		if (code == usertable_replace[l].codepoint) {
+			outcode = usertable_replace[l].newcodepoint;
+			break;
+		}
+	}
+	for (l = 0; l < usertable_move_max; l++) {
+		if (code == usertable_move[l].codepoint) {
+			skip = usertable_move[l].moveright * zw;
+			skip2 = usertable_move[l].movedown * zh;
+			goto outputu;
+		}
+	}
+	if (enhanced) {
+#ifdef DEBUG
+		if (skip != -rightamount) {
+			fprintf(stderr,
+				"[DEBUG] Conflicting MOVERIGHT value for code %x,\n"
+				"[DEBUG]   makejvf default:    %08x\n"
+				"[DEBUG]   suggested from JFM: %08x <= I'll use this ...\n",
+				code, skip, -rightamount);
+		}
+#endif
 		skip=-rightamount;
 	}
+
+outputu:
 	if (kanatfm)
 		cc=4;
 	else
 		cc=3;
-	if (code>=0x10000)
+	if (outcode>=0x10000)
 		cc+=1;
 	if (skip)
 		cc+=numcount(skip)+1;
@@ -730,12 +768,12 @@ void writevfu(int code, FILE *fp)
 		else
 			fputc(172+fidshift,fp); /* FONT_NUM_1 */
 	}
-	if (code>=0x10000) {
+	if (outcode>=0x10000) {
 		fputc(130,fp); /* SET3 */
-		fputnum(code,3,fp); /* char code */
+		fputnum(outcode,3,fp); /* char code */
 	} else {
 		fputc(129,fp); /* SET2 */
-		fputnum(code,2,fp); /* char code */
+		fputnum(outcode,2,fp); /* char code */
 	}
 }
 
@@ -756,6 +794,10 @@ void maketfm(char *name)
 	FILE *fp;
 	int i;
 
+	if (strlen(name) >= 252) { /* <buffer size> - ".tfm" */
+		fprintf(stderr,"Too long output file name.\n");
+		exit(1);
+	}
 	strcpy(nbuf,name);
 	strcat(nbuf,".tfm");
 	fp = fopen(nbuf,"wb");

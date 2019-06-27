@@ -2,7 +2,7 @@
 ** XMLDocument.hpp                                                      **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -22,20 +22,22 @@
 #define XMLDOCUMENT_HPP
 
 #include <memory>
+#include <vector>
 #include "XMLNode.hpp"
 
-class XMLDocument
-{
+class XMLDocument {
 	public:
-		XMLDocument (XMLElementNode *root=0);
+		XMLDocument () =default;
+		XMLDocument (std::unique_ptr<XMLElementNode> &&root);
 		void clear ();
-		void append (XMLNode *node);
-		void setRootNode (XMLElementNode *root);
+		void append (std::unique_ptr<XMLElementNode> &&node);
+		void append (std::unique_ptr<XMLNode> &&node);
+		void setRootNode (std::unique_ptr<XMLElementNode> &&root);
 		const XMLElementNode* getRootElement () const {return _rootElement.get();}
 		std::ostream& write (std::ostream &os) const;
 
 	private:
-		std::list<std::unique_ptr<XMLNode>> _nodes;
+		std::vector<std::unique_ptr<XMLNode>> _nodes;
 		std::unique_ptr<XMLElementNode> _rootElement;
 };
 

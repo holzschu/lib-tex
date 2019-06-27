@@ -1,6 +1,6 @@
 /* mpfr_fits_*_p -- test whether an mpfr fits a C signed type.
 
-Copyright 2003-2016 Free Software Foundation, Inc.
+Copyright 2003-2019 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,7 +17,7 @@ License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
+https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
 
 #include "mpfr-impl.h"
@@ -29,7 +29,7 @@ http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 int
 FUNCTION (mpfr_srcptr f, mpfr_rnd_t rnd)
 {
-  unsigned int saved_flags;
+  mpfr_flags_t saved_flags;
   mpfr_exp_t e;
   int prec;
   mpfr_t x;
@@ -84,7 +84,8 @@ FUNCTION (mpfr_srcptr f, mpfr_rnd_t rnd)
   /* hard case: first round to prec bits, then check */
   saved_flags = __gmpfr_flags;
   mpfr_init2 (x, prec);
-  mpfr_set (x, f, rnd);
+  /* for RNDF, it suffices to check it fits when rounded away from zero */
+  mpfr_set (x, f, (rnd == MPFR_RNDF) ? MPFR_RNDA : rnd);
   /* Warning! Due to the rounding, x can be an infinity. Here we use
      the fact that singular numbers have a special exponent field,
      thus well-defined and different from e, in which case this means

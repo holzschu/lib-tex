@@ -6,86 +6,328 @@
  *****/
 
 #include "bezierpatch.h"
+#include "predicates.h"
 
 namespace camp {
 
-size_t tstride;
-GLfloat *B;
+using ::orient2d;
+using ::orient3d;
 
 #ifdef HAVE_GL
 
-std::vector<GLfloat> BezierPatch::buffer;
-std::vector<GLfloat> BezierPatch::Buffer;
+
+//FIXME: Find a nicer way to pass the shader program number,
+// preferably without global variables...
+
+extern GLint noColorShader;
+extern GLint colorShader;
+extern void setUniforms(GLint shader); 
+
+const size_t nbuffer=10000; // Initial size of dynamic buffers
+
+std::vector<vertexData> BezierPatch::vertexbuffer;
+std::vector<VertexData> BezierPatch::Vertexbuffer;
+std::vector<VertexData> BezierPatch::tVertexbuffer;
 std::vector<GLuint> BezierPatch::indices;
 std::vector<GLuint> BezierPatch::Indices;
-std::vector<GLfloat> BezierPatch::tbuffer;
-std::vector<GLuint> BezierPatch::tindices;
-std::vector<GLfloat> BezierPatch::tBuffer;
 std::vector<GLuint> BezierPatch::tIndices;
 
 GLuint BezierPatch::nvertices=0;
-GLuint BezierPatch::ntvertices=0;
 GLuint BezierPatch::Nvertices=0;
 GLuint BezierPatch::Ntvertices=0;
 
-extern const double Fuzz2;
+//std::vector<GLuint>& I=BezierPatch::tIndices;
+//std::vector<VertexData>& V=BezierPatch::tVertexbuffer;
+bool colors;
+
+std::vector<GLfloat> zbuffer;
+std::vector<GLfloat> xbuffer;
+std::vector<GLfloat> ybuffer;
+
+std::vector<GLfloat> xmin,ymin,zmin;
+std::vector<GLfloat> xmax,ymax,zmax;
+std::vector<GLfloat> zsum;
+
+inline double min(double a, double b, double c)
+{
+  return min(min(a,b),c);
+}
+
+inline double max(double a, double b, double c)
+{
+  return max(max(a,b),c);
+}
+
+struct iz {
+  unsigned i;
+  double z;
+  iz() {}
+  void minimum(unsigned i, const std::vector<GLuint>& I) {
+    this->i=i;
+    unsigned i3=3*i;
+    z=min(zbuffer[I[i3]],zbuffer[I[i3+1]],zbuffer[I[i3+2]]);
+  }
+};
+
+std::vector<iz> IZ;
 
 const double FillFactor=0.1;
 const double BezierFactor=0.4;
 
-// Partially work around OpenGL transparency bug by sorting transparent
-// triangles by their centroid depth.
-int compare(const void *a, const void *b)
+inline int sgn1(double x) 
 {
-  size_t a0=tstride*((GLuint *) a)[0];
-  size_t a1=tstride*((GLuint *) a)[1];
-  size_t a2=tstride*((GLuint *) a)[2];
-  
-  size_t b0=tstride*((GLuint *) b)[0];
-  size_t b1=tstride*((GLuint *) b)[1];
-  size_t b2=tstride*((GLuint *) b)[2];
-
-  double x=
-    T[0]*(B[a0]+B[a1]+B[a2]-B[b0]-B[b1]-B[b2])+
-    T[1]*(B[a0+1]+B[a1+1]+B[a2+1]-B[b0+1]-B[b1+1]-B[b2+1])+
-    T[2]*(B[a0+2]+B[a1+2]+B[a2+2]-B[b0+2]-B[b1+2]-B[b2+2]);
-  if(x > 0.0) return 1;
-  if(x < 0.0) return -1;
-  return 0;
+  return x >= 0.0 ? 1 : -1;
 }
+
+inline int sgn(double x) 
+{
+  return (x > 0.0 ? 1 : (x < 0.0 ? -1 : 0));
+}
+
+bool sameside(const double *a, const double *b, int s0, const double *A,
+              const double *B, const double *C)
+{
+  if(sgn(orient2d(a,b,A)) == s0) return true;
+  if(sgn(orient2d(a,b,B)) == s0) return true;
+  if(sgn(orient2d(a,b,C)) == s0) return true;
+  return false;
+}
+
+// returns true iff 2D triangles abc and ABC intersect
+bool intersect2D(const double *a, const double *b, const double *c,
+                 const double *A, const double *B, const double *C)
+{
+  int s0=sgn(orient2d(a,b,c)); // Optimize away
+  int S0=sgn(orient2d(A,B,C)); // Optimize away
+  return
+    sameside(a,b,s0,A,B,C) &&
+    sameside(b,c,s0,A,B,C) &&
+    sameside(c,a,s0,A,B,C) &&
+    sameside(A,B,S0,a,b,c) &&
+    sameside(B,C,S0,a,b,c) &&
+    sameside(C,A,S0,a,b,c);
+}
+
+// returns true iff triangle abc is pierced by line segment AB.
+bool pierce(const double *a, const double *b, const double *c, const double *A, const double *B)
+{
+  int sa=sgn(orient3d(A,b,c,B));
+  int sb=sgn(orient3d(A,c,a,B));
+  int sc=sgn(orient3d(A,a,b,B));
+  return sa == sb && sb == sc; 
+}
+
+// returns true iff triangle abc is pierced by an edge of triangle ABC
+bool intersect0(const double *a, const double *b, const double *c,
+                const double *A, const double *B, const double *C,
+                int sA, int sB, int sC)
+{
+  if(sA != sB) {
+    if(pierce(a,b,c,A,B)) return true;
+    if(sC != sA) {
+      if(pierce(a,b,c,C,A)) return true;
+    } else {
+      if(pierce(a,b,c,B,C)) return true;
+    }
+  } else {
+    if(pierce(a,b,c,B,C)) return true;
+    if(pierce(a,b,c,C,A)) return true;
+  }
+  return false;
+}  
+
+// returns true iff triangle abc intersects triangle ABC
+bool intersect3D(const double *a, const double *b, const double *c,
+                 const double *A, const double *B, const double *C)
+{
+  int sA=sgn(orient3d(a,b,c,A));
+  int sB=sgn(orient3d(a,b,c,B));
+  int sC=sgn(orient3d(a,b,c,C));
+  if(sA == sB && sB == sC) return false;
+
+  int sa=sgn(orient3d(A,B,C,a));
+  int sb=sgn(orient3d(A,B,C,b));
+  int sc=sgn(orient3d(A,B,C,c));
+  if(sa == sb && sb == sc) return false;
+
+  return intersect0(a,b,c,A,B,C,sA,sB,sC) || intersect0(A,B,C,a,b,c,sa,sb,sc);
+}
+
+// Return the intersection time of the extension of the line segment PQ
+// with the plane perpendicular to n and passing through Z.
+inline double intersect(const double *P, const double *Q, const double *n,
+                        const double *Z)
+{
+  double d=n[0]*Z[0]+n[1]*Z[1]+n[2]*Z[2];
+  double denom=n[0]*(Q[0]-P[0])+n[1]*(Q[1]-P[1])+n[2]*(Q[2]-P[2]);
+  return denom == 0 ? DBL_MAX : (d-n[0]*P[0]-n[1]*P[1]-n[2]*P[2])/denom;
+}
+                    
+inline triple interp(const double *a, const double *b, double t)
+{
+  return triple(a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1]),a[2]+t*(b[2]-a[2]));
+}
+
+inline void interp(GLfloat *dest,
+                   const GLfloat *a, const GLfloat *b, double t)
+{
+  double onemt=1.0-t;
+  for(size_t i=0; i < 4; ++i)
+    dest[i]=onemt*a[i]+t*b[i];
+}
+
+inline triple interp(const triple& a, const triple& b, double t)
+{
+  return a+(b-a)*t;
+}
+
+inline void cross(double *dest, const double *u, const double *v,
+                  const double *w)
+{
+  double u0=u[0]-w[0];
+  double u1=u[1]-w[1];
+  double u2=u[2]-w[2];
+  double v0=v[0]-w[0];
+  double v1=v[1]-w[1];
+  double v2=v[2]-w[2];
+  dest[0]=u1*v2-u2*v1;
+  dest[1]=u2*v0-u0*v2;
+  dest[2]=u0*v1-u1*v0;
+}
+
+unsigned n;
+unsigned int count;
+  
+// Sort nonintersecting triangles by depth.
+int compare(const void *p, const void *P)
+{
+  unsigned Ia=((GLuint *) p)[0];
+  unsigned Ib=((GLuint *) p)[1];
+  unsigned Ic=((GLuint *) p)[2];
+
+  unsigned IA=((GLuint *) P)[0];
+  unsigned IB=((GLuint *) P)[1];
+  unsigned IC=((GLuint *) P)[2];
+  
+  return zbuffer[Ia]+zbuffer[Ib]+zbuffer[Ic] < 
+    zbuffer[IA]+zbuffer[IB]+zbuffer[IC] ? -1 : 1;
+  
+  /*
+  double a[]={xbuffer[Ia],ybuffer[Ia],zbuffer[Ia]};
+  double b[]={xbuffer[Ib],ybuffer[Ib],zbuffer[Ib]};
+  double c[]={xbuffer[Ic],ybuffer[Ic],zbuffer[Ic]};
+      
+  double A[]={xbuffer[IA],ybuffer[IA],zbuffer[IA]};
+  double B[]={xbuffer[IB],ybuffer[IB],zbuffer[IB]};
+  double C[]={xbuffer[IC],ybuffer[IC],zbuffer[IC]};
+
+  double viewpoint[]={0,0,100000};
+  
+  double sa=-orient3d(A,B,C,a);
+  double sb=-orient3d(A,B,C,b);
+  double sc=-orient3d(A,B,C,c);
+  double s=min(sa,sb,sc);
+  double S=max(sa,sb,sc);
+  double eps=1000;
+
+  if(s < -eps && S > eps) { //swap
+    double sA=-orient3d(a,b,c,A);
+    double sB=-orient3d(a,b,c,B);
+    double sC=-orient3d(a,b,c,C);
+    double s=min(sA,sB,sC);
+    double S=max(sA,sB,sC);
+    if(S < -s) S=s;
+    int sz=sgn1(orient3d(a,b,c,viewpoint));
+    if(S < -eps) return -sz;
+    if(S > eps) return sz;
+  }
+  if(S < -s) S=s;
+  int sz=sgn1(orient3d(A,B,C,viewpoint));
+  if(S < -eps) return sz;
+  if(S > eps) return -sz;
+  return a[2]+b[2]+c[2] < A[2]+B[2]+C[2] ? -1 : 1;
+  */
+}
+
+#if 0
+void split(unsigned i3, GLuint ia, GLuint ib, GLuint ic,
+           double *a, double *b, double *c, double *N, double *A) {
+  double td=intersect(a,b,N,A);
+  double te=intersect(a,c,N,A);
+      
+  triple d=interp(a,b,td);
+  triple e=interp(a,c,te);
+      
+  GLuint Ia=tstride*ia;
+  GLuint Ib=tstride*ib;
+  GLuint Ic=tstride*ic;
+    
+  triple na=triple(V[Ia+3],V[Ia+4],V[Ia+5]);
+  triple nb=triple(V[Ib+3],V[Ib+4],V[Ib+5]);
+  triple nc=triple(V[Ic+3],V[Ic+4],V[Ic+5]);
+  
+  triple nd=interp(na,nb,td);
+  triple ne=interp(na,nc,te);
+      
+  GLuint id,ie;
+  
+  if(colors) {
+    GLfloat *ca=&V[Ia+6];
+    GLfloat *cb=&V[Ib+6];
+    GLfloat *cc=&V[Ic+6];
+        
+    GLfloat cd[4],ce[4];
+    interp(cd,ca,cb,td);
+    interp(ce,ca,cc,te);
+        
+    id=BezierPatch::tVertex(d,nd,cd);
+    ie=BezierPatch::tVertex(e,ne,ce);
+  } else {
+    id=BezierPatch::tVertex(d,nd);
+    ie=BezierPatch::tVertex(e,ne);
+  }
+      
+  I[i3]=ia;
+  I[i3+1]=id;
+  I[i3+2]=ie;
+      
+  I.push_back(id);
+  I.push_back(ib);
+  I.push_back(ie);
+      
+  I.push_back(ie);
+  I.push_back(ib);
+  I.push_back(ic);
+}
+#endif
 
 void BezierPatch::init(double res, const triple& Min, const triple& Max,
                        bool transparent, GLfloat *colors)
 {
-  empty=false;
   res2=res*res;
   Res2=BezierFactor*BezierFactor*res2;
   Epsilon=FillFactor*res;
+
   this->Min=Min;
   this->Max=Max;
-  
-  const size_t nbuffer=10000;
+
   if(transparent) {
-    tbuffer.reserve(nbuffer);
-    tindices.reserve(nbuffer);
-    pindices=&tindices;
+    tVertexbuffer.reserve(nbuffer);
+    tIndices.reserve(nbuffer);
+    pindices=&tIndices;
     pvertex=&tvertex;
-    if(colors) {
-      tBuffer.reserve(nbuffer);
-      tIndices.reserve(nbuffer);
-      pindices=&tIndices;
-      pVertex=&tVertex;
-    }
+    pVertex=&tVertex;
   } else {
-    buffer.reserve(nbuffer);
-    indices.reserve(nbuffer);
-    pindices=&indices;
-    pvertex=&vertex;
     if(colors) {
-      Buffer.reserve(nbuffer);
+      Vertexbuffer.reserve(nbuffer);
       Indices.reserve(nbuffer);
       pindices=&Indices;
       pVertex=&Vertex;
+    } else {
+      vertexbuffer.reserve(nbuffer);
+      indices.reserve(nbuffer);
+      pindices=&indices;
+      pvertex=&vertex;
     }
   }
 }
@@ -290,7 +532,7 @@ void BezierPatch::render(const triple *p, bool straight, GLfloat *c0)
   for(unsigned i=1; i < 16; ++i)
     epsilon=max(epsilon,abs2(p[i]-p0));
   
-  epsilon *= Fuzz2;
+  epsilon *= Fuzz4;
     
   triple p3=p[3];
   triple p12=p[12];
@@ -549,7 +791,7 @@ void BezierTriangle::render(const triple *p, bool straight, GLfloat *c0)
   for(int i=1; i < 10; ++i)
     epsilon=max(epsilon,abs2(p[i]-p0));
   
-  epsilon *= Fuzz2;
+  epsilon *= Fuzz4;
     
   GLuint I0,I1,I2;
     
@@ -586,64 +828,294 @@ void BezierTriangle::render(const triple *p, bool straight, GLfloat *c0)
   }
 }
 
-void BezierPatch::draw()
+void transform(const std::vector<VertexData>& b)
 {
-  if(empty) return;
-  size_t stride=6;
-  size_t Stride=10;
-  size_t size=sizeof(GLfloat);
-  size_t bytestride=stride*size;
-  size_t Bytestride=Stride*size;
-    
-  glEnableClientState(GL_NORMAL_ARRAY);
-  glEnableClientState(GL_VERTEX_ARRAY);
+  unsigned n=b.size();
+//  xbuffer.resize(n);
+//  ybuffer.resize(n);
+  zbuffer.resize(n);
   
-  if(indices.size()) {
-    glVertexPointer(3,GL_FLOAT,bytestride,&buffer[0]);
-    glNormalPointer(GL_FLOAT,bytestride,&buffer[3]);
-    glDrawElements(GL_TRIANGLES,indices.size(),GL_UNSIGNED_INT,&indices[0]);
+  for(unsigned i=0; i < n; ++i) {
+    const GLfloat *v=b[i].position;
+//    xbuffer[i]=Tx[0]*b[j]+Tx[1]*b[j+1]+Tx[2]*b[j+2];
+//    ybuffer[i]=Ty[0]*b[j]+Ty[1]*b[j+1]+Ty[2]*b[j+2];
+    zbuffer[i]=Tz[0]*v[0]+Tz[1]*v[1]+Tz[2]*v[2];
   }
-  
-  if(Indices.size()) {
-    glEnableClientState(GL_COLOR_ARRAY);
-    glEnable(GL_COLOR_MATERIAL);
-    glVertexPointer(3,GL_FLOAT,Bytestride,&Buffer[0]);
-    glNormalPointer(GL_FLOAT,Bytestride,&Buffer[3]);
-    glColorPointer(4,GL_FLOAT,Bytestride,&Buffer[6]);
-    glDrawElements(GL_TRIANGLES,Indices.size(),GL_UNSIGNED_INT,&Indices[0]);
-    glDisable(GL_COLOR_MATERIAL);
-    glDisableClientState(GL_COLOR_ARRAY);
-  }
-  
-  if(tindices.size()) {
-    B=&tbuffer[0]; 
-    tstride=stride;
-    qsort(&tindices[0],tindices.size()/3,3*sizeof(GLuint),compare);
-    glVertexPointer(3,GL_FLOAT,bytestride,&tbuffer[0]);
-    glNormalPointer(GL_FLOAT,bytestride,&tbuffer[3]);
-    glDrawElements(GL_TRIANGLES,tindices.size(),GL_UNSIGNED_INT,&tindices[0]);
-  }
-  
-  if(tIndices.size()) {
-    B=&tBuffer[0];
-    tstride=Stride;
-    qsort(&tIndices[0],tIndices.size()/3,3*sizeof(GLuint),compare);
-    glEnableClientState(GL_COLOR_ARRAY);
-    glEnable(GL_COLOR_MATERIAL);
-    glVertexPointer(3,GL_FLOAT,Bytestride,&tBuffer[0]);
-    glNormalPointer(GL_FLOAT,Bytestride,&tBuffer[3]);
-    glColorPointer(4,GL_FLOAT,Bytestride,&tBuffer[6]);
-    glDrawElements(GL_TRIANGLES,tIndices.size(),GL_UNSIGNED_INT,&tIndices[0]);
-    glDisable(GL_COLOR_MATERIAL);
-    glDisableClientState(GL_COLOR_ARRAY);
-  }
-  
-  glDisableClientState(GL_VERTEX_ARRAY);
-  glDisableClientState(GL_NORMAL_ARRAY);
-  
-  clear();
 }
 
+// precompute min and max bounds of each triangle
+void bounds(const std::vector<GLuint>& I)
+{
+  unsigned n=I.size()/3;
+/*  
+  xmin.resize(n);
+  xmax.resize(n);
+  ymin.resize(n);
+  ymax.resize(n);
+*/
+  
+  zmin.resize(n);
+  zmax.resize(n);
+  
+  for(unsigned i=0; i < n; ++i) {
+    unsigned i3=3*i;
+    unsigned Ia=I[i3];
+    unsigned Ib=I[i3+1];
+    unsigned Ic=I[i3+2];
+    
+    
+    /*
+    double xa=xbuffer[Ia];
+    double xb=xbuffer[Ib];
+    double xc=xbuffer[Ic];
+    
+    double ya=ybuffer[Ia];
+    double yb=ybuffer[Ib];
+    double yc=ybuffer[Ic];
+    */
+    
+    double za=zbuffer[Ia];
+    double zb=zbuffer[Ib];
+    double zc=zbuffer[Ic];
+    
+    /*
+    xmin[i]=min(xa,xb,xc);
+    xmax[i]=max(xa,xb,xc);
+    
+    ymin[i]=min(ya,yb,yc);
+    ymax[i]=max(ya,yb,yc);
+    */
+    
+    zmin[i]=min(za,zb,zc);
+    zmax[i]=max(za,zb,zc);
+  }
+}
+  
+void BezierPatch::drawMaterials()
+{
+  if(nvertices == 0)
+    return;
+  
+  static const size_t size=sizeof(GLfloat);
+  static const size_t bytestride=sizeof(vertexData);
+
+  GLuint vertsBufferIndex; 
+  GLuint elemBufferIndex; 
+  
+  GLuint vao;
+  
+  glGenVertexArrays(1,&vao);
+  glBindVertexArray(vao);
+
+  glGenBuffers(1,&vertsBufferIndex);
+  glGenBuffers(1,&elemBufferIndex);
+  
+  registerBuffer(vertexbuffer,vertsBufferIndex);
+  registerBuffer(indices,elemBufferIndex);
+  
+  camp::setUniforms(noColorShader); 
+
+  const GLint posAttrib=glGetAttribLocation(noColorShader,"position");
+  const GLint normalAttrib=glGetAttribLocation(noColorShader,"normal");
+  const GLint materialAttrib=glGetAttribLocation(noColorShader,"material");
+  
+  glBindBuffer(GL_ARRAY_BUFFER,vertsBufferIndex);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,elemBufferIndex);
+
+  glVertexAttribPointer(posAttrib,3,GL_FLOAT,GL_FALSE,bytestride,(void *) 0);
+  glEnableVertexAttribArray(posAttrib);
+    
+  glVertexAttribPointer(normalAttrib,3,GL_FLOAT,GL_FALSE,bytestride,
+                        (void *) (3*size));
+  glEnableVertexAttribArray(normalAttrib);
+
+  glVertexAttribIPointer(materialAttrib,1,GL_INT,bytestride, 
+                         (void *) (6*size));
+  glEnableVertexAttribArray(materialAttrib);
+
+  glFlush(); // Workaround broken MSWindows drivers for Intel GPU
+  glDrawElements(GL_TRIANGLES,indices.size(),GL_UNSIGNED_INT,(void *) 0);
+
+  glDisableVertexAttribArray(posAttrib);
+  glDisableVertexAttribArray(normalAttrib);
+  glDisableVertexAttribArray(materialAttrib);
+
+  glBindBuffer(GL_ARRAY_BUFFER,0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+  glUseProgram(0);
+
+  glBindVertexArray(0);
+  glDeleteVertexArrays(1,&vao);
+  
+  nvertices=0;
+  vertexbuffer.clear();
+  indices.clear();
+  
+  glDeleteBuffers(1,&vertsBufferIndex);
+  glDeleteBuffers(1,&elemBufferIndex);
+}
+
+void BezierPatch::drawColors(GLuint& Nvertices,
+                             std::vector<VertexData>& Vertexbuffer,
+                             std::vector<GLuint>& Indices)
+{
+  if(Nvertices == 0)
+    return;
+
+  static const size_t size=sizeof(GLfloat);
+  static const size_t bytestride=sizeof(VertexData);
+
+  GLuint vertsBufferIndex; 
+  GLuint elemBufferIndex; 
+  
+  GLuint vao;
+  
+  glGenVertexArrays(1,&vao);
+  glBindVertexArray(vao);
+
+  glGenBuffers(1,&vertsBufferIndex);
+  glGenBuffers(1,&elemBufferIndex);
+  
+  registerBuffer(Vertexbuffer,vertsBufferIndex);
+  registerBuffer(Indices,elemBufferIndex);
+  
+  camp::setUniforms(colorShader); 
+
+  const GLint posAttrib=glGetAttribLocation(colorShader,"position");
+  const GLint normalAttrib=glGetAttribLocation(colorShader,"normal");
+  const GLint colorAttrib=glGetAttribLocation(colorShader,"color");
+  const GLint materialAttrib=glGetAttribLocation(colorShader,"material");
+  
+  glBindBuffer(GL_ARRAY_BUFFER,vertsBufferIndex);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,elemBufferIndex);
+
+  glVertexAttribPointer(posAttrib,3,GL_FLOAT,GL_FALSE,bytestride,
+                        (void *) 0);
+  glEnableVertexAttribArray(posAttrib);
+
+  glVertexAttribPointer(normalAttrib,3,GL_FLOAT,GL_FALSE,bytestride,
+                        (void *) (3*size));
+  glEnableVertexAttribArray(normalAttrib);
+
+  glVertexAttribIPointer(colorAttrib,1,GL_UNSIGNED_INT,bytestride,
+                         (void *) (6*size));
+  glEnableVertexAttribArray(colorAttrib);
+
+  glVertexAttribIPointer(materialAttrib,1,GL_INT,bytestride,
+                         (void *) (6*size+sizeof(GLuint)));
+  glEnableVertexAttribArray(materialAttrib);
+    
+  glFlush(); // Workaround broken MSWindows drivers for Intel GPU
+  glDrawElements(GL_TRIANGLES,Indices.size(),GL_UNSIGNED_INT,(void *) 0);
+
+  glDisableVertexAttribArray(posAttrib);
+  glDisableVertexAttribArray(normalAttrib);
+  glDisableVertexAttribArray(colorAttrib);
+  glDisableVertexAttribArray(materialAttrib);
+
+  glBindBuffer(GL_ARRAY_BUFFER,0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+  glUseProgram(0);
+
+  glBindVertexArray(0);
+  glDeleteVertexArrays(1,&vao);
+  
+  Nvertices=0;
+  Vertexbuffer.clear();
+  Indices.clear();
+  
+  glDeleteBuffers(1,&vertsBufferIndex);
+  glDeleteBuffers(1,&elemBufferIndex);
+}
+
+void BezierPatch::sortTriangles()
+{
+  if(Ntvertices > 0) {
+    transform(tVertexbuffer);
+    bounds(tIndices);
+    qsort(&tIndices[0],tIndices.size()/3,3*sizeof(GLuint),compare);
+  }
+}
+
+void Triangles::queue(size_t nP, triple* P, size_t nN, triple* N,
+                      size_t nC, prc::RGBAColour* C, size_t nI,
+                      uint32_t (*PI)[3], uint32_t (*NI)[3], uint32_t (*CI)[3],
+                      bool transparent)
+{
+  if(!nN) return;
+  const size_t indexstride=3;
+  size_t nindices=indexstride*nI;
+  size_t index0;
+
+  if(transparent) {
+    tVertexbuffer.reserve(nbuffer);
+    tVertexbuffer.resize(Ntvertices+nP);
+    tIndices.reserve(nbuffer);
+    index0=tIndices.size();
+    tIndices.resize(index0+nindices);
+  } else {
+    if(nC) {
+      Vertexbuffer.reserve(nbuffer);
+      Vertexbuffer.resize(Nvertices+nP);
+      Indices.reserve(nbuffer);
+      index0=Indices.size();
+      Indices.resize(index0+nindices);
+    } else {
+      vertexbuffer.reserve(nbuffer);
+      vertexbuffer.resize(nvertices+nP);
+      indices.reserve(nbuffer);
+      index0=indices.size();
+      indices.resize(index0+nindices);
+    }
+  }
+
+  uint32_t *P0=(uint32_t *) PI;
+  uint32_t *N0=(uint32_t *) NI;
+  uint32_t *C0=(uint32_t *) CI;
+
+  if(transparent) {
+    if(nC) {
+      for(size_t i=0; i < nindices; ++i) {
+        uint32_t i0=P0[i];
+        prc::RGBAColour c=C[C0[i]];
+        GLfloat c0[]={(GLfloat) c.R,(GLfloat) c.G,(GLfloat) c.B,(GLfloat) c.A};
+        GLuint index=Ntvertices+i0;
+        tVertexbuffer[index]=VertexData(P[i0],N[N0[i]],c0);
+        tIndices[index0+i]=index;
+      }
+    } else {
+      for(size_t i=0; i < nindices; ++i) {
+        uint32_t i0=P0[i];
+        GLuint index=Ntvertices+i0;
+        tVertexbuffer[index]=VertexData(P[i0],N[N0[i]]);
+        tIndices[index0+i]=index;
+      }
+    }
+    Ntvertices += nP;
+  } else {
+    if(nC) {
+      for(size_t i=0; i < nindices; ++i) {
+        uint32_t i0=P0[i];
+        prc::RGBAColour c=C[C0[i]];
+        GLfloat c0[]={(GLfloat) c.R,(GLfloat) c.G,(GLfloat) c.B,
+                      (GLfloat) c.A};
+        GLuint index=Nvertices+i0;
+        Vertexbuffer[index]=VertexData(P[i0],N[N0[i]],c0);
+        Indices[index0+i]=index;
+      }
+      Nvertices += nP;
+    } else {
+      for(size_t i=0; i < nindices; ++i) {
+        uint32_t i0=P0[i];
+        GLuint index=nvertices+i0;
+        vertexbuffer[index]=vertexData(P[i0],N[N0[i]]);
+        indices[index0+i]=index;
+      }
+      nvertices += nP;
+    }
+  }
+}
+ 
 #endif
 
 } //namespace camp

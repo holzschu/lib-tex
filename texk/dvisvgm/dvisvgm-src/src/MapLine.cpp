@@ -2,7 +2,7 @@
 ** MapLine.cpp                                                          **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -18,7 +18,6 @@
 ** along with this program; if not, see <http://www.gnu.org/licenses/>. **
 *************************************************************************/
 
-#include <config.h>
 #include <cstring>
 #include <sstream>
 #include "InputBuffer.hpp"
@@ -124,8 +123,8 @@ void MapLine::parseDVIPSLine (InputReader &ir) {
 	while (ir.peek() == '<' || ir.peek() == '"') {
 		if (ir.peek() == '<') {
 			ir.get();
-			if (ir.peek() == '[')
-				ir.get();
+			if (ir.peek() == '[' || ir.peek() == '<')
+				ir.get();  // skip second char of "<[" and "<<"
 			string name = ir.getString();
 			if (name.length() > 4 && name.substr(name.length()-4) == ".enc")
 				_encname = name.substr(0, name.length()-4);
@@ -133,7 +132,7 @@ void MapLine::parseDVIPSLine (InputReader &ir) {
 				_fontfname = name;
 		}
 		else {  // ir.peek() == '"' => list of PS font operators
-			string options = ir.getQuotedString('"');
+			string options = ir.getQuotedString("\"");
 			StringInputBuffer sib(options);
 			BufferInputReader sir(sib);
 			while (!sir.eof()) {

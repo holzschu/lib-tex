@@ -95,8 +95,14 @@ extern "C" {
 char *strerror(int errno);
 #endif
 
+/* Prototype my_memmem */
+void *my_memmem(const void* haystack, size_t haystack_len,
+             const void* needle, size_t needle_len);
+
 #ifdef __cplusplus
 }
+/* Get rid of a possible inline macro under C++. */
+# define inline inline
 #endif
 
 #endif /* T1UTILS_CONFIG_H */

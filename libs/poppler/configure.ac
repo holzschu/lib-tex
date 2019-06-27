@@ -1,6 +1,8 @@
+dnl $Id: configure.ac 47052 2018-03-20 22:41:25Z kakuto $
 dnl Process this file with autoconf to produce a configure script.
 dnl
-dnl   Copyright (C) 2011-2013 Peter Breitenlohner <tex-live@tug.org>
+dnl   Copyright 2018 Karl Berry <tex-live@tug.org>
+dnl   Copyright 2011-2013 Peter Breitenlohner <tex-live@tug.org>
 dnl
 dnl   This file is free software; the copyright holder
 dnl   gives unlimited permission to copy and/or distribute it,
@@ -17,6 +19,7 @@ KPSE_BASIC([poppler], [no-define])
 
 AC_PROG_CC
 AC_PROG_CXX
+AX_CXX_COMPILE_STDCXX([11])
 AC_PROG_RANLIB
 AC_PROG_LN_S
 
@@ -27,7 +30,10 @@ if test $ac_cv_sizeof_long_long -lt 8; then
   AC_MSG_ERROR([Sorry, your compiler has no `long long' with at least 8 bytes.])
 fi
 
-test "x$GXX" = xyes && NO_WARN_CXXFLAGS='-Wno-write-strings'
+if test "x$GXX" = xyes; then
+  NO_WARN_CXXFLAGS='-Wno-write-strings'
+fi
+
 AC_SUBST([NO_WARN_CXXFLAGS])  
 
 dnl ##### Optional features.
@@ -63,14 +69,40 @@ AC_ARG_ENABLE([fixedpoint],
 fi
 ])
 
+
+# For TL, we just hardware DCT/JPX_DECODER to on.
+AC_DEFINE([HAVE_DCT_DECODER], 1, [Do we have any DCT decoder?])
+dnl
+dnl AC_ARG_ENABLE([dctdecoder],
+dnl               AS_HELP_STRING([--enable-dctdecoder],
+dnl                             [use dctdecoder]),
+dnl              [if test "x$enableval" = xlibjpeg; then
+dnl  AC_DEFINE([HAVE_DCT_DECODER], 1, [Do we have any DCT decoder?])
+dnl fi
+dnl ])
+
+AC_DEFINE([HAVE_JPX_DECODER], 1, [Do we have any JPX decoder?])
+dnl
+dnl AC_ARG_ENABLE([libopenjpeg],
+dnl              AS_HELP_STRING([--enable-libopenjpeg],
+dnl                              [use openjpeg decoder]),
+dnl               [if test "x$enableval" = xopenjpeg2; then
+dnl   AC_DEFINE([HAVE_JPX_DECODER], 1, [Do we have any JPX decoder?])
+dnl fi
+dnl ])
+
 dnl **** Checks for header files ****
 
 AC_CHECK_HEADERS([strings.h])
 AC_HEADER_DIRENT
 
-dnl **** Checks for library functions ****
+dnl Checks for library functions (from goo/glibc.h and more).
+AC_CHECK_FUNCS([gettimeofday gmtime_r localtime_r mkstemp popen rand_r \
+                timegm strtok_r])
 
-AC_CHECK_FUNCS([gettimeofday gmtime_r mkstemp popen rand_r timegm])
+dnl Check for struct stat needed by goo/gfile.c
+AC_CHECK_MEMBERS([struct stat.st_mtim])
+
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO
 AC_CHECK_FUNC([ftell64], [AC_CHECK_FUNCS([fseek64])])

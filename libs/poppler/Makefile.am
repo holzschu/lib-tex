@@ -1,7 +1,7 @@
-## $Id: Makefile.am 43567 2017-03-21 17:43:10Z karl $
+## $Id: Makefile.am 48731 2018-09-22 08:15:42Z kakuto $
 ## Proxy Makefile.am to build poppler for TeX Live.
 ##
-##   Copyright 2016-2017 Karl Berry <tex-live@tug.org>
+##   Copyright 2016-2018 Karl Berry <tex-live@tug.org>
 ##   Copyright 2011-2015 Peter Breitenlohner <tex-live@tug.org>
 ##
 ##   This file is free software; the copyright holder
@@ -29,7 +29,7 @@ POPPLER_SRC = $(top_srcdir)/$(POPPLER_TREE)/poppler
 AM_CPPFLAGS = -I$(top_srcdir)/$(POPPLER_TREE) -I$(GOO_SRC) $(ZLIB_INCLUDES)
 AM_CPPFLAGS += -DPOPPLER_DATADIR='"."'
 AM_CFLAGS = $(VISIBILITY_CFLAGS) $(WARNING_CFLAGS)
-AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS) $(NO_WARN_CXXFLAGS)
+AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS) $(NO_WARN_CXXFLAGS) $(CXX_FLAGS_RELEASE)
 
 noinst_LIBRARIES = libpoppler.a
 
@@ -48,7 +48,6 @@ goo_libGoo_a_sources = \
 	@POPPLER_TREE@/goo/grandom.cc \
 	@POPPLER_TREE@/goo/gstrtod.cc \
 	@POPPLER_TREE@/goo/FixedPoint.cc \
-	@POPPLER_TREE@/goo/GooHash.cc \
 	@POPPLER_TREE@/goo/GooList.cc \
 	@POPPLER_TREE@/goo/GooString.cc \
 	@POPPLER_TREE@/goo/GooTimer.cc
@@ -122,11 +121,11 @@ poppler_libpoppler_a_sources = \
 	@POPPLER_TREE@/poppler/StructTreeRoot.cc \
 	@POPPLER_TREE@/poppler/UTF.cc \
 	@POPPLER_TREE@/poppler/UnicodeMap.cc \
+	@POPPLER_TREE@/poppler/UnicodeMapFuncs.cc \
 	@POPPLER_TREE@/poppler/UnicodeTypeTable.cc \
 	@POPPLER_TREE@/poppler/ViewerPreferences.cc \
 	@POPPLER_TREE@/poppler/XRef.cc \
-	@POPPLER_TREE@/poppler/XpdfPluginAPI.cc \
-	@POPPLER_TREE@/poppler/strtok_r.cpp
+	@POPPLER_TREE@/poppler/XpdfPluginAPI.cc
 
 $(libpoppler_a_OBJECTS): config.force
 

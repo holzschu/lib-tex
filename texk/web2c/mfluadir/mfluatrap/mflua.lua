@@ -1,3 +1,7 @@
+print("MFLua version: " .. mflua.MFbuiltin.mflua_version())
+print("MFLua banner:  ".. mflua.MFbuiltin.mflua_banner())
+
+local function PRINTDBG(s) print(tostring(s)) end
 local function PRINTDBG(s) end
 local function chMF(t,k) if t[k] then print(k.." already inserted") os.exit(1) end end 
 
@@ -875,7 +879,6 @@ local function printedges(s,nuline,x_off,y_off)
    -- 
    -- local management of y, xq, xr 
    --
-   --f = mflua.print_specification.outfile1
    index = (0+print_int(MFbuiltin.char_code())) +  (0+print_int(MFbuiltin.char_ext()))*256
    char = chartable[index] or {}
    --print("#xq=".. #xq)
@@ -1237,6 +1240,7 @@ local function print_specification(c,h)
    -- f = mflua.print_specification.outfile1
    -- f:write("\n%%POST START\n".. res .. "\n%%POST END\n")
    --f:close()
+   return res
 end
 mflua.MF.print_specification = print_specification 
 
@@ -1563,7 +1567,7 @@ local function _postprocessing_contour()
    index = (0+print_int(MFbuiltin.char_code())) +  (0+print_int(MFbuiltin.char_ext()))*256
    res = res .. "%% postprocessing contour for " .. index ..";\n"
    res = res .. "path p[];\n"
-   print("CHAR " .. index)
+   --print("\n_postprocessing_contour CHAR " .. index)
    bezier_octant_contour = mflua.do_add_to.bezier_octant_contour[#mflua.do_add_to.bezier_octant_contour]
    
    path_cnt = 1
@@ -1600,7 +1604,7 @@ local function _postprocessing_contour()
    char['contour'] = char['contour'] or {}
    char['contour'][#char['contour']+1] = bezier_octant_contour
    char['res']     =   char['res']  or "" 
-   char['res']     =   char['res']  .. res 
+   char['res']     =   char['res']  .. res ; 
    char['index'] = index
    chartable[index] = char 
   return 0
@@ -1619,16 +1623,7 @@ mflua.do_add_to._postprocessing_contour = _postprocessing_contour
 local function _store_current_cycle(hs) 
    local res, current_cycle 
    res, current_cycle = mflua.do_add_to._get_cycle(hs)
-   --print( mflua_print_path(hs) )
    if res=='cycle' then 
-      -- for i=0,(#current_cycle/3)-1 do 
-      --    local l = current_cycle
-      --    local base = i*3
-      --    local p,c1,c2,q = _circular_list_geti(l,base+1) , _circular_list_geti(l,base+2),_circular_list_geti(l,base+3),_circular_list_geti(l,base+4)    
-      --    print (string.format("%d/%d (%f,%f) .. controls (%f,%f) and (%f,%f) .. (%f,%f) ",(i-1)%3,#current_cycle,
-      -- 				 p[1],p[2],c1[1],c1[2],c2[1],c2[2],q[1],q[2]))
-       
-      -- end  
      local index = (0+print_int(MFbuiltin.char_code())) +  (0+print_int(MFbuiltin.char_ext()))*256
      local char = mflua.chartable[index] or {}
      char['cycle'] = char['cycle'] or  {}
@@ -1649,6 +1644,7 @@ end
 
 local function POST_make_spec_rhs(rhs)
    PRINTDBG("POST_make_spec_rhs")
+   --mflua.do_add_to._store_current_cycle(rhs)
    --print("post rhs MFbuiltin.turning_number=",MFbuiltin.turning_number() ) ;
 end 
 
@@ -1660,7 +1656,8 @@ end
 
 local function POST_make_spec_lhs(lhs)
   PRINTDBG("PRE_make_spec_lhs")
-  print("post lhs MFbuiltin.turning_number=",MFbuiltin.turning_number() ) ;
+  --mflua.do_add_to._store_current_cycle(lhs) 
+  --print("post lhs MFbuiltin.turning_number=",MFbuiltin.turning_number() ) ;
 end 
 
 local function PRE_fill_envelope_rhs(rhs)
@@ -2101,9 +2098,7 @@ mflua.end_program			 = end_program
 mflua.max_recursion_level = 32
 
 
-
 mflua.bit = 7					 -- should be 4 
-mflua.pen = {}					 -- collect bezier curves of the pens
 
 mflua.pi = 2*math.atan2(1,0)
 mflua.print_specification = mflua.print_specification or {}
@@ -2140,9 +2135,7 @@ mflua.mflua_exe = 'mflua'
 mflua.turningnumber_file='mflua_tn'
 mflua.fill_envelope = {}
 mflua.fill_envelope.temp_transition = ""
-mflua.pen = {}
-
-
+mflua.pen = {}					 -- collect bezier curves of the pens
 
 --
 
@@ -2187,6 +2180,7 @@ function mflua.angle(p,q)
       return math.acos(dot(p,q)/(math.sqrt(dot(p,p))*math.sqrt(dot(q,q))))
    end 
 end
+
 -- function mflua.vec(a,w,b1) if b1 == nil then b=w else b = b1 end ; return {b[1]-a[1],b[2]-a[2]} end
 -- mflua.vec(a,b) == mflua.vec(a,'->',b)
 function mflua.round(p)
@@ -2249,13 +2243,11 @@ function mflua.approx_curve_lenght(p,c1,c2,q)
 end
 
 
--- to permit multiple instances of mflua
-if io.open('LOCK1')==nil and io.open('LOCK_ELLIPSE')==nil then 
-   mflua.print_specification.filename  = "envelope.tex"
-   mflua.print_specification.outfile1  = io.open(mflua.print_specification.filename,'w')
-end
-
-
+-- for multiple instances of mflua one can define a LOCK like this 
+-- if io.open('LOCK1')==nil and io.open('LOCK_ELLIPSE')==nil then 
+--    mflua.print_specification.filename  = "envelope.tex"
+--    mflua.print_specification.outfile1  = io.open(mflua.print_specification.filename,'w')
+-- end
 
 
 
@@ -2498,9 +2490,13 @@ tfm.getface =
 
 tfm.printfloat =
    function(d,p)
-      local d,p = tostring(d), tonumber(p) or 6
-      local f = string.format("%%.%df",p)
-      return string.format(f,d)
+      if d then
+       local d,p = d, tonumber(p) or 6
+       local f = string.format("%%.%df",p)
+       return string.format(f,d)
+      else 
+        return tostring(d)
+      end
    end 
 
 tfm.array = {}
@@ -2667,7 +2663,7 @@ tfm.build.all =
       tfm.array.param     = tfm.build.param(1,np,w)
    end
 
-tfm.debug = 1
+tfm.debug = 0
 tfm.printdebug = 
    function()
       if tfm.debug==1 then
@@ -2697,7 +2693,7 @@ tfm.font = {}
 tfm.run=
    function(name)
       local name = name
-      local _print = tfm.printdebug
+      local _print = tfm.printdebug()
       local header    ={}        
       local char_info ={}    
       local width     ={}    
@@ -2813,7 +2809,7 @@ tfm.run=
 	 tfm.chars[current_char].depth  = depth[depth_index]
 	 tfm.chars[current_char].italic = italic[italic_index]
 	 tfm.chars[current_char].tag    = tag
-	 _print(i,string.format("O %o",current_char),string.char(current_char),
+	 _print(string.format("O %o",current_char),string.char(current_char),
 	       'WIDTH='.._pf(width[width_index]), 
 	       'HEIGHT='.._pf(height[height_index]),
 	       'DEPTH='.._pf(depth[depth_index]),
@@ -2824,6 +2820,7 @@ tfm.run=
 	    local kern_program = tfm.dump.kernprogram(remainder,current_char)
 	 end
       end
+
       tfm.font.slant = param[1]
       _print("SLANT=".._pf(tfm.font.slant))
 
@@ -2855,3 +2852,940 @@ mflua.tfm = tfm
 
 
 
+--------------------------------------------------------------------------------
+--
+-- gf module
+--
+--------------------------------------------------------------------------------
+--
+-- In-memory parser, i.e. reads all the gf into memory
+-- and then parses the byte stream
+--
+
+local GF =   {}
+do 
+
+   local sub	= string.sub
+   local len	= string.len
+   local byte	= string.byte
+   local format	= string.format
+   local rep     = string.rep
+
+   local gfdata=''
+   local gfdata_index
+   local gfdata_len
+
+   local chars={}
+   local current_char
+   local current_row  -- aka n
+   local current_col  -- aka m
+   local white=0
+   local black=white+1
+   local paint_switch
+   chars.xxx1 = {}
+   chars.xxx2 = {}
+   chars.xxx3 = {}
+   chars.xxx4 = {}
+   chars.yyy  = {}
+   chars.nop  = {}
+   chars.all_nop = {} -- collect a xxx1 or xxx2 or xxx3 or xxx4 or yyy or nop
+   chars.locators = {}
+
+
+
+
+   local defDEBUG = false
+   local function DEBUG(k,s)
+      print("DEBUG:"..tostring(k).."="..tostring(s))
+   end
+
+
+   local function error_msg(msg)
+      io.write(format("! mflua GF: char %s: %s",current_char, msg))
+      io.write(format(" position=%s ",gfdata_index))
+      print()
+   end
+   GF.error = error_msg
+
+   local function warning_msg(msg)
+      print(format("\n! mflua GF: char %s: %s.",current_char, msg))
+   end
+   GF.warning = warning_msg
+
+
+
+   --
+   -- read n bytes starting from from gfdata_index included
+   -- and move gfdata_index
+   --
+   local function readbytes(n)
+      if (gfdata_index+n-1)<1 then 
+	 GF.warning("attempt to read before the beginning of the file")
+	 return nil
+      end
+      if (gfdata_index+n-1)>gfdata_len then
+	 GF.warning("attempt to read beyond the end of the file")
+	 return nil
+      end
+      local s 
+      if (n<0) then
+	 s = sub(gfdata,gfdata_index+n+1,gfdata_index)
+      elseif n>0 then
+	 s = sub(gfdata,gfdata_index,gfdata_index+n-1)
+      else
+	 s =''
+      end
+      gfdata_index = gfdata_index+n
+      return s
+   end
+
+
+   local function read4bytes()
+      local b0 = byte(readbytes(1))
+      local b1 = byte(readbytes(1))
+      local b2 = byte(readbytes(1))
+      local b3 = byte(readbytes(1))
+      local v =  (b3+b2*256+b1*65536+b0*16777216)
+      if v >2147483647 then
+	 v = v -4294967296
+      end
+      return v
+   end
+
+
+   local function readrev4bytes()
+      local b3 = byte(readbytes(-1))
+      local b2 = byte(readbytes(-1))
+      local b1 = byte(readbytes(-1))
+      local b0 = byte(readbytes(-1))
+      local v =  (b3+b2*256+b1*65536+b0*16777216)
+      if v >2147483647 then
+	 v = v -4294967296
+      end
+      return v
+   end
+
+
+   local function readuntileof()
+      if gfdata_index>gfdata_len then 
+	 GF.warning("wrong index: gfdata_index="..tostring(gfdata_index).."> gfdata_len="..tostring(gfdata_len) )
+	 return nil
+      end
+      local s = sub(gfdata,gfdata_index,gfdata_len)
+      gfdata_index = gfdata_len +1
+      return s
+   end
+
+
+   local function datanotfinished()
+      return (gfdata_index <= gfdata_len)
+   end
+
+
+   local function moveindex_after(p)
+      gfdata_index = p+1
+   end
+
+
+
+   error = {}
+   error.ok = 0
+   error.base = error.ok
+   error.pre	= error.base +1
+   error.parse	= error.base +2
+   error.post	= error.base +3
+   error.boc       = error.base +4
+   error.load	= error.base +127
+   error.parse    	= error.base +128
+   error.parsechar	= error.base +129
+   error.paint	= {}
+   for j=0,63 do
+      error.paint[j]	= error.base +130+j
+   end
+   error.paint_switch=error.base +130+64
+   error.paint1    = error.base +130+64+1
+   error.paint2    = error.base +130+64+2
+   error.paint3    = error.base +130+64+3
+   error.eoc       = error.base +130+64+6
+   error.skip0     = error.base +130+64+7
+   error.skip1     = error.base +130+64+8
+   error.skip2     = error.base +130+64+9
+   error.skip3     = error.base +130+64+10
+   error.new_row   = {}
+   for j=0,164 do
+      error.new_row[j]= error.base +130+64+10+1+j
+   end
+
+   error.post_post=error.base +130+64+10+1+165
+
+   error.skip223=error.base +130+64+10+1+166
+
+
+   error_name_t = {}
+   for  k,v in pairs(error) do
+      error_name_t[v] = k
+   end
+   local function error_name(res)
+      if res==nil then
+	 return "unknown error code"
+      elseif error_name_t[res] == nil then
+	 return "unknown error code"
+      else
+	 return error_name_t[res]
+      end
+   end
+
+   local opcodes = {}
+
+   -- {beginning of the \\{paint} commands}
+   for j=0,63 do
+      local s = format("paint_%d",j)
+      opcodes[s] = j
+   end
+   opcodes.paint1=64	-- {move right a given number of columns, then   black${}\swap{}$white}
+   opcodes.paint2=65
+   opcodes.paint3=66
+   opcodes.boc=67		-- {beginning of a character}
+   opcodes.boc1=68		-- {short form of |boc|}
+   opcodes.eoc=69		-- {end of a character}
+   opcodes.skip0=70	-- {skip no blank rows}
+   opcodes.skip1=71	-- {skip over blank rows}
+   opcodes.skip2=72	
+   opcodes.skip3=73
+   --opcodes.new_row_0=74	-- {move down one row and then right}
+   --:
+   --opcodes.new_row_164=238
+   for j=0,164 do
+      local s = format("new_row_%d",j)
+      opcodes[s] = j+74
+   end
+
+   --opcodes.max_new_row=164	-- {the largest \\{new\_row} command is |new_row_164|}
+   opcodes.xxx1=239	-- {for \&{special} strings}
+   opcodes.xxx2=240
+   opcodes.xxx3=241	-- {for long \&{special} strings}
+   opcodes.xxx4=242
+   opcodes.yyy=243		-- {for \&{numspecial} numbers}
+   opcodes.nop=244		-- no operation
+   opcodes.char_loc=245	-- {character locators in the postamble}
+   opcodes.char_loc0=246
+   opcodes.pre=247		-- {preamble}
+   opcodes.post=248	-- {postamble beginning}
+   opcodes.post_post=249	-- {postamble ending} 
+
+   opcodes.undefined_1=250
+   opcodes.undefined_2=251
+   opcodes.undefined_3=252
+   opcodes.undefined_4=253
+   opcodes.undefined_5=254
+   opcodes.undefined_6=255
+
+   local revopcode = {}
+   for k,v in pairs(opcodes) do revopcode[v] = k end
+
+
+
+   complement_paint_switch = function()
+      local res = error.ok
+      if( paint_switch==black or paint_switch==white) then
+	 paint_switch=(paint_switch+1)%2
+      else
+	 GF.error("wrong value for paint_switch")
+	 res = error.paint_switch
+      end
+      return res
+   end
+
+   local paint = function(n)
+      local res = error.ok
+      local c = chars[current_char]
+      local row = c[current_row] 
+      if row==nil then
+	 GF.error("error in paint_"..tostring(n)..", row is nil")
+      end
+      if paint_switch==black then
+	 for i=current_col,current_col+n-1 do
+	    row[i]=true
+	 end
+      end
+      res = complement_paint_switch()
+      current_col = current_col + n
+      if res~=error.ok then
+	 if n<64 then
+	    GF.error("error in paint_"..tostring(n))
+	    res = error.paint[n]
+	 elseif  (64<=n and n<256) then
+	    GF.error("error in paint1")
+	    res = error.paint1
+	 elseif (256<=n and n<65536) then
+	    GF.error("error in paint2")
+	    res = error.paint2
+	 elseif (65536<=n and n<16777216) then
+	    GF.error("error in paint3")
+	    res = error.paint3
+	 end
+      end
+      return res
+   end
+
+
+   opcodes.func = {}
+
+
+   opcodes.func[opcodes.paint_0]= function()
+      local res = error.ok
+      res = complement_paint_switch()
+      if res~=error.ok then
+	 GF.error("error in paint_0")
+	 res = error.paint[0]
+      end
+      return res
+   end
+
+   --opcodes.func[opcodes.paint_1]= function() return paint(1) end
+   --:
+   --opcodes.func[opcodes.paint_63]= function() return paint(63) end
+   for i=1, 63 do
+      local key = format("paint_%d",i)
+      local index = opcodes[key]
+      opcodes.func[index] = function() return paint(i) end
+   end 
+
+   opcodes.func[opcodes.paint1]= function()
+      local res = error.ok
+      local b = byte(readbytes(1))
+      if (64<=b and b<256) then
+	 paint(b)
+      else
+	 GF.error("wrong value " ..tostring(b) .. " in paint1")
+	 res = error.paint1
+      end
+      return res
+   end
+
+
+   opcodes.func[opcodes.paint2]= function()
+      local res = error.ok
+      local b1 = byte(readbytes(1))
+      local b2 = byte(readbytes(1))
+      local b = b2+b1*256
+      if (256<=b and b<65536) then
+	 paint(b)
+      else
+	 GF.error("wrong value " ..tostring(b) .. " in paint2")
+	 res = error.paint2
+      end
+      return res
+   end
+
+
+
+   opcodes.func[opcodes.paint3]= function()
+      local res = error.ok
+      local b1 = byte(readbytes(1))
+      local b2 = byte(readbytes(1))
+      local b3 = byte(readbytes(1))
+      local b  = b3+b2*256+ (b1*65536)
+      if (65536<=b and b<16777216) then
+	 paint(b)
+      else
+	 GF.error("wrong value " ..tostring(b) .. " in paint3")
+	 res = error.paint3
+      end
+      return res
+   end
+
+
+   opcodes.func[opcodes.boc]= function()
+      local pos = gfdata_index
+      local c = read4bytes()
+      local p = read4bytes()
+      local min_m = read4bytes()
+      local max_m = read4bytes()
+      local min_n = read4bytes()
+      local max_n = read4bytes()
+      current_char = c
+      chars[current_char] = chars[current_char] or {}
+      chars[current_char]['p'] = p
+      chars[current_char]['max_m'] = max_m
+      chars[current_char]['min_m'] = min_m
+      chars[current_char]['max_n'] = max_n
+      chars[current_char]['min_n'] = min_n
+      chars[current_char]['opened'] = true
+      chars[current_char]['stream_pos'] = gfdata_index
+      chars[current_char]['max_col'] = max_m
+      chars[current_char]['min_col'] = min_m
+      chars[current_char]['max_row'] = max_n
+      chars[current_char]['min_row'] = min_n
+      current_col = min_m
+      current_row = max_n 
+      chars[current_char][current_row]={}
+      paint_switch = white
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.boc1]= function()
+      local pos = gfdata_index
+      local c = byte(readbytes(1))
+      local del_m = byte(readbytes(1))
+      local max_m = byte(readbytes(1))
+      local del_n = byte(readbytes(1))
+      local max_n = byte(readbytes(1))
+      local p = -1
+      local min_m = max_m - del_m
+      local min_n = max_n - del_n
+      current_char = c
+      chars[current_char] = chars[current_char] or {}
+      chars[current_char]['p'] = p
+      chars[current_char]['max_m'] = max_m
+      chars[current_char]['min_m'] = min_m
+      chars[current_char]['max_n'] = max_n
+      chars[current_char]['min_n'] = min_n
+      chars[current_char]['opened'] = true
+      chars[current_char]['stream_pos'] = gfdata_index
+      chars[current_char]['max_col'] = max_m
+      chars[current_char]['min_col'] = min_m
+      chars[current_char]['max_row'] = max_n
+      chars[current_char]['min_row'] = min_n
+      current_col = min_m
+      current_row = max_n
+      chars[current_char][current_row]={}
+      paint_switch = white
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.eoc]= function()
+      local res = error.ok
+      if chars[current_char].opened == true then
+	 chars[current_char].opened = false
+	 res = error.ok
+      else
+	 GF.error("error closing char")
+	 res = error.eoc
+      end
+      --
+      -- use them as stack to tie the nop 
+      -- opcodes to current_char
+      table.insert(chars.xxx1,{current_char,-1})
+      table.insert(chars.xxx2,{current_char,-1})
+      table.insert(chars.xxx3,{current_char,-1})
+      table.insert(chars.xxx4,{current_char,-1})
+      table.insert(chars.yyy,{current_char,-1})
+      table.insert(chars.nop,{current_char,-1})
+      table.insert(chars.all_nop,{'eoc',current_char,-1})
+      return res  
+   end
+
+
+   opcodes.func[opcodes.skip0]= function()
+      if chars[current_char]==nil or chars[current_char].min_m==nil then
+	 GF.error("error in skip0")
+	 return error.skip0
+      end
+      current_row = current_row -1 
+      current_col = chars[current_char].min_m
+      paint_switch = white
+      chars[current_char][current_row]={}
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.skip1]= function()
+      if chars[current_char]==nil or chars[current_char].min_m==nil then
+	 GF.error("error in skip1")
+	 return error.skip1
+      end
+      local b = byte(readbytes(1))
+      current_row = current_row -(b+1) 
+      current_col = chars[current_char].min_m
+      paint_switch = white
+      chars[current_char][current_row]={}
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.skip2]= function()
+      if chars[current_char]==nil or chars[current_char].min_m==nil then
+	 GF.error("error in skip2")
+	 return error.skip2
+      end
+      local b0 = byte(readbytes(1))
+      local b1 = byte(readbytes(1))
+      local b =  b1+256*b0
+      current_row = current_row - (b+1) 
+      current_col = chars[current_char].min_m
+      paint_switch = white
+      chars[current_char][current_row]={}
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.skip3]= function()
+      if chars[current_char]==nil or chars[current_char].min_m==nil then
+	 GF.error("error in skip3 ")
+	 return error.skip3
+      end
+      local b0 = byte(readbytes(1))
+      local b1 = byte(readbytes(1))
+      local b2 = byte(readbytes(1))
+      local b =  b2+b1*256+b3*65536
+      current_row = current_row - (b+1)
+      current_col = chars[current_char].min_m
+      paint_switch = white
+      chars[current_char][current_row]={}
+      return error.ok
+   end
+
+
+   local function new_row(n)
+      if chars[current_char]==nil or chars[current_char].min_m==nil then
+	 GF.error("error in new_row_"..n)
+	 return error.new_row[n]
+      end
+      current_row = current_row - 1
+      current_col  = chars[current_char].min_m+n
+      paint_switch = black
+      chars[current_char][current_row]={}
+      return error.ok
+      
+   end
+
+   opcodes.func[opcodes.new_row_0]= function()
+      if chars[current_char]==nil or chars[current_char].min_m==nil then
+	 GF.error("error in new_row_0")
+	 return error.new_row[0]
+      end
+      current_row = current_row - 1
+      current_col  = chars[current_char].min_m
+      paint_switch = black
+      chars[current_char][current_row]={}
+      return error.ok
+   end
+
+   --opcodes.func[opcodes.new_row_1]= function() new_row(1) end
+   --:
+   --opcodes.func[opcodes.new_row_164]= function() new_row(i)end
+   for i=1, 164 do
+      local key = format("new_row_%d",i)
+      local index = opcodes[key]
+      opcodes.func[index] = function() return new_row(i) end
+   end 
+
+   --opcodes.func[opcodes.max_new_row]= function()
+   --   return new_row(opcodes.max_new_row)
+   --end
+
+   opcodes.func[opcodes.xxx1]= function()
+      local stream_pos = gfdata_index
+      local b = byte(readbytes(1))
+      local k = readbytes(b)
+      table.insert(chars.xxx1,{k,stream_pos})
+      table.insert(chars.all_nop,{'xxx1',k,stream_pos})
+      return error.ok
+   end
+
+   opcodes.func[opcodes.xxx2]= function()
+      local stream_pos = gfdata_index
+      local b0 = byte(readbytes(1))
+      local b1 = byte(readbytes(1))
+      local k = readbytes(b1+ b0*256)
+      table.insert(chars.xxx2,{k,stream_pos})
+      table.insert(chars.all_nop,{'xxx2',k,stream_pos})
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.xxx3]= function()
+      local stream_pos = gfdata_index
+      local b0 = byte(readbytes(1))
+      local b1 = byte(readbytes(1))
+      local b2 = byte(readbytes(1))
+      local k = readbytes(b2+ b1*256+b0*65536)
+      table.insert(chars.xxx3,{k,stream_pos})
+      table.insert(chars.all_nop,{'xxx3', k,stream_pos})
+      return error.ok
+   end
+
+   opcodes.func[opcodes.xxx4]= function()
+      local stream_pos = gfdata_index
+      local k = readbytes(read4bytes())
+      -- k must be positive
+      if k<=0 then
+	 k = k +4294967296
+      end
+      table.insert(chars.xxx4,{k,stream_pos})
+      table.insert(chars.all_nop,{'xxx4',k,stream_pos})
+      return error.ok
+   end
+
+   opcodes.func[opcodes.yyy]= function()
+      local stream_pos = gfdata_index
+      local v =  read4bytes()
+      table.insert(chars.yyy,{v,stream_pos})
+      table.insert(chars.all_nop,{'yyy',v,stream_pos})
+      return error.ok
+   end
+
+   opcodes.func[opcodes.nop]= function()
+      table.insert(chars.nop,gfdata_index)
+      table.insert(chars.all_nop,{'nop','',gfdata_index})
+      return error.ok
+   end
+
+   opcodes.func[opcodes.char_loc]= function()
+      local c	=  byte(readbytes(1))
+      local dx	=  read4bytes()
+      local dy	=  read4bytes()
+      local w	=  read4bytes()
+      local p	=  read4bytes()
+      local char_locator = {}
+      char_locator['c']	= c 
+      char_locator['dx']	= dx
+      char_locator['dy']	= dy
+      char_locator['w']	= w
+      char_locator['p']	= p
+      table.insert(chars.locators,char_locator)
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.char_loc0]= function()
+      local c	= byte(readbytes(1))
+      local dm	= byte(readbytes(1))
+      local w	= read4bytes()
+      local p	= read4bytes()
+      local dy	= 0
+      local dx	= 65536*dm
+      local char_locator = {}
+      char_locator['c']	= c 
+      char_locator['dx']	= dx
+      char_locator['dy']	= dy
+      char_locator['w']	= w
+      char_locator['p']	= p
+      table.insert(chars.locators,char_locator)
+      return error.ok
+   end
+
+
+   opcodes.func[opcodes.pre]= function()
+      local i	=  byte(readbytes(1))
+      local k	=  byte(readbytes(1))
+      local x	=  readbytes(k)
+      chars.GF_format	= i
+      chars.GF_comment	= x
+      return error.ok
+   end
+
+   opcodes.func[opcodes.post]= function()
+      local p	=  read4bytes()
+      local ds	=  read4bytes()
+      local cs	=  read4bytes()
+      local hppp	=  read4bytes()
+      local vppp	=  read4bytes()
+      local min_m  =  read4bytes()
+      local max_m  =  read4bytes()
+      local min_n  =  read4bytes()
+      local max_n  =  read4bytes()
+      chars['ds']		= ds
+      chars['cs']		= cs
+      chars['hppp']	= hppp
+      chars['vppp']	= vppp
+      chars['min_m']	=  min_m
+      chars['max_m']	=  max_m
+      chars['min_n']	=  min_n
+      chars['max_n']	=  max_n
+      return error.ok
+   end
+
+   opcodes.func[opcodes.post_post]= function()
+      local q	=  read4bytes()
+      local i      =  byte(readbytes(1))
+      local pad223 =  readbytes(4)
+      if ( pad223~='\223\223\223\223' ) then
+	 GF.error("error post_post_1 "..pad223)
+	 return error.post_post
+      end
+      if gfdata_index <=gfdata_len then 
+       local s = readuntileof()
+       local ctr223 = rep('\223',len(s))
+        if ctr223 ~= s then
+	 GF.error("error post_post_2 "..pad223)
+	 return error.post_post
+	end
+      end	 
+      chars.GF_format_post = i
+      return error.ok
+   end
+
+   opcodes.func[opcodes.undefined_1]= function()
+      GF.warning("undefined command 1")
+      return error.ok
+   end
+   opcodes.func[opcodes.undefined_2]= function()
+      GF.warning("undefined command 2")
+      return error.ok
+   end
+   opcodes.func[opcodes.undefined_3]= function()
+      GF.warning("undefined command 3")
+      return error.ok
+   end
+   opcodes.func[opcodes.undefined_4]= function()
+      GF.warning("undefined command 4")
+      return error.ok
+   end
+   opcodes.func[opcodes.undefined_5]= function()
+      GF.warning("undefined command 5")
+      return error.ok
+   end
+   opcodes.func[opcodes.undefined_6]= function()
+      GF.warning("undefined command 6")
+      return error.ok
+   end
+
+
+
+   --------------------------------------------------------------------------------
+   --
+   --------------------------------------------------------------------------------
+
+   local function load(gffile)
+      gfdata = ''
+      local f,res = io.open(gffile,'rb')
+      if f==nil then
+	 GF.error(res)
+	 gfdata_index=0
+	 return error.load
+      else 
+	 gfdata		= f:read("*a")
+	 gfdata_len		= len(gfdata)
+	 gfdata_index	=1 
+      end  
+      f:close()
+      return  error.ok
+   end
+
+
+   local function parse_pre()
+      gfdata_index=1 
+      local res = error.ok
+      local b = byte(readbytes(1))
+      if b==opcodes.pre then
+	 local i=byte(readbytes(1))
+	 local k=byte(readbytes(1))
+	 local x=readbytes(k)
+	 chars.GF_format=i
+	 chars.comments=x
+      else 
+	 GF.error("error parsing pre")
+	 res = error.pre
+      end
+      return res
+   end
+
+
+   local function parse_rest()
+      local b = byte(readbytes(1))
+      local func = opcodes.func
+      local res = error.ok
+      local cond = true
+      while (cond) do
+	 if func[b] then
+	    res = (func[b])()
+	    if res~=error.ok then
+	       cond = false  
+	    elseif datanotfinished() then  
+	       b = byte(readbytes(1))
+	    else
+	       res = error.ok
+	       cond = false
+	    end
+	 else
+	    cond = false
+	    GF.error("wrong opcode while parsing char")  
+	    res = error.parsechar
+	 end
+      end   
+      return res
+   end
+
+
+   local function  parse()
+      if gfdata_len == 0 then  
+	 GF.error("no data")
+	 return error.parse
+      end
+      local res 
+      res = parse_pre()
+      if res~=error.ok then
+	 GF.error("wrong preamble")
+	 return res
+      end
+      res = parse_rest()
+      if not(res==error.ok) then
+	 GF.error("error while reading characters")
+	 return res
+      end
+      return res  
+   end
+
+
+   ----------------------------------------------------------------------------------
+   -- Parse from the end 
+   ----------------------------------------------------------------------------------
+
+   local function skip223()
+      local i = gfdata_len
+      local cond = true
+      while cond do
+	 local c = byte(sub(gfdata,i,i))
+	 if c==223 then
+	    i=i-1
+	 else
+	    cond=false
+	 end
+      end
+      if i<3 then
+	 GF.error("error skip suffix ")
+	 res = error.skip223
+      else
+	 res = error.ok
+	 gfdata_index =  i
+      end
+      return res
+   end
+
+
+   local function parse_char_fromlocator()
+      local cond = true
+      local func = opcodes.func
+      local b,res
+      while cond do
+	 b = byte(readbytes(1))
+	 if func[b] then
+	    res = (func[b])()
+	    if res ~= error.ok then
+	       cond = false 
+	       return res
+	    elseif b==opcodes.eoc then
+	       cond = false
+	    else
+	       cond = true 
+	    end
+	 else
+	    GF.error("wrong char from locator")
+	    cond = false
+	    return error.parse
+	 end
+      end
+      if chars[current_char] and chars[current_char].p == -1 then
+	 return error.ok
+      end
+      moveindex_after(chars[current_char].p)
+      return parse_char_fromlocator()
+      
+   end
+
+   local function parse_from_end()
+      if gfdata_len == 0 then  
+	 GF.error("no data")
+	 return error.parse
+      end
+      local res = error.ok
+      gfdata_index = gfdata_len
+      res = skip223()
+      if res ~= error.ok then
+	 return res
+      end
+      --
+      -- read identification byte
+      --
+      chars.GF_format_post = byte(readbytes(-1))
+      --
+      -- read post_post
+      -- 
+      local q = readrev4bytes()
+      if q<=0 then
+	 q = q +4294967296
+      end
+      if q<1 or q>gfdata_len then
+	 GF.error("wrong pointer to post")
+	 return error.parse
+      end
+      --
+      -- reading post
+      -- 
+      moveindex_after(q)
+      q = byte(readbytes(1))
+      if q~=opcodes.post then
+	 GF.error("expected  post opcode")
+	 return error.parse
+      end
+      --
+      res = opcodes.func[opcodes.post]()
+      if res~=error.ok then
+	 GF.error("reading postamble")
+	 return error.parse
+      end
+      --
+      -- read char locators 
+      --
+      local cond		= true
+      local char_loc	= opcodes.char_loc
+      local char_loc0	= opcodes.char_loc0
+      local post_post	= opcodes.post_post
+      local f		= opcodes.func
+      while cond do
+	 q = byte(readbytes(1))
+	 if q==char_loc or q==char_loc0 then
+	    f[q]()
+	 elseif q==post_post then
+	    cond = false
+	    res = error.ok
+	 else
+	    GF.error("reading char locators")
+	    cond = false 
+	    return error.parse
+	 end
+      end
+      --
+      -- read  chars
+      --
+      if #chars.locators == 0 then
+	 GF.error("no char locators")
+	 return error.parse
+      end
+      for i,v in ipairs(chars.locators) do
+	 local p  = v.p
+	 if p>-1 then
+	    moveindex_after(p)
+	    res = parse_char_fromlocator()
+	    if res ~= error.ok then
+	       break;
+	    end
+	 end
+      end
+      return res
+   end
+
+
+   --------------------------------------------------------------------------------
+
+   -- Already assigned before:
+   -- GF.warning = warning_msg
+   -- GF.error = error_msg
+   GF.load		= load
+   GF.parse	= parse
+   GF.chars        = chars
+   GF.errorcode    = error
+   GF.error_name   = error_name
+   GF.parse_from_end = parse_from_end
+   --
+   -- TODO: parsing by reading a file
+   -- 
+
+
+end
+-- Add GF to the mflua table
+mflua.GF = GF

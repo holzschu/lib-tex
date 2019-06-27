@@ -1,0 +1,50 @@
+	Do not disable C++11 on Solaris, since we don't use the Sun compiler.
+
+*** source/configure.ORIG1	Mon Jan  7 11:18:59 2019
+--- source/configure	Mon Jan  7 11:27:11 2019
+***************
+*** 6095,6103 ****
+              CXXFLAGS="$OLD_CXXFLAGS"
+          fi
+!         case "${host}" in
+!         *-*-solaris*)
+!             CXXFLAGS="$OLD_CXXFLAGS"
+!             ;;
+!         esac
+      fi
+  fi
+--- 6095,6104 ----
+              CXXFLAGS="$OLD_CXXFLAGS"
+          fi
+! # TL: why? http://bugs.icu-project.org/trac/ticket/13543
+! #        case "${host}" in
+! #        *-*-solaris*)
+! #            CXXFLAGS="$OLD_CXXFLAGS"
+! #            ;;
+! #        esac
+      fi
+  fi
+*** source/configure.ac.ORIG1	Mon Jan  7 11:18:59 2019
+--- source/configure.ac	Mon Jan  7 11:28:00 2019
+***************
+*** 522,530 ****
+              CXXFLAGS="$OLD_CXXFLAGS"
+          fi
+!         case "${host}" in
+!         *-*-solaris*)
+!             CXXFLAGS="$OLD_CXXFLAGS"
+!             ;;
+!         esac
+      fi
+  fi
+--- 522,531 ----
+              CXXFLAGS="$OLD_CXXFLAGS"
+          fi
+! # TL: why? http://bugs.icu-project.org/trac/ticket/13543
+! #        case "${host}" in
+! #        *-*-solaris*)
+! #            CXXFLAGS="$OLD_CXXFLAGS"
+! #            ;;
+! #        esac
+      fi
+  fi

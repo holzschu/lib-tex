@@ -24,7 +24,19 @@
  * Google Author(s): Behdad Esfahbod
  */
 
-#include "hb-private.hh"
+#include "hb.hh"
+
+
+/**
+ * SECTION:hb-gobject
+ * @title: hb-gobject
+ * @short_description: GObject integration
+ * @include: hb-gobject.h
+ *
+ * Functions for using HarfBuzz with the GObject library to provide
+ * type data.
+ **/
+
 
 /* g++ didn't like older gtype.h gcc-only code path. */
 #include <glib.h>
@@ -39,7 +51,7 @@
 
 #define HB_DEFINE_BOXED_TYPE(name,copy_func,free_func) \
 GType \
-hb_gobject_##name##_get_type (void) \
+hb_gobject_##name##_get_type () \
 { \
    static gsize type_id = 0; \
    if (g_once_init_enter (&type_id)) { \
@@ -52,18 +64,18 @@ hb_gobject_##name##_get_type (void) \
 }
 
 #define HB_DEFINE_OBJECT_TYPE(name) \
-	HB_DEFINE_BOXED_TYPE (name, hb_##name##_reference, hb_##name##_destroy);
+	HB_DEFINE_BOXED_TYPE (name, hb_##name##_reference, hb_##name##_destroy)
 
 #define HB_DEFINE_VALUE_TYPE(name) \
 	static hb_##name##_t *_hb_##name##_reference (const hb_##name##_t *l) \
 	{ \
 	  hb_##name##_t *c = (hb_##name##_t *) calloc (1, sizeof (hb_##name##_t)); \
-	  if (unlikely (!c)) return NULL; \
+	  if (unlikely (!c)) return nullptr; \
 	  *c = *l; \
 	  return c; \
 	} \
 	static void _hb_##name##_destroy (hb_##name##_t *l) { free (l); } \
-	HB_DEFINE_BOXED_TYPE (name, _hb_##name##_reference, _hb_##name##_destroy);
+	HB_DEFINE_BOXED_TYPE (name, _hb_##name##_reference, _hb_##name##_destroy)
 
 HB_DEFINE_OBJECT_TYPE (buffer)
 HB_DEFINE_OBJECT_TYPE (blob)
@@ -71,6 +83,7 @@ HB_DEFINE_OBJECT_TYPE (face)
 HB_DEFINE_OBJECT_TYPE (font)
 HB_DEFINE_OBJECT_TYPE (font_funcs)
 HB_DEFINE_OBJECT_TYPE (set)
+HB_DEFINE_OBJECT_TYPE (map)
 HB_DEFINE_OBJECT_TYPE (shape_plan)
 HB_DEFINE_OBJECT_TYPE (unicode_funcs)
 HB_DEFINE_VALUE_TYPE (feature)

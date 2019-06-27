@@ -35,7 +35,6 @@ typedef enum {
     find_type1_file_callback, read_type1_file_callback,
     find_truetype_file_callback, read_truetype_file_callback,
     find_opentype_file_callback, read_opentype_file_callback,
-    find_sfd_file_callback, read_sfd_file_callback,
     find_cidmap_file_callback, read_cidmap_file_callback,
     find_pk_file_callback, read_pk_file_callback,
     show_error_hook_callback,
@@ -47,7 +46,7 @@ typedef enum {
     pre_output_filter_callback,
     buildpage_filter_callback,
     hpack_filter_callback, vpack_filter_callback,
-    char_exists_callback,
+    glyph_not_found_callback,
     hyphenate_callback,
     ligaturing_callback,
     kerning_callback,
@@ -69,7 +68,14 @@ typedef enum {
     call_edit_callback,
     build_page_insert_callback,
     glyph_stream_provider_callback,
-    total_callbacks
+    font_descriptor_objnum_provider_callback,
+    finish_synctex_callback,
+    wrapup_run_callback,
+    new_graf_callback,
+    page_objnum_provider_callback,
+    make_extensible_callback,
+    process_pdf_image_content_callback,
+    total_callbacks,
 } callback_callback_types;
 
 /* lcallbacklib.c */
@@ -96,7 +102,6 @@ extern void get_lua_boolean(const char *table, const char *name, boolean * targe
 extern void get_lua_number(const char *table, const char *name, int *target);
 extern void get_lua_string(const char *table, const char *name, char **target);
 
-extern int lua_reader_callback(int callback_id, pointer *buffloc);
 
 extern char *get_lua_name(int i);
 

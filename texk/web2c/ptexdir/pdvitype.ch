@@ -133,8 +133,8 @@ lh:=b2*256+b3;
 for k:=1 to nt do
   begin
     read_tfm_word;
-    jfm_char_code[jfm_char_type_count]:=b0*256+b1;
-    jfm_char_type[jfm_char_type_count]:=b2*256+b3;
+    jfm_char_code[jfm_char_type_count]:=b0*256+b1+b2*65536;
+    jfm_char_type[jfm_char_type_count]:=b3;
     jfm_char_font[jfm_char_type_count]:=nf;
     jfm_h:= { hash value }
       (jfm_char_code[jfm_char_type_count]+nf) mod jfm_hash_size;
@@ -511,16 +511,6 @@ const n_options = 10; {Pascal won't count array lengths for us.}
 @x
 @ An element with all zeros always ends the list.
 @y
-@ Shift-JIS terminal (the flag is ignored except for WIN32).
-@.-sjis-terminal@>
-
-@<Define the option...@> =
-long_options[current_option].name := 'sjis-terminal';
-long_options[current_option].has_arg := 0;
-long_options[current_option].flag := address_of (sjis_terminal);
-long_options[current_option].val := 1;
-incr (current_option);
-
 @ Decide kanji encode
 @.-kanji@>
 

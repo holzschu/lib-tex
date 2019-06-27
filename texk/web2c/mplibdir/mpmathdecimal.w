@@ -1,4 +1,4 @@
-% $Id: mpmathdecimal.w 1915 2013-06-13 10:17:31Z taco $
+% $Id$
 %
 % This file is part of MetaPost;
 % the MetaPost program is in the public domain.
@@ -409,7 +409,7 @@ void * mp_initialize_decimal_math (MP mp) {
   mp_new_number (mp, &math->precision_max, mp_scaled_type);
   decNumberFromInt32(math->precision_max.data.num, DECNUMDIGITS);
   mp_new_number (mp, &math->precision_min, mp_scaled_type);
-  decNumberFromInt32(math->precision_min.data.num, 1);
+  decNumberFromInt32(math->precision_min.data.num, 2);
   /* here are the constants for |scaled| objects */
   mp_new_number (mp, &math->epsilon_t, mp_scaled_type);
   decNumberCopy(math->epsilon_t.data.num, &epsilon_decNumber);
@@ -582,7 +582,6 @@ void mp_decimal_set_precision (MP mp) {
 }
 
 void mp_free_decimal_math (MP mp) {
-  int i;
   free_number (((math_data *)mp->math)->three_sixty_deg_t);
   free_number (((math_data *)mp->math)->one_eighty_deg_t);
   free_number (((math_data *)mp->math)->fraction_one_t);
@@ -608,10 +607,11 @@ void mp_free_decimal_math (MP mp) {
   free_number (((math_data *)mp->math)->p_over_v_threshold_t);
   free_number (((math_data *)mp->math)->equation_threshold_t);
   free_number (((math_data *)mp->math)->tfm_warn_threshold_t);
-  for (i = 0; i <= last_cached_factorial; i++) {
-    free(factorials[i]);
-  }
-  free(factorials);
+  /* For sake of speed, we accept this memory leak. */
+  /* for (i = 0; i <= last_cached_factorial; i++) {*/
+  /*  free(factorials[i]);*/
+  /* }*/
+  /* free(factorials); */
   free(mp->math);
 }
 

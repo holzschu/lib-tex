@@ -23,7 +23,10 @@ RELEASE_ANNOUNCE_LIST = cairo-announce@cairographics.org, xorg-announce@lists.fr
 
 EXTRA_DIST =				\
 	Makefile.win32			\
-	Makefile.win32.common
+	Makefile.win32.common		\
+	meson.build			\
+	meson_options.txt		\
+	$(NULL)
 
 tar_gz = $(PACKAGE)-$(VERSION).tar.gz
 tar_bz2 = $(PACKAGE)-$(VERSION).tar.bz2
@@ -124,7 +127,7 @@ release-publish-message: $(HASHFILES) ensure-prev
 	@echo "	(signed by`gpg --list-keys $(GPGKEY) | grep uid | cut -b4- | tr -s " "`)"
 	@echo ""
 	@echo "Git:"
-	@echo "	git://git.freedesktop.org/git/pixman"
+	@echo "	https://gitlab.freedesktop.org/pixman/pixman.git"
 	@echo "	tag: $(PACKAGE)-$(VERSION)"
 	@echo ""
 	@echo "Log:"

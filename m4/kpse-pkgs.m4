@@ -1,15 +1,15 @@
-# $Id: kpse-pkgs.m4 39962 2016-03-07 19:26:54Z karl $
+# $Id: kpse-pkgs.m4 49640 2019-01-08 18:57:53Z karl $
 # Private Autoconf macros for the TeX Live (TL) tree.
-# Copyright 2016 Karl Berry <tex-live@tug.org>
+# Copyright 2016-2019 Karl Berry <tex-live@tug.org>
 # Copyright 2009-2015 Peter Breitenlohner <tex-live@tug.org>
 #
 # This file is free software; the copyright holder
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
 
-## ------------------------------ ##
-## Define lists of sub-packages.  ##
-## ------------------------------ ##
+# ------------------------------ #
+# Define lists of sub-packages.  #
+# ------------------------------ #
 
 # Hopefully these lists are defined here and nowhere else.
 # Note: directories in these lists need not exist.
@@ -36,13 +36,12 @@ mpfr
 gmp
 cairo
 pixman
-potrace
 gd
 freetype2
 libpng
 libpaper
 luajit
-lua52
+lua53
 zlib
 ])[]dnl
 m4_define([kpse_texlibs_pkgs], [dnl
@@ -63,7 +62,6 @@ AC_REQUIRE([KPSE_LIBPAPER_SYSTEM_FLAGS])[]dnl
 AC_REQUIRE([KPSE_LIBPNG_SYSTEM_FLAGS])[]dnl
 AC_REQUIRE([KPSE_FREETYPE2_SYSTEM_FLAGS])[]dnl
 AC_REQUIRE([KPSE_GD_SYSTEM_FLAGS])[]dnl
-AC_REQUIRE([KPSE_POTRACE_SYSTEM_FLAGS])[]dnl
 AC_REQUIRE([KPSE_PIXMAN_SYSTEM_FLAGS])[]dnl
 AC_REQUIRE([KPSE_CAIRO_SYSTEM_FLAGS])[]dnl
 AC_REQUIRE([KPSE_GMP_SYSTEM_FLAGS])[]dnl
@@ -83,6 +81,7 @@ AC_REQUIRE([KPSE_HARFBUZZ_SYSTEM_FLAGS])[]dnl
 AC_DEFUN([KPSE_UTILS_PKGS], [dnl
 m4_define([kpse_utils_pkgs], [dnl
 autosp
+axodraw2
 devnag
 lacheck
 m-tx
@@ -112,6 +111,7 @@ dtl
 dvi2tty
 dvidvi
 dviljk
+dviout-util
 dvipdfm-x
 dvipng
 dvipos
@@ -135,11 +135,9 @@ xdvik
 texlive
 ])]) # KPSE_TEXK_PKGS
 
-
-
-## ------------------------------- ##
-##  Loop over one of these lists.  ##
-## ------------------------------- ##
+# ------------------------------- #
+#  Loop over one of these lists.  #
+# ------------------------------- #
 
 # KPSE_FOR_PKGS(LIST, ACTION)
 # ---------------------------

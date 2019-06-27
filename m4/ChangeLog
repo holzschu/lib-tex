@@ -1,3 +1,79 @@
+2019-03-25  Karl Berry  <karl@freefriends.org>
+
+	* kpse-freetype2-flags.m4 (KPSE_FREETYPE2_SYSTEM_FLAGS): try
+	pkg-config if freetype-config is not available. From Debian.
+
+2019-02-18  Luigi Scarso  <luigi.scarso@gmail.com>
+
+	* kpse-win32.m4 (KPSE_COND_WIN32_WRAP): if w64 and mingw,
+	use different wrapper.
+
+2019-01-11  Karl Berry  <karl@freefriends.org>
+
+	* kpse-luajit-flags.m4 (KPSE_LUAJIT_FLAGS): try LIBLUAJIT_LDEXTRA,
+	following (sort of):
+	https://github.com/TeX-Live/luatex/commit/273de1c6308ab9378905a5e1929b19207e2765af
+
+2019-01-10  Karl Berry  <karl@freefriends.org>
+
+	* kpse-luajit-flags.m4 (KPSE_LUAJIT_FLAGS): check for
+	-lc++abi -lpthread, needed with clang on openbsd.
+	Test from Mojca.
+
+2019-01-08  Karl Berry  <karl@tug.org>
+
+	* kpse-pkgs.m4 (KPSE_LIBS_PKGS): lua52 gone.
+
+2018-12-24  Karl Berry  <karl@freefriends.org>
+
+	* kpse-common.m4,
+	* kpse-pkgs.m4,
+	* kpse-setup.m4,
+	* kpse-visibility.m4: consistently use tldbg in tracing messages,
+	both in the configure scripts and the config.log transcript.
+	* kpse-icu-flags.m4 (_KPSE_ICU_FLAGS): special case to include
+	-lpthread when $build_os is openbsd. Reported by Mojca and Nelson
+	and others, e.g.,
+	https://tug.org/pipermail/tlbuild/2017q2/003799.html
+
+2018-08-27  Karl Berry  <karl@freefriends.org>
+
+	* kpse-potrace-flags.m4: remove file, again bundled with dvisvgm.
+	* kpse-pkgs.m4 (KPSE_ALL_SYSTEM_FLAGS),
+	(kpse_libs_pkgs): no more potrace.
+
+2018-02-09  Karl Berry  <karl@freefriends.org>
+
+	* kpse-pkgs.m4 (kpse_utils_pkgs): add axodraw2.
+
+2018-01-08  Karl Berry  <karl@freefriends.org>
+
+	* ax_cxx_compile_stdcxx.m4: move from dvisvgm; original from
+	https://www.gnu.org/software/autoconf-archive/ax_cxx_compile_stdcxx.html#ax_cxx_compile_stdcxx
+
+2017-12-08  Norbert Preining  <preining@logic.at>
+
+	* kpse-icu-flags.m4 (KPSE_ICU_SYSTEM_FLAGS): also check for PKG_CONFIG.
+	(KPSE_ICU_SYSTEM_FLAGS): try pkg-config if icu-config fails.
+
+2017-12-02  Karl Berry  <karl@freefriends.org>
+
+	* kpse-visibility.m4 (KPSE_COMPILER_VISIBILITY): write debug line.
+	(_KPSE_VISIBILITY_FLAGS): only restore from kpse_save_flags
+	if we set it, i.e., if not using the cached value. (Otherwise,
+	e.g., in libpng, we can end up overriding the user-set CFLAGS with
+	the empty string.)
+
+2017-11-02  Karl Berry  <karl@freefriends.org>
+
+	* kpse-setup.m4 (_KPSE_RECURSE): revert previous change,
+	as (1) it causes configure to fail in the cut-down pdftex source tree,
+	and (2) for 2018, more packages (icu, poppler, ...) are going to
+	require C++11, so we can't hack around it again. So not worth
+	spending more time refining.
+	Also, write debug line to >&AS_MESSAGE_LOG_FD (config.log).
+	reautoconf.
+
 2017-02-17  Karl Berry  <karl@freefriends.org>
 
 	* kpse-setup.m4 (_KPSE_RECURSE): do not add a package to

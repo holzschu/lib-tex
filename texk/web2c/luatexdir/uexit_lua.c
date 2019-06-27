@@ -30,6 +30,8 @@ uexit_lua (int unix_code)
 		final_code = EXIT_FAILURE;
 	else
 		final_code = unix_code;
+	// Goal: what is messing with memory issues in uexit_lau? 
+#ifdef TESTING_MEMORY_MANAGEMENT
 #ifdef __IPHONE__
 	// This function is called for each exit, either regular exit 
 	// or exit after error. 
@@ -177,11 +179,11 @@ uexit_lua (int unix_code)
 	dump_name = NULL; // dump_name needs to be reset, but not freed
 	// it's a pointer to an area that has already been freed. 
 	// dvigen.h
-	down_ptr = 0;
-	right_ptr = 0;
+	// down_ptr = 0;
+	// right_ptr = 0;
 	total_pages = 0; 
 	// writeimg.h
-	idict_ptr = NULL; 
+	// idict_ptr = NULL; 
 	xfree(idict_array);
 	idict_array = NULL;
 	cur_box = 0;
@@ -201,6 +203,7 @@ uexit_lua (int unix_code)
 	avail = 0;
 	par_loc = 0;
 	par_token = 0;
-#endif
+#endif // __IPHONE__
+#endif // TESTING_MEMORY_MANAGEMENT
 	exit (final_code);
 }

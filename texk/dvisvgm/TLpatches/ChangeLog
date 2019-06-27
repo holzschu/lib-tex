@@ -1,3 +1,55 @@
+2019-03-26  Karl Berry  <karl@freefriends.org>
+
+	* patch-09-woff-zlib: new file. From Mojca and Martin,
+	tlbuild 25 Mar 2019 21:03:53.
+
+2019-02-25  Karl Berry  <karl@freefriends.org>
+
+	* patch-08-makefiles (AM_CXXFLAGS): use WARNING_CXXFLAGS,
+	omit -Wno-mismatched-tags. From Vojta and Scherer,
+	tlbuild 24 Feb 2019 11:48:55.
+
+2018-08-30  Karl Berry  <karl@freefriends.org>
+
+	* patch-08-makefiles: adapt to 2.5.
+
+2018-07-19  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.4.2.
+	* patch-08-makefiles: adapt.
+
+2018-07-08  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.4.1.
+	* patch-08-makefiles: adapt.
+
+2018-05-04  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.4.
+	* patch-08-makefiles: adapt.
+
+2018-03-24  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.3.5.
+	* patch-08-makefiles: adapt.
+
+2018-02-21  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.3.3.
+	* patch-08-makefiles: adapt.
+
+2018-02-09  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.3.2.
+	* patch-08-makefiles: adapt.
+	* patch-16-gserrornames: Remove.
+
+2018-01-15  Karl Berry  <karl@freefriends.org>
+
+	* Import 2.3.1.
+	* patch-08-makefiles: adapt.
+	* patch-16-gserrornames: new patch from Martin.
+
 2017-01-29  Karl Berry  <karl@freefriends.org>
 
 	* Import 2.1.
@@ -148,4 +200,3 @@
 2013-01-29  Peter Breitenlohner  <peb@mppmu.mpg.de>
 
 	* Import release 1.1.
-

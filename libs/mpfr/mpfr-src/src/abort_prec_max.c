@@ -1,6 +1,6 @@
 /* mpfr_abort_prec_max -- Abort due to maximal precision overflow.
 
-Copyright 2005-2016 Free Software Foundation, Inc.
+Copyright 2005-2019 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,14 +17,13 @@ License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
+https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
-
-#include <stdlib.h>
 
 #include "mpfr-impl.h"
 
-void mpfr_abort_prec_max (void)
+MPFR_COLD_FUNCTION_ATTR MPFR_NORETURN void
+mpfr_abort_prec_max (void)
 {
   fprintf (stderr, "MPFR: Maximal precision overflow\n");
   abort ();

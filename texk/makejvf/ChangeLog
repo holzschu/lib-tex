@@ -1,3 +1,136 @@
+2019-02-23  Akira Kakuto  <kakuto@w32tex.org>
+
+	* main.c: Support old compiler.
+	* tfmread.c: Allocate one more byte for nbuff in tfmget().
+
+2019-02-23  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* main.c, tfmread.c: Forbid invalid usages.
+	  - Make sure the output TFM does not have the same
+	    basename as the input TFM.
+	  - Options -J, -U, -3, -H are useless in non-UCS mode,
+	    throw a warning and ignore.
+	  - Options -J and -U cannot be used at the same time,
+	    throw an error.
+	* version.h: Bump version.
+
+2019-02-19  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* tfmread.c, tool.c: Avoid compiler warnings for fgetc().
+	* tfmread.c, write.c: Security fix for too long file names.
+	* write.c (writevfu): Removed unnecessary conditionals.
+	Thanks to @ngothan for a report by covscan.
+	https://github.com/TeX-Live/texlive-source/issues/11
+
+2019-02-10  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* uniblock.c: Update references Unicode blocks Blocks-12.0.0.txt
+	and CMap files.
+	* COPYRIGHT: Update copyright years.
+	* version.h: Bump version.
+
+2019-01-23  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* makejvf.1: Add fallback TeX and LaTeX logos.
+
+2018-08-18  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* tfmread.c: Do not check GLUEKERN table in non-enhanced mode.
+	* version.h: Bump version.
+
+2018-03-15  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* usrtable.c: Do not initialize CHARSET flag at
+	continuous lines of a CHARSET entry.
+	* version.h: Bump version.
+
+2018-03-03  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* write.c: Add U+2329, U+232A, U+301A, U+301B, U+FE59..FE5E.
+	* version.h: Bump version.
+
+2018-02-23  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* main.c, makejvf.1: Improve help message and manual.
+	* usrtable.c: Initialize CHARSET flag at other commands or an
+	empty line. Make an error message more clear.
+	* version.h: Bump version.
+
+2018-02-17  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* write.c: Add U+301E.
+	* version.h: Bump version.
+
+2018-02-02  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* tfmread.c: Support SKIP property in GLUEKERN table.
+	* write.c: Remove warning message on enhanced mode (hoping
+	  well-tested).
+	* version.h: Bump version.
+	* tests/{gkhugeok,skipjfmp}.{tfm,vf}: New test files.
+	* Makefile.am, makejvf.test: Add new tests.
+
+2018-01-27  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* tfmread.c: Support new JFM spec (3-byte characters in TYPE > 0).
+	* version.h: Bump version.
+	* tests/testnewu.{tfm,vf}, tests/uni10.cnf: New test files.
+	* Makefile.am, makejvf.test: Add new tests.
+	* makejvf.1 (.TH): use 1 instead of L, per Debian.
+
+2018-01-14  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* uniblock.c: Update references Unicode blocks Blocks-10.0.0.txt
+	and CMap files.
+	* COPYRIGHT: Update copyright years.
+	* version.h: Bump version.
+
+2017-08-29  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* makejvf.1: Updated manual based on version 20170828.
+
+2017-08-28  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	makejvf version 20170828.
+	Largely contributed by H. Yamashita-san.
+	* usrtable.[ch]: New files to support a configuration file.
+	* main.c, write.c, uniblock.[ch], makejvf.h: Support a configuration file.
+	* Makefile.{am,in}: Add usrtable.[ch].
+	* version.h: Bump version.
+
+2017-08-01  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	makejvf version 20170801.
+	* write.c: Simplify code, add more hankaku characters.
+	* version.h: Bump version.
+
+2017-07-31  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	makejvf version 20170731.
+	* tfmread.c: Support large GLUEKERN table.
+	* write.c: Add support for 0x00AB and 0x00BB in writevfu().
+	* version.h: Bump version.
+
+2017-07-24  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* tfmread.c, makejvf.h: More efficient code. Note that
+	GLUEKERN table parser is still not working for nl > 255.
+
+2017-07-23  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* write.c: Trivial change to avoid round-off error in
+	tmin10.vf test on i386 environment. Report from Mojca:
+	http://tug.org/pipermail/tlbuild/2017q3/003866.html
+
+2017-07-20  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	makejvf version 20170720.
+	* tfmread.c, makejvf.h: Declare "rightamount" as signed,
+	to be consistent with "skip" in write.c.
+	* write.c: Improve -m option for UCS mode.
+	* version.h: Bump version.
+	* makejvf.1: Add documentation of -m option.
+
 2017-07-17  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
 
 	makejvf version 20170717.

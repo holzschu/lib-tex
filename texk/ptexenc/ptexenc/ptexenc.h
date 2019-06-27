@@ -23,7 +23,6 @@
 
 extern PTENCDLL const char *ptexenc_version_string;
 #if defined(WIN32)
-extern PTENCDLL int sjisterminal;
 extern PTENCDLL FILE *Poptr;
 extern PTENCDLL int infile_enc_auto;
 #endif
@@ -39,6 +38,10 @@ extern PTENCDLL const_string get_enc_string(void);
 extern PTENCDLL boolean set_enc_string(const_string file, const_string inter);
 #define getencstring  get_enc_string
 #define setencstring  set_enc_string
+
+/* get internal Kanji encode (used in kanji_dump.c) */
+extern PTENCDLL const_string enc_to_string(int enc);
+extern PTENCDLL int get_internal_enc(void);
 
 /* decide if internal Kanji encode is SJIS/UPTEX or not */
 extern PTENCDLL boolean  is_internalSJIS(void);
@@ -83,6 +86,7 @@ extern PTENCDLL long input_line2(FILE *fp, unsigned char *buff, long pos,
 
 /* set current encoding */
 extern PTENCDLL boolean setinfileenc(FILE *fp, const char *str);
+extern PTENCDLL boolean setstdinenc(const char *str);
 
 #ifdef WIN32
 extern PTENCDLL void clear_infile_enc(FILE *fp);
@@ -91,6 +95,9 @@ extern PTENCDLL void clear_infile_enc(FILE *fp);
 extern PTENCDLL void nkf_disable(void);
 extern PTENCDLL FILE *nkf_open(const char *path, const char *mode);
 extern PTENCDLL int nkf_close(FILE *fp);
+extern PTENCDLL unsigned char *ptenc_from_utf8_string_to_internal_enc(const unsigned char *is);
+extern PTENCDLL unsigned char *ptenc_from_internal_enc_string_to_utf8(const unsigned char *is);
+extern PTENCDLL int ptenc_get_command_line_args(int *p_ac, char ***p_av);
 #endif
 
 #endif /* PTEXENC_PTEXENC_H */

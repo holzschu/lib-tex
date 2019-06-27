@@ -24,7 +24,7 @@
 #include "lua.h"
 #include "lauxlib.h"
 
-#define img_types_max 7
+#define img_types_max 8
 
 const char *img_types[] = {
     "none",
@@ -35,6 +35,7 @@ const char *img_types[] = {
     "jbig2",
     "stream",
     "memstream",
+    "rawstream",
     NULL
 };
 
@@ -119,7 +120,7 @@ static void read_scale_img(image * a)
         luaL_error(Luas, "the image scaler needs a valid image");
     } else {
         ad = img_dict(a);
-        if (a == NULL) {
+        if (ad == NULL) {
             luaL_error(Luas, "the image scaler needs a valid dictionary");
         } else {
             if (img_state(ad) == DICT_NEW) {
@@ -243,6 +244,26 @@ static void write_image_or_node(lua_State * L, wrtype_e writetype)
         img_state(ad) = DICT_REFERED;
 }
 
+static int write_image_object(lua_State * L, wrtype_e writetype)
+{
+    image *a, **aa;
+    image_dict *ad;
+    int num;
+    if (lua_gettop(L) != 2)
+        luaL_error(L, "%s expects two argument", wrtype_s[writetype]);
+    aa = (image **) luaL_checkudata(L, 1, TYPE_IMG);
+    a = *aa;
+    ad = img_dict(a);
+
+    read_img(ad);
+
+    /*   setup_image(static_pdf, a, writetype); */
+    num = (int) lua_tointeger(L, 2);
+    num = write_img_object(static_pdf, ad, num);
+    lua_pushinteger(L,num);
+    return 1;
+}
+
 static int l_write_image(lua_State * L)
 {
     write_image_or_node(L, WR_WRITE);
@@ -260,6 +281,17 @@ static int l_immediatewrite_image(lua_State * L)
     return 1;
 }
 
+static int l_immediatewrite_image_object(lua_State * L)
+{
+    check_o_mode(static_pdf, "img.immediatewriteobject", 1 << OMODE_PDF, true);
+    if (global_shipping_mode != NOT_SHIPPING) {
+        luaL_error(L, "img.immediatewriteobject can not be used with \\latelua");
+    } else {
+        write_image_object(L, WR_IMMEDIATEWRITE);
+    }
+    return 1;
+}
+
 static int l_image_node(lua_State * L)
 {
     write_image_or_node(L, WR_NODE);
@@ -273,7 +305,7 @@ static int l_image_keys(lua_State * L)
 
 static int l_image_types(lua_State * L)
 {
-    return lua_show_valid_list(L, img_types, img_types_max);
+    return lua_show_valid_list(L, img_types, 0, img_types_max);
 }
 
 static int l_image_boxes(lua_State * L)
@@ -287,10 +319,13 @@ static const struct luaL_Reg imglib_f[] = {
     { "scan", l_scan_image },
     { "write", l_write_image },
     { "immediatewrite", l_immediatewrite_image },
+    { "immediatewriteobject", l_immediatewrite_image_object },
     { "node", l_image_node },
-    { "keys", l_image_keys },
+    { "fields", l_image_keys },
     { "types", l_image_types },
     { "boxes", l_image_boxes },
+    /* for a while: */
+    { "keys", l_image_keys },
     { NULL, NULL }
 };
 
@@ -348,14 +383,14 @@ static int m_img_get(lua_State * L)
         } else {
             lua_pushstring(L, img_filename(d));
         }
-    } else if (lua_key_eq(s,visiblefilename)) {
-        if (img_visiblefilename(d) == NULL || strlen(img_visiblefilename(d)) == 0) {
-            lua_pushnil(L);
-        } else {
-            lua_pushstring(L, img_visiblefilename(d));
-        }
     } else if (lua_key_eq(s,keepopen)) {
         lua_pushboolean(L, img_keepopen(d));
+    } else if (lua_key_eq(s,nolength)) {
+        lua_pushboolean(L, img_nolength(d));
+    } else if (lua_key_eq(s,notype)) {
+        lua_pushboolean(L, img_notype(d));
+    } else if (lua_key_eq(s,nobbox)) {
+        lua_pushboolean(L, img_nobbox(d));
     } else if (lua_key_eq(s,filepath)) {
         if (img_filepath(d) == NULL || strlen(img_filepath(d)) == 0) {
             lua_pushnil(L);
@@ -461,10 +496,28 @@ static int m_img_get(lua_State * L)
         if (img_type(d) != IMG_TYPE_PDFSTREAM
                 || img_pdfstream_ptr(d) == NULL
                 || img_pdfstream_stream(d) == NULL
-                || strlen(img_pdfstream_stream(d)) == 0) {
+                || img_pdfstream_size(d) == 0) {
             lua_pushnil(L);
         } else {
-            lua_pushstring(L, img_pdfstream_stream(d));
+            lua_pushlstring(L, img_pdfstream_stream(d), img_pdfstream_size(d));
+        }
+    } else if (lua_key_eq(s,visiblefilename)) {
+        if (img_visiblefilename(d) == NULL || strlen(img_visiblefilename(d)) == 0) {
+            lua_pushnil(L);
+        } else {
+            lua_pushstring(L, img_visiblefilename(d));
+        }
+    } else if (lua_key_eq(s,userpassword)) {
+        if (img_userpassword(d) == NULL || strlen(img_userpassword(d)) == 0) {
+            lua_pushnil(L);
+        } else {
+            lua_pushstring(L, img_userpassword(d));
+        }
+    } else if (lua_key_eq(s,ownerpassword)) {
+        if (img_ownerpassword(d) == NULL || strlen(img_ownerpassword(d)) == 0) {
+            lua_pushnil(L);
+        } else {
+            lua_pushstring(L, img_ownerpassword(d));
         }
     } else if (lua_key_eq(s,ref_count)) {
         lua_pushinteger(L, img_luaref(d));
@@ -488,7 +541,7 @@ static void lua_to_image(lua_State * L, image * a, image_dict * d)
         } else if (t == LUA_TSTRING) {
             img_width(a) = dimen_to_number(L, lua_tostring(L, -1));
         } else {
-            luaL_error(L, "image.width needs integer or nil value or dimension string");
+            luaL_error(L, "img.width needs integer or nil value or dimension string");
         }
     } else if (lua_key_eq(s,height)) {
         if (t == LUA_TNIL) {
@@ -498,7 +551,7 @@ static void lua_to_image(lua_State * L, image * a, image_dict * d)
         } else if (t == LUA_TSTRING) {
             img_height(a) = dimen_to_number(L, lua_tostring(L, -1));
         } else {
-            luaL_error(L, "image.height needs integer or nil value or dimension string");
+            luaL_error(L, "img.height needs integer or nil value or dimension string");
         }
     } else if (lua_key_eq(s,depth)) {
         if (t == LUA_TNIL) {
@@ -508,50 +561,72 @@ static void lua_to_image(lua_State * L, image * a, image_dict * d)
         } else if (t == LUA_TSTRING) {
             img_depth(a) = dimen_to_number(L, lua_tostring(L, -1));
         } else {
-            luaL_error(L, "image.depth needs integer or nil value or dimension string");
+            luaL_error(L, "img.depth needs integer or nil value or dimension string");
         }
     } else if (lua_key_eq(s,transform)) {
         if (t == LUA_TNUMBER) {
             img_transform(a) = (int) lua_tointeger(L, -1);
         } else {
-            luaL_error(L, "image.transform needs integer value");
+            luaL_error(L, "img.transform needs integer value");
         }
     } else if (lua_key_eq(s,filename)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.filename is now read-only");
+            luaL_error(L, "img.filename is now read-only");
         } else if (img_type(d) == IMG_TYPE_PDFSTREAM) {
-            luaL_error(L, "image.filename can't be used with image.stream");
+            /* just ignore */
         } else if (t == LUA_TSTRING) {
             xfree(img_filename(d));
             img_filename(d) = xstrdup(lua_tostring(L, -1));
         } else {
-            luaL_error(L, "image.filename needs string value");
+            luaL_error(L, "img.filename needs string value");
         }
     } else if (lua_key_eq(s,visiblefilename)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.visiblefilename is now read-only");
+            luaL_error(L, "img.visiblefilename is now read-only");
         } else if (img_type(d) == IMG_TYPE_PDFSTREAM) {
-            luaL_error(L, "image.visiblefilename can't be used with image.stream");
+            img_visiblefilename(d) = NULL;
         } else if (t == LUA_TSTRING) {
             xfree(img_visiblefilename(d));
             img_visiblefilename(d) = xstrdup(lua_tostring(L, -1));
         } else {
-            luaL_error(L, "image.visiblefilename needs string value");
+            luaL_error(L, "img.visiblefilename needs string value");
+        }
+    } else if (lua_key_eq(s,userpassword)) {
+        if (img_state(d) >= DICT_FILESCANNED) {
+            luaL_error(L, "img.userpassword is now read-only");
+        } else if (img_type(d) == IMG_TYPE_PDFSTREAM) {
+            img_userpassword(d) = NULL;
+        } else if (t == LUA_TSTRING) {
+            xfree(img_userpassword(d));
+            img_userpassword(d) = xstrdup(lua_tostring(L, -1));
+        } else {
+            luaL_error(L, "img.userpassword needs string value");
+        }
+    } else if (lua_key_eq(s,ownerpassword)) {
+        if (img_state(d) >= DICT_FILESCANNED) {
+            luaL_error(L, "img.ownerpassword is now read-only");
+        } else if (img_type(d) == IMG_TYPE_PDFSTREAM) {
+            img_ownerpassword(d) = NULL;
+        } else if (t == LUA_TSTRING) {
+            xfree(img_ownerpassword(d));
+            img_ownerpassword(d) = xstrdup(lua_tostring(L, -1));
+        } else {
+            luaL_error(L, "img.ownerpassword needs string value");
         }
     } else if (lua_key_eq(s,attr)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.attr is now read-only");
+            luaL_error(L, "img.attr is now read-only");
         } else if (t == LUA_TSTRING) {
             xfree(img_attr(d));
             img_attr(d) = xstrdup(lua_tostring(L, -1));
         } else if (t == LUA_TNIL) {
             xfree(img_attr(d));
         } else {
-            luaL_error(L, "image.attr needs string or nil value");
+            luaL_error(L, "img.attr needs string or nil value");
         }
     } else if (lua_key_eq(s,page)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.page is now read-only");
+            luaL_error(L, "img.page is now read-only");
         } else if (t == LUA_TSTRING) {
             xfree(img_pagename(d));
             img_pagename(d) = xstrdup(lua_tostring(L, -1));
@@ -560,21 +635,21 @@ static void lua_to_image(lua_State * L, image * a, image_dict * d)
             img_pagenum(d) = (int) lua_tointeger(L, -1);
             xfree(img_pagename(d));
         } else {
-            luaL_error(L, "image.page needs integer or string value");
+            luaL_error(L, "img.page needs integer or string value");
         }
     } else if (lua_key_eq(s,colorspace)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.colorspace is now read-only");
+            luaL_error(L, "img.colorspace is now read-only");
         } else if (t == LUA_TNIL) {
             img_colorspace(d) = 0;
         } else if (t == LUA_TNUMBER) {
             img_colorspace(d) = (int) lua_tointeger(L, -1);
         } else {
-            luaL_error(L, "image.colorspace needs integer or nil value");
+            luaL_error(L, "img.colorspace needs integer or nil value");
         }
     } else if (lua_key_eq(s,pagebox)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.pagebox is now read-only");
+            luaL_error(L, "img.pagebox is now read-only");
         } else if (t == LUA_TNIL) {
             img_pagebox(d) = PDF_BOX_SPEC_MEDIA;
         } else if (t == LUA_TNUMBER) {
@@ -597,23 +672,29 @@ static void lua_to_image(lua_State * L, image * a, image_dict * d)
                 }
             }
         } else {
-            luaL_error(L, "image.pagebox needs string, number or nil value");
+            luaL_error(L, "img.pagebox needs string, number or nil value");
         }
     } else if (lua_key_eq(s,keepopen)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.keepopen is now read-only");
+            luaL_error(L, "img.keepopen is now read-only");
         } else if (t != LUA_TBOOLEAN) {
-            luaL_error(L, "image.bbox needs boolean value");
+            luaL_error(L, "img.bbox needs boolean value");
         } else {
             img_keepopen(d) = lua_toboolean(L, -1);
         }
+    } else if (lua_key_eq(s,nolength)) {
+        img_nolength(d) = lua_toboolean(L, -1);
+    } else if (lua_key_eq(s,notype)) {
+        img_notype(d) = lua_toboolean(L, -1);
+    } else if (lua_key_eq(s,nobbox)) {
+        img_nobbox(d) = lua_toboolean(L, -1);
     } else if (lua_key_eq(s,bbox)) {
         if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.bbox is now read-only");
+            luaL_error(L, "img.bbox is now read-only");
         } else if (t != LUA_TTABLE) {
-            luaL_error(L, "image.bbox needs table value");
+            luaL_error(L, "img.bbox needs table value");
         } else if (lua_rawlen(L, -1) != 4) {
-            luaL_error(L, "image.bbox table must have exactly 4 elements");
+            luaL_error(L, "img.bbox table must have exactly 4 elements");
         } else {
             for (i = 1; i <= 4; i++) {      /* v k t ... */
                 lua_pushinteger(L, i);      /* idx v k t ... */
@@ -624,7 +705,7 @@ static void lua_to_image(lua_State * L, image * a, image_dict * d)
                 } else if (t == LUA_TSTRING) {
                     img_bbox(d)[i - 1] = dimen_to_number(L, lua_tostring(L, -1));
                 } else {
-                    luaL_error(L, "image.bbox table needs integer value or dimension string elements");
+                    luaL_error(L, "img.bbox table needs integer value or dimension string elements");
                 }
                 lua_pop(L, 1);      /* v k t ... */
             }
@@ -632,19 +713,23 @@ static void lua_to_image(lua_State * L, image * a, image_dict * d)
         }
     } else if (lua_key_eq(s,stream)) {
         if (img_filename(d) != NULL) {
-            luaL_error(L, "image.stream can't be used with image.filename");
+            luaL_error(L, "img.stream can't be used with image.filename");
         } else if (img_state(d) >= DICT_FILESCANNED) {
-            luaL_error(L, "image.stream is now read-only");
+            luaL_error(L, "img.stream is now read-only");
         } else {
+            size_t size = 0;
+            const char *stream = lua_tolstring(L, -1, &size);
             if (img_pdfstream_ptr(d) == NULL) {
                 new_img_pdfstream_struct(d);
             }
             xfree(img_pdfstream_stream(d));
-            img_pdfstream_stream(d) = xstrdup(lua_tostring(L, -1));
+            img_pdfstream_size(d) = size;
+            img_pdfstream_stream(d) = xmalloc(size);
+            memcpy(img_pdfstream_stream(d),stream,size);
             img_type(d) = IMG_TYPE_PDFSTREAM;
         }
     } else {
-        luaL_error(L, "image.%s can not be set", s);
+        luaL_error(L, "img.%s can not be set", s);
     }
 }
 
@@ -758,14 +843,14 @@ int luaopen_img(lua_State * L)
 {
     luaL_newmetatable(L, TYPE_IMG);
 #ifdef LuajitTeX
-    luaL_register(L, NULL, img_m);
+    luaL_openlib(L, NULL, img_m, 0);
     luaL_newmetatable(L, TYPE_IMG_DICT);
-    luaL_register(L, NULL, img_dict_m);
+    luaL_openlib(L, NULL, img_dict_m, 0);
 #else
     luaL_setfuncs(L, img_m, 0);
     luaL_newmetatable(L, TYPE_IMG_DICT);
     luaL_setfuncs(L, img_dict_m, 0);
 #endif
-    luaL_register(L, "img", imglib_f);
+    luaL_openlib(L, "img", imglib_f, 0);
     return 1;
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /*
 **********************************************************************
@@ -49,6 +49,12 @@ public:
     void testBug12825();
 
     void testBug12815();
+
+    void testBug13314_MixedNumbers();
+
+    void testBug13328_MixedCombiningMarks();
+
+    void testCombiningDot();
 
     // Internal function to run a single skeleton test case.
     void  checkSkeleton(const USpoofChecker *sc, uint32_t flags, 

@@ -1,34 +1,44 @@
 	We don't want this for TeX Live cross compilation.
 
-Index: source/config/mh-mingw
-===================================================================
---- source/config/mh-mingw	(revision 43491)
-+++ source/config/mh-mingw	(working copy)
-@@ -61,27 +61,9 @@
- ## Non-shared intermediate object suffix
- STATIC_O = ao
- 
--ifeq ($(ENABLE_SHARED),YES)
--SO_TARGET_VERSION_SUFFIX = $(SO_TARGET_VERSION_MAJOR)
--else
--SO_TARGET_VERSION_SUFFIX = 
--endif
--
--# Static library prefix and file extension
--LIBSICU = $(LIBPREFIX)$(STATIC_PREFIX)$(ICUPREFIX)
--A = a
--
- ## An import library is needed for z/OS and MSVC
- IMPORT_LIB_EXT = .dll.a
- 
--LIBPREFIX=lib
--
--# Change the stubnames so that poorly working FAT disks and installation programs can work.
--# This is also for backwards compatibility.
--DATA_STUBNAME = dt
--I18N_STUBNAME = in
--LIBICU = $(STATIC_PREFIX_WHEN_USED)$(ICUPREFIX)
--
- #SH### copied from Makefile.inc
- #SH## for icu-config to test with
- #SH#ICULIBS_COMMON_LIB_NAME="${LIBICU}${COMMON_STUBNAME}${ICULIBSUFFIX}${ICULIBSUFFIX_VERSION}.${SO}"
+*** source/config/mh-mingw~	Mon Oct  1 15:39:56 2018
+--- source/config/mh-mingw	Tue Jan  8 10:16:08 2019
+***************
+*** 71,95 ****
+  STATIC_O = ao
+  
+- ifeq ($(ENABLE_SHARED),YES)
+- SO_TARGET_VERSION_SUFFIX = $(SO_TARGET_VERSION_MAJOR)
+- else
+- SO_TARGET_VERSION_SUFFIX = 
+- endif
+- 
+- # Static library prefix and file extension
+- LIBSICU = $(LIBPREFIX)$(STATIC_PREFIX)$(ICUPREFIX)
+- A = a
+- 
+  ## An import library is needed for z/OS and MSVC
+  IMPORT_LIB_EXT = .dll.a
+  
+- LIBPREFIX=lib
+- 
+- # Change the stubnames so that poorly working FAT disks and installation programs can work.
+- # This is also for backwards compatibility.
+- DATA_STUBNAME = dt
+- I18N_STUBNAME = in
+- LIBICU = $(STATIC_PREFIX_WHEN_USED)$(ICUPREFIX)
+- 
+  #SH### copied from Makefile.inc
+  #SH## for icu-config to test with
+--- 71,77 ----
+
+--- source/i18n/unicode/numberrangeformatter.h	(revision 49992)
++++ source/i18n/unicode/numberrangeformatter.h	(working copy)
+@@ -185,7 +185,7 @@
+  * Export an explicit template instantiation. See datefmt.h
+  * (When building DLLs for Windows this is required.)
+  */
+-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN && !defined(U_IN_DOXYGEN)
++#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM < U_PF_MINGW && !defined(U_IN_DOXYGEN) && defined(X)
+ template struct U_I18N_API std::atomic<impl::NumberRangeFormatterImpl*>;
+ #endif
+ /** \endcond */

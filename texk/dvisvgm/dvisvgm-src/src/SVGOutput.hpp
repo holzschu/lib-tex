@@ -2,7 +2,7 @@
 ** SVGOutput.hpp                                                        **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -28,26 +28,41 @@
 
 
 struct SVGOutputBase {
+	class HashTriple {
+		public:
+			HashTriple () =default;
+			HashTriple (const std::string &dviHash, const std::string &optHash, const std::string &cmbHash)
+				: _dviHash(dviHash), _optHash(optHash), _cmbHash(cmbHash) {}
+			std::string dviHash () const {return _dviHash;}
+			std::string optHash () const {return _optHash;}
+			std::string cmbHash () const {return _cmbHash;}
+			bool empty () const {return _dviHash.empty();}
+
+		private:
+			std::string _dviHash;  ///< hash of plain DVI data
+			std::string _optHash;  ///< hash of options affecting the SVG document
+			std::string _cmbHash;  ///< combined hash of DVI data and options
+	};
+
 	virtual ~SVGOutputBase () =default;
-	virtual std::ostream& getPageStream (int page, int numPages) const =0;
-	virtual std::string filename (int page, int numPages) const =0;
-//	virtual std::string outpath (int page, int numPages) const =0;
+	virtual std::ostream& getPageStream (int page, int numPages, const HashTriple &hashes=HashTriple()) const =0;
+	virtual std::string filename (int page, int numPages, const HashTriple &hashes=HashTriple()) const =0;
+	virtual bool ignoresHashes () const {return true;}
 };
 
 
-class SVGOutput : public SVGOutputBase
-{
+class SVGOutput : public SVGOutputBase {
 	public:
-		SVGOutput () : SVGOutput(0, "", 0) {}
-		SVGOutput (const char *base) : SVGOutput(base, "", 0) {}
-		SVGOutput (const char *base, const std::string &pattern) : SVGOutput(base, pattern, 0) {}
-		SVGOutput (const char *base, const std::string &pattern, int zipLevel);
-		std::ostream& getPageStream (int page, int numPages) const override;
-		std::string filename (int page, int numPages) const override;
-//		std::string outpath (int page, int numPages) const override;
+		SVGOutput () : SVGOutput("", "", 0) {}
+		SVGOutput (const std::string &base) : SVGOutput(base, "", 0) {}
+		SVGOutput (const std::string &base, const std::string &pattern) : SVGOutput(base, pattern, 0) {}
+		SVGOutput (const std::string &base, const std::string &pattern, int zipLevel);
+		std::ostream& getPageStream (int page, int numPages, const HashTriple &hash=HashTriple()) const override;
+		std::string filename (int page, int numPages, const HashTriple &hash=HashTriple()) const override;
+		bool ignoresHashes () const override;
 
 	protected:
-		std::string expandFormatString (std::string str, int page, int numPages) const;
+		std::string expandFormatString (std::string str, int page, int numPages, const HashTriple &hashes) const;
 
 	private:
 		FilePath _path;

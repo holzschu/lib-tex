@@ -1,6 +1,26 @@
+2018-10-18  Norbert Preining  <preining@logic.at>
+
+	* ligkern_routines.c (retrieve_ligkern_table): need
+	lig_kern_size+1 for `activity' array, else glibc 2.28
+	on 32-bit architectures finds malloc error.
+	Original report from Tom Callaway,
+	https://tug.org/pipermail/tex-live/2018-September/042411.html
+
+2018-09-09  Karl Berry  <karl@tug.org>
+
+	* overbmp.test: LC_ALL=LANGUAGE=C.
+
+2018-01-18  Karl Berry  <karl@tug.org>
+
+	* error_routines.c (yyerror, warning_0, fatal_error_0,
+	internal_error_0),
+	* out_routines.c (out): printf %s instead of direct string.
+	From Debian.
+
 2016-02-27  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
 
-	* omfonts.c, help.test: Add an option -charcode-format for compatibility.
+	* omfonts.c, help.test: Add an option -charcode-format for
+	compatibility.
 
 2015-07-07  Peter Breitenlohner  <peb@mppmu.mpg.de>
 

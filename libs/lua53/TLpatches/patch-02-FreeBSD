@@ -1,0 +1,12 @@
+diff -u liolib.c.orig liolib.c 
+--- liolib.c.orig	2017-04-19 19:29:57.000000000 +0200
++++ liolib.c	2018-07-21 10:04:50.965674394 +0200
+@@ -16,6 +16,9 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#if defined(HAVE_UNISTD_H)
++#include <unistd.h>
++#endif
+ 
+ #include "lua.h"

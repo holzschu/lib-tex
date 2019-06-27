@@ -1,3 +1,152 @@
+2019-04-07  Karl Berry  <karl@freefriends.org>
+
+	* TeX Live 2019.
+
+2019-03-11  Karl Berry  <karl@tug.org>
+
+	* ac/web2c.ac (kpse_tex_progs) <luatex53>: remove.
+	<luatex>, <mflua>: depend on lua53, not lua52.
+
+2019-01-19  Andreas Scherer  <https://ascherer.github.io>
+
+	* help.h: Fix CTWILL '--help' text.
+
+2019-01-15  Andreas Scherer  <https://ascherer.github.io>
+
+	* cwebboot.cin: Provisional 'bindtextdomain' lookup in TDS.
+
+2019-01-10  Andreas Scherer  <https://ascherer.github.io>
+
+	* help.h (CTWILLHELP): update.
+
+2019-01-09  Andreas Scherer  <https://ascherer.github.io>
+	
+	* help.h (CTANGLEHELP, CWEAVEHELP, CTWILLHELP): update.
+
+2019-01-06  Andreas Scherer  <https://ascherer.github.io>
+
+	Integration of CWEBbin as the new CWEB in TeX Live,
+	https://github.com/ascherer/cwebbin.
+	
+	Purge cweb.h and cwebboot.h[in] from CWEB build process.
+	* am/bootstrap.am (cweb.h): no longer created at common-ctangle.
+	(DISTCLEANFILES): do not remove cweb.h or cwebboot.h.
+	$(ctangleboot_OBJECTS): do not depend on cwebboot.h.
+	(EXTRA_DIST): omit no-longer-created cwebboot.hin.
+	(ctangle.c),
+	* am/cweb.am (cweave.c): depend on new file cwebdir/comm-w2c.h,
+	instead of common.h.
+	$(cweave_OBJECTS): remove rule.
+	* ctangleboot-sh.in <common>: only generate .c, not .h;
+	don't try to #include cwebboot.h.
+	* ctangleboot.cin,
+	* cwebboot.cin: regenerate.
+	* cwebboot.hin: delete.
+	* help.h (CTWILLHELP): new help string.
+	(CTANGLEHELP, CWEAVEHELP): update.
+	
+	Add CTWILL material on top of CWEAVE.
+	* am/bootstrap.am (NEVER_DIST): omit {ctwill,refsort,twinx}.{log,trs}.
+	* am/cweb.am (bin_programs): add ctwill, ctwill-refsort, ctwill-twinx,
+	with related targets and dependencies.
+
+2018-12-30  Karl Berry  <karl@tug.org>
+
+	* mplibdir/am/mplib.am,
+	* pmpostdir/am/pmpost.am (bin_links): make that r- instead of r.
+	Suggested by Hironobu,
+	https://tug.org/pipermail/tex-live/2018-December/043014.html.
+
+2018-12-21  Karl Berry  <karl@freefriends.org>
+
+	* mplibdir/am/mplib.am,
+	* pmpostdir/am/pmpost.am (bin_links): make links at install time:
+	 ln -s mpost rmpost
+	 ln -s pmpost rpmpost
+	 ln -s upmpost rupmpost
+	which implicitly specify -restricted; these new links can be
+	included in shell_escape_commands (we hope).
+	Thread starting here:
+	https://tug.org/pipermail/tex-live/2017-May/040169.html
+
+2018-11-19  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* texmfmp.h: Remove unused functions in XeTeX.
+
+2018-11-17  Joseph Wright  <joseph.wright@morningstar2.co.uk>
+
+	* texmfmp.h: Support some primitives from pdfTeX in XeTeX.
+
+2018-09-09  Karl Berry  <karl@tug.org>
+
+	* mftraptest.test,
+	* triptest.test: LC_ALL=LANGUAGE=C.
+
+2018-07-24  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* synctexdir/am/synctex.am: Add synctex_version.h.
+	Report by Johannes:
+	https://tug.org/pipermail/tex-live/2018-July/042089.html
+
+2018-07-17  Karl Berry  <karl@freefriends.org>
+
+	* dvicopy.web: typos.
+
+2018-06-14  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* help.h, texmfmp-help.h: remove sjisterminal (w32 only).
+
+2018-06-08  Karl Berry  <karl@freefriends.org>
+
+	* bibtex.ch (142): also try opening subsidiary .aux files
+	via a_open_in_with_dirname.
+	(bib_makecstring): new fn.
+	* cpascal.h (aopeninwithdirname): new #define.
+	* lib/openclose.c (open_input_with_dirname): new fn.
+	* tests/bibtex-auxinclude.test: new test.
+	* tests/auxinclude*.*: files for test.
+	* am/web.am (web_tests): include bibtex-auxinclude.test.
+	Suggestion from John Collins. See thread from
+	http://tug.org/pipermail/tex-live/2018-May/041624.html.
+
+2018-05-03  Karl Berry  <karl@freefriends.org>
+
+	* patgen.ch (trie_size, triec_size): increase greatly.
+	Request/patch from Werner Lemberg, 27 Apr 2018 07:51:29,
+	03 May 2018 13:49:02.
+
+2018-04-14  Karl Berry  <karl@tug.org>
+
+	* TeX Live 2018 release.
+
+2018-02-23  Karl Berry  <karl@freefriends.org>
+
+	* doc/web2c.texi (bibtex invocation): mention need to remove aux
+	file from previous run for -min-crossrefs to be effective.
+	https://tex.stackexchange.com/questions/123740
+
+2018-02-18  Karl Berry  <karl@tug.org>
+
+	* bibtex.ch (str_ends_with): new fn.
+	(print_bib_name, log_pr_bib_name): don't print foo.bib.bib
+	when given \bibdata{foo.bib}.
+
+2018-02-03  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* lib/texmfmp.c, texmfmp.h: XeTeX properly close input pipes.
+	Fixes https://sourceforge.net/p/xetex/bugs/147
+
+2018-01-21  Karl Berry  <karl@freefriends.org>
+
+	* configure.ac <luatex>: quote [notice] so not misparsed at comma,
+	ending up with "bad fd number".
+
+2017-09-10  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* pltotf.ch: web2c extends the range of 'lf' from 0..32767
+	into short (-32768..32767), but the overflow here ends up in
+	Bad metric (TFM) file. So add a test.
+
 2017-03-27  Karl Berry  <karl@freefriends.org>
 
 	* Makefile.am (AM_TESTS_ENVIRONMENT): use instead of TESTS_ENVIRONMENT.
@@ -2012,7 +2161,7 @@
 	* doc/web2c.texi (gftodvi invocation): talk a bit more about slant
 	fonts, pursuant to DEK's message to tex-k of 10 Jul 2005 18:38:11.
 
-2007-12-19  Martin Schrer <martin@oneiros.de>
+2007-12-19  Martin Schr\"oder <martin@oneiros.de>
 
 	* tex.ch (ssup_max_strings): increase to 2097151
 		 (sup_main_memory): increase to 256000000
@@ -2938,7 +3087,7 @@
 
 	* tex.ch: Initialize source_filename_stack[0],
 	full_source_filename_stack[0] -- these can be read under some
-	circumstances.  Found by Krank Kter <frank@kuesterei.ch>.
+	circumstances.  Found by Frank K\"uester <frank@kuesterei.ch>.
 
 	* tex.ch: Correct printing of |src_specials| when weaving.
 
@@ -3793,7 +3942,7 @@
 
 	* dvitomp.ch: A checksum failure should result in a warning, but
 	not in a non-zero return code.  This was done correctly in one
-	location, wrong in another.  Reported by Berthold Hlmann.
+	location, wrong in another.  Reported by Berthold H\"olmann.
 
 1999-05-30  Olaf Weber  <olaf@infovore.xs4all.nl>
 

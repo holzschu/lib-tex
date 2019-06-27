@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2002-2016 by Jin-Hwan Cho and Matthias Franz,
+    Copyright (C) 2002-2018 by Jin-Hwan Cho and Matthias Franz,
     the dvipdfmx project team.
 
     Copyright (C) 1998, 1999 by Mark A. Wicks <mwicks@kettering.edu>
@@ -36,7 +36,7 @@
 #include "error.h"
 #include "mem.h"
 
-#include "dvipdfmx.h"
+#include "dpxconf.h"
 
 #include "pdfobj.h"
 
@@ -146,7 +146,7 @@ read_res__data (ximage_info *info, FILE *fp, unsigned int size)
   HR_D = get_unsigned_pair(fp);
   VR_E = get_unsigned_byte(fp);
   HR_E = get_unsigned_byte(fp);
-  if (compat_mode)
+  if (dpx_conf.compat_mode == dpx_mode_compat_mode)
     info->xdensity = info->ydensity = 72.0 / 100.0;
   else {
     info->xdensity = 72.0/(((double) HR_N / HR_D) * pow(10.0, HR_E) * 0.0254);
@@ -362,14 +362,12 @@ check_for_jp2 (FILE *fp)
 int
 jp2_include_image (pdf_ximage *ximage, FILE *fp)
 {
-  unsigned pdf_version;
   int      smask = 0;
   pdf_obj *stream, *stream_dict;
   ximage_info info;
 
-  pdf_version = pdf_get_version();
-  if (pdf_version < 5) {
-    WARN("JPEG 2000 support requires PDF version >= 1.5 (Current setting 1.%d)\n", pdf_version);
+  if (pdf_check_version(1, 5) < 0) {
+    WARN("JPEG 2000 support requires PDF version >= 1.5 (Current setting %d.%d)\n", pdf_get_version_major(), pdf_get_version_minor());
     return -1;
   }
 

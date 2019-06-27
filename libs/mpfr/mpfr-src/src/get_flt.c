@@ -1,6 +1,6 @@
 /* mpfr_get_flt -- convert a mpfr_t to a machine single precision float
 
-Copyright 2009-2016 Free Software Foundation, Inc.
+Copyright 2009-2019 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,7 +17,7 @@ License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
+https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
 
 #include <float.h>     /* for FLT_MIN */
@@ -50,7 +50,10 @@ mpfr_get_flt (mpfr_srcptr src, mpfr_rnd_t rnd_mode)
     rnd_mode = negative ? MPFR_RNDD : MPFR_RNDU;
 
   /* FIXME: The code below assumes the IEEE-754 binary32 format
-     with subnormal support. */
+     with subnormal support. Fix it by converting to double, then
+     to float, and in case of binary radix (for which we want
+     correct rounding), handle double-rounding issues somewhere
+     in the code? */
 
   /* the smallest positive normal float number is 2^(-126) = 0.5*2^(-125),
      and the smallest positive subnormal number is 2^(-149) = 0.5*2^(-148) */
@@ -117,7 +120,7 @@ mpfr_get_flt (mpfr_srcptr src, mpfr_rnd_t rnd_mode)
       if (negative)
         dd = -dd;
 
-      /* convert (exacly) to float */
+      /* convert (exactly) to float */
       d = (float) dd;
     }
 

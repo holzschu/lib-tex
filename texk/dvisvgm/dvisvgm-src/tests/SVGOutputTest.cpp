@@ -2,7 +2,7 @@
 ** SVGOutputTest.cpp                                                    **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -25,10 +25,18 @@
 #include "SVGOutput.hpp"
 #include "ZLibOutputStream.hpp"
 
+#ifndef SRCDIR
+#define SRCDIR "."
+#endif
+
 using namespace std;
 
+struct SVGOutputTest : public ::testing::Test {
+	void SetUp () override {FileSystem::chdir(SRCDIR);}
+};
 
-TEST(SVGOutputTest, defaults) {
+
+TEST_F(SVGOutputTest, defaults) {
 	SVGOutput out("SVGOutputTest.cpp", "");
 	EXPECT_EQ(out.filename(1, 1), "SVGOutputTest.svg");
 	EXPECT_EQ(out.filename(5, 9), "SVGOutputTest-5.svg");
@@ -37,7 +45,7 @@ TEST(SVGOutputTest, defaults) {
 }
 
 
-TEST(SVGOutputTest, widthSpecifier) {
+TEST_F(SVGOutputTest, widthSpecifier) {
 	{
 		SVGOutput out("SVGOutputTest.cpp", "%f--%3p");
 		EXPECT_EQ(out.filename(5, 9), "SVGOutputTest--005.svg");
@@ -62,7 +70,7 @@ TEST(SVGOutputTest, widthSpecifier) {
 }
 
 
-TEST(SVGOutputTest, expressions) {
+TEST_F(SVGOutputTest, expressions) {
 	{
 		SVGOutput out("SVGOutputTest.cpp", "no-macro");
 		EXPECT_EQ(out.filename(5, 9), "no-macro.svg");
@@ -87,9 +95,41 @@ TEST(SVGOutputTest, expressions) {
 }
 
 
-TEST(SVGOutputTest, getPageStream) {
+TEST_F(SVGOutputTest, hashes) {
+	SVGOutput::HashTriple hashes("dvihash", "opthash", "cmbhash");
 	{
-		SVGOutput out(0, "");
+		SVGOutput out("SVGOutputTest.cpp", "%f-%hd-x");
+		EXPECT_EQ(out.filename(1, 10), "SVGOutputTest--x.svg");
+		EXPECT_EQ(out.filename(1, 10, hashes), "SVGOutputTest-dvihash-x.svg");
+	}{
+		SVGOutput out("SVGOutputTest.cpp", "%f-%hd-x-%hc%ho");
+		EXPECT_EQ(out.filename(1, 10), "SVGOutputTest--x-.svg");
+		EXPECT_EQ(out.filename(1, 10, hashes), "SVGOutputTest-dvihash-x-cmbhashopthash.svg");
+	}{
+		SVGOutput out("SVGOutputTest.cpp", "%f-%hd%p%ho");
+		EXPECT_EQ(out.filename(1, 10), "SVGOutputTest-01.svg");
+		EXPECT_EQ(out.filename(1, 10, hashes), "SVGOutputTest-dvihash01opthash.svg");
+	}
+}
+
+
+TEST_F(SVGOutputTest, hashes_fail) {
+	SVGOutput::HashTriple hashes("dvihash", "opthash", "cmbhash");
+	{
+		SVGOutput out("SVGOutputTest.cpp", "%f-%h-x");
+		EXPECT_THROW(out.filename(1, 10), MessageException);
+		EXPECT_THROW(out.filename(1, 10, hashes), MessageException);
+	}{
+		SVGOutput out("SVGOutputTest.cpp", "%f-%hd-x-%ha%ho");
+		EXPECT_THROW(out.filename(1, 10), MessageException);
+		EXPECT_THROW(out.filename(1, 10, hashes), MessageException);
+	}
+}
+
+
+TEST_F(SVGOutputTest, getPageStream) {
+	{
+		SVGOutput out("", "");
 		ostream &os = out.getPageStream(1, 10);
 		EXPECT_EQ(&os, &cout);
 	}{
@@ -98,23 +138,24 @@ TEST(SVGOutputTest, getPageStream) {
 		EXPECT_TRUE(dynamic_cast<ofstream*>(os1));
 		ostream *os2 = &out.getPageStream(1, 10);
 		EXPECT_EQ(os1, os2);
-		FileSystem::remove("SVGOutputTest-01.svg");
-	}{
+	}
+	FileSystem::remove("SVGOutputTest-01.svg");
+	{
 		SVGOutput out("SVGOutputTest.cpp", "%f-%p", 9);
 		ostream *os = &out.getPageStream(1, 10);
 		EXPECT_TRUE(dynamic_cast<ZLibOutputStream*>(os));
-		FileSystem::remove("SVGOutputTest-01.svgz");
 	}
+	FileSystem::remove("SVGOutputTest-01.svgz");
 }
 
 
-TEST(SVGOutputTest, ignore) {
+TEST_F(SVGOutputTest, ignore) {
 	SVGOutput out("SVGOutputTest.cpp", "%x %y");
 	EXPECT_EQ(out.filename(5, 9), "SVGOutputTest-5.svg");
 }
 
 
-TEST(SVGOutputTest, error) {
+TEST_F(SVGOutputTest, error) {
 	SVGOutput out("SVGOutputTest.cpp", "%(p/0)");
 	EXPECT_THROW(out.filename(5, 9), MessageException);
 }

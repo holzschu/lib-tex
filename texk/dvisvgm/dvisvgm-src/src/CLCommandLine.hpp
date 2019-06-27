@@ -2,7 +2,7 @@
 ** CLCommandLine.hpp                                                    **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -37,10 +37,12 @@ class CommandLine {
 		virtual ~CommandLine () =default;
 		void parse (int argc, char **argv);
 		void help (std::ostream &os, int mode=0) const;
+		void addFilename (std::string fname) {_files.emplace_back(fname);}
+		bool singleDashGiven () const {return _singleDashParsed;}
 		const std::vector<std::string>& filenames () const {return _files;}
 
 	protected:
-		typedef std::pair<Option*,int> OptSectPair;
+		using OptSectPair = std::pair<Option*,int>;
 		void parseShortOption (std::istringstream &is, int argc, char **argv, int &argn);
 		void parseLongOption (std::istream &is);
 		virtual std::vector<OptSectPair>& options () const =0;
@@ -52,12 +54,12 @@ class CommandLine {
 		const char *_summary;
 		const char *_usage;
 		const char *_copyright;
+		bool _singleDashParsed=false; ///< true if a single '-' w/o a following char was parsed
 		std::vector<std::string> _files;
 };
 
 
-struct CommandLineException : public MessageException
-{
+struct CommandLineException : public MessageException {
 	CommandLineException (const std::string &msg) : MessageException(msg) {}
 };
 

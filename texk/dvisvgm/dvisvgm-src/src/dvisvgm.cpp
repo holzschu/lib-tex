@@ -2,7 +2,7 @@
 ** dvisvgm.cpp                                                          **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -18,12 +18,14 @@
 ** along with this program; if not, see <http://www.gnu.org/licenses/>. **
 *************************************************************************/
 
+#include <config.h>
+#include <algorithm>
 #include <clipper.hpp>
 #include <fstream>
 #include <iostream>
 #include <potracelib.h>
 #include <sstream>
-#include <xxhash.h>
+#include <vector>
 #include <zlib.h>
 #include "CommandLine.hpp"
 #include "DVIToSVG.hpp"
@@ -34,18 +36,26 @@
 #include "Font.hpp"
 #include "FontEngine.hpp"
 #include "Ghostscript.hpp"
-#include "HtmlSpecialHandler.hpp"
+#include "HashFunction.hpp"
+#include "HyperlinkManager.hpp"
 #include "Message.hpp"
 #include "PageSize.hpp"
+#include "PDFToSVG.hpp"
 #include "PSInterpreter.hpp"
 #include "PsSpecialHandler.hpp"
 #include "SignalHandler.hpp"
+#include "SourceInput.hpp"
 #include "SVGOutput.hpp"
 #include "System.hpp"
+#include "XXHashFunction.hpp"
+#include "utility.hpp"
 #include "version.hpp"
 
 #ifndef DISABLE_WOFF
+#include <brotli/encode.h>
+//#include <woff2/version.h>
 #include "ffwrapper.h"
+#include "TTFAutohint.hpp"
 #endif
 
 using namespace std;
@@ -61,10 +71,12 @@ static string remove_path (string fname) {
 }
 
 
-static string ensure_suffix (string fname, bool eps) {
-	size_t dotpos = remove_path(fname).rfind('.');
-	if (dotpos == string::npos)
-		fname += (eps ? ".eps" : ".dvi");
+static string ensure_suffix (string fname, const string &suffix) {
+	if (!fname.empty()) {
+		size_t dotpos = remove_path(fname).rfind('.');
+		if (dotpos == string::npos)
+			fname += "." + suffix;
+	}
 	return fname;
 }
 
@@ -103,7 +115,12 @@ static bool set_cache_dir (const CommandLine &args) {
 			Message::wstream(true) << "cache directory '" << args.cacheOpt.value() << "' does not exist (caching disabled)\n";
 	}
 	else if (const char *userdir = FileSystem::userdir()) {
-		static string cachepath = userdir + string("/.dvisvgm/cache");
+#ifdef _WIN32
+		string cachedir = "\\.dvisvgm\\cache";
+#else
+		string cachedir = "/.dvisvgm/cache";
+#endif
+		static string cachepath = userdir + cachedir;
 		if (!FileSystem::exists(cachepath))
 			FileSystem::mkdir(cachepath);
 		PhysicalFont::CACHE_PATH = cachepath.c_str();
@@ -111,7 +128,8 @@ static bool set_cache_dir (const CommandLine &args) {
 	if (args.cacheOpt.given() && args.cacheOpt.value().empty()) {
 		cout << "cache directory: " << (PhysicalFont::CACHE_PATH ? PhysicalFont::CACHE_PATH : "(none)") << '\n';
 		try {
-			FontCache::fontinfo(PhysicalFont::CACHE_PATH, cout, true);
+			if (PhysicalFont::CACHE_PATH)
+				FontCache::fontinfo(PhysicalFont::CACHE_PATH, cout, true);
 		}
 		catch (StreamReaderException &e) {
 			Message::wstream(true) << "failed reading cache data\n";
@@ -135,80 +153,176 @@ static bool set_temp_dir (const CommandLine &args) {
 }
 
 
-static bool check_bbox (const string &bboxstr) {
-	const char *formats[] = {"none", "min", "preview", "papersize", "dvi", 0};
-	for (const char **p=formats; *p; ++p)
-		if (bboxstr == *p)
-			return true;
+static void check_bbox (const string &bboxstr) {
+	for (const char *fmt : {"none", "min", "preview", "papersize", "dvi"})
+		if (bboxstr == fmt)
+			return;
 	if (isalpha(bboxstr[0])) {
 		try {
 			PageSize size(bboxstr);
-			return true;
 		}
 		catch (const PageSizeException &e) {
-			Message::estream(true) << "invalid bounding box format '" << bboxstr << "'\n";
-			return false;
+			throw MessageException("invalid bounding box format '" + bboxstr + "'");
 		}
 	}
-	try {
+	else {
 		// check if given bbox argument is valid, i.e. doesn't throw an exception
 		BoundingBox bbox;
 		bbox.set(bboxstr);
-		return true;
-	}
-	catch (const MessageException &e) {
-		Message::estream(true) << e.what() << '\n';
-		return false;
 	}
 }
 
 
-static void print_version (bool extended) {
-	ostringstream oss;
-	oss << "dvisvgm " << PROGRAM_VERSION;
-	if (extended) {
-		if (strlen(TARGET_SYSTEM) > 0)
-			oss << " (" TARGET_SYSTEM ")";
-		int len = oss.str().length();
-		oss << "\n" << string(len, '-') << "\n"
-			"clipper:     " << CLIPPER_VERSION "\n";
-#ifndef DISABLE_WOFF
-		oss << "fontforge:   " << ff_version() << '\n';
-#endif
-		oss << "freetype:    " << FontEngine::version() << "\n";
+// Helper class to generate a list of version information of the used libraries.
+class VersionInfo {
+	public:
+		void add (const string &name, const string &version, bool ignoreEmpty=false) {
+			if (!version.empty() || !ignoreEmpty)
+				append(name, util::trim(version));
+		}
 
-		Ghostscript gs;
-		string gsver = gs.revision(true);
-		if (!gsver.empty())
-			oss << "Ghostscript: " << gsver + "\n";
-		const unsigned xxh_ver = XXH_versionNumber();
-		oss <<
-#ifdef MIKTEX
-			"MiKTeX:      " << FileFinder::instance().version() << "\n"
-#else
-			"kpathsea:    " << FileFinder::instance().version() << "\n"
+		void add (const string &name, const char *version, bool ignoreEmpty=false) {
+			if (version && *version)
+				append(name, util::trim(version));
+			else if (!ignoreEmpty)
+				append(name, "");
+		}
+
+		void add (const string &name, const vector<int> &versionComponents) {
+			string version;
+			for (auto it=versionComponents.begin(); it != versionComponents.end(); ++it) {
+				if (it != versionComponents.begin())
+					version += '.';
+				version += to_string(*it);
+			}
+			append(name, version);
+		}
+
+		/** Adds a version number given as a single unsigned integer, and optionally
+		 *  extracts its components, e.g. 0x00010203 => "1.2.3" (3 components separated
+		 *  by multiples of 256).
+		 *  @param[in] name library name
+		 *  @param[in] version version number
+		 *  @param[in] compcount number of components the version consists of
+		 *  @param[in] factor factor used to separate the components */
+		void add (const string &name, uint32_t version, int compcount=1, uint32_t factor=0xffffffff) {
+			string str;
+			while (compcount-- > 0) {
+				if (!str.empty())
+					str.insert(0, ".");
+				str.insert(0, to_string(version % factor));
+				version /= factor;
+			}
+			append(name, str);
+		}
+
+		/** Writes the version information to the given output stream. */
+		void write (ostream &os) {
+			using Entry = pair<string,string>;
+			sort(_versionPairs.begin(), _versionPairs.end(), [](const Entry &e1, const Entry &e2) {
+				return util::tolower(e1.first) < util::tolower(e2.first);
+			});
+			size_t maxNameLength=0;
+			for (const Entry &versionPair : _versionPairs)
+				maxNameLength = max(maxNameLength, versionPair.first.length());
+			for (const Entry &versionPair : _versionPairs) {
+				string name = versionPair.first+":";
+				os << left << setw(maxNameLength+2) << name;
+				os << (versionPair.second.empty() ? "unknown" : versionPair.second) << '\n';
+			}
+		}
+
+	protected:
+		void append (const string &name, const string &version) {
+			_versionPairs.emplace_back(pair<string,string>(name, version));
+		}
+
+	private:
+		vector<pair<string,string>> _versionPairs;
+};
+
+
+static void print_version (bool extended) {
+	string versionstr = string(PROGRAM_NAME)+" "+PROGRAM_VERSION;
+#ifdef TARGET_SYSTEM
+	if (extended && strlen(TARGET_SYSTEM) > 0)
+		versionstr += " (" TARGET_SYSTEM ")";
 #endif
-			"potrace:     " << (strchr(potrace_version(), ' ') ? strchr(potrace_version(), ' ')+1 : "unknown") << "\n"
-			"xxhash:      " << xxh_ver/10000 << '.' << (xxh_ver/100)%100 << '.' << xxh_ver%100 << "\n"
-			"zlib:        " << zlibVersion();
+	cout << versionstr << '\n';
+	if (extended) {
+		cout << string(versionstr.length(), '-') << '\n';
+		VersionInfo versionInfo;
+		versionInfo.add("clipper", CLIPPER_VERSION);
+		versionInfo.add("freetype", FontEngine::version());
+		versionInfo.add("potrace", strchr(potrace_version(), ' '));
+		versionInfo.add("xxhash", XXH64HashFunction::version(), 3, 100);
+		versionInfo.add("zlib", zlibVersion());
+		versionInfo.add("Ghostscript", Ghostscript().revisionstr(), true);
+#ifndef DISABLE_WOFF
+		versionInfo.add("brotli", BrotliEncoderVersion(), 3, 0x1000);
+//		versionInfo.add("woff2", woff2::version, 3, 0x100);
+		versionInfo.add("fontforge", ff_version());
+		versionInfo.add("ttfautohint", TTFAutohint().version(), true);
+#endif
+#ifdef MIKTEX
+		versionInfo.add("MiKTeX", FileFinder::instance().version());
+#else
+		versionInfo.add("kpathsea", FileFinder::instance().version());
+#endif
+		versionInfo.write(cout);
 	}
-	cout << oss.str() << endl;
 }
 
 
 static void init_fontmap (const CommandLine &cmdline) {
-	const char *mapseq = cmdline.fontmapOpt.given() ? cmdline.fontmapOpt.value().c_str() : 0;
-	bool additional = mapseq && strchr("+-=", *mapseq);
-	if (!mapseq || additional) {
-		const char *mapfiles[] = {"ps2pk.map", "dvipdfm.map", "psfonts.map", 0};
+	string mapseq;
+	if (cmdline.fontmapOpt.given())
+		mapseq = cmdline.fontmapOpt.value();
+	bool additional = !mapseq.empty() && strchr("+-=", mapseq[0]);
+	if (mapseq.empty() || additional) {
 		bool found = false;
-		for (const char **p=mapfiles; *p && !found; p++)
-			found = FontMap::instance().read(*p);
+		for (string mapfile : {"ps2pk", "pdftex", "dvipdfm", "psfonts"}) {
+			if ((found = FontMap::instance().read(mapfile+".map")))
+				break;
+		}
 		if (!found)
 			Message::wstream(true) << "none of the default map files could be found\n";
 	}
-	if (mapseq)
+	if (!mapseq.empty())
 		FontMap::instance().read(mapseq);
+}
+
+
+/** Returns a unique string for the current state of the command-line
+ *  options affecting the SVG output. */
+static string svg_options_hash (const CommandLine &cmdline) {
+	// options affecting the SVG output
+	vector<const CL::Option*> svg_options = {
+		&cmdline.bboxOpt,	&cmdline.clipjoinOpt, &cmdline.colornamesOpt, &cmdline.commentsOpt,
+		&cmdline.exactOpt, &cmdline.fontFormatOpt, &cmdline.fontmapOpt, &cmdline.gradOverlapOpt,
+		&cmdline.gradSegmentsOpt, &cmdline.gradSimplifyOpt, &cmdline.linkmarkOpt, &cmdline.magOpt,
+		&cmdline.noFontsOpt, &cmdline.noMergeOpt,	&cmdline.noSpecialsOpt,	&cmdline.noStylesOpt,
+		&cmdline.precisionOpt,	&cmdline.relativeOpt, &cmdline.zoomOpt
+	};
+	string idString = get_transformation_string(cmdline);
+	for (const CL::Option *opt : svg_options) {
+		idString += opt->given();
+		idString += opt->valueString();
+	}
+	return XXH64HashFunction(idString).digestString();
+}
+
+
+static bool list_page_hashes (const CommandLine &cmdline, DVIToSVG &dvisvg) {
+	if (cmdline.pageHashesOpt.given()) {
+		DVIToSVG::PAGE_HASH_SETTINGS.setParameters(cmdline.pageHashesOpt.value());
+		DVIToSVG::PAGE_HASH_SETTINGS.setOptionHash(svg_options_hash(cmdline));
+		if (DVIToSVG::PAGE_HASH_SETTINGS.isSet(DVIToSVG::HashSettings::P_LIST)) {
+			dvisvg.listHashes(cmdline.pageOpt.value(), cout);
+			return true;
+		}
+	}
+	return false;
 }
 
 
@@ -247,9 +361,22 @@ static void set_variables (const CommandLine &cmdline) {
 }
 
 
+static void timer_message (double start_time, const pair<int,int> *pageinfo) {
+	Message::mstream().indent(0);
+	if (!pageinfo)
+		Message::mstream(false, Message::MC_PAGE_NUMBER) << "\n" << "file";
+	else {
+		Message::mstream(false, Message::MC_PAGE_NUMBER) << "\n" << pageinfo->first << " of " << pageinfo->second << " page";
+		if (pageinfo->second > 1)
+			Message::mstream(false, Message::MC_PAGE_NUMBER) << 's';
+	}
+	Message::mstream(false, Message::MC_PAGE_NUMBER) << " converted in " << (System::time()-start_time) << " seconds\n";
+}
+
+
 int main (int argc, char *argv[]) {
-	CommandLine cmdline;
 	try {
+		CommandLine cmdline;
 		cmdline.parse(argc, argv);
 		if (argc == 1 || cmdline.helpOpt.given()) {
 			cmdline.help(cout, cmdline.helpOpt.value());
@@ -268,47 +395,44 @@ int main (int argc, char *argv[]) {
 		}
 		if (!set_cache_dir(cmdline) || !set_temp_dir(cmdline))
 			return 0;
-		if (cmdline.stdoutOpt.given() && cmdline.zipOpt.given()) {
-			Message::estream(true) << "writing SVGZ files to stdout is not supported\n";
-			return 1;
-		}
-		if (!check_bbox(cmdline.bboxOpt.value()))
-			return 1;
-		if (!HtmlSpecialHandler::setLinkMarker(cmdline.linkmarkOpt.value()))
+		check_bbox(cmdline.bboxOpt.value());
+		if (!HyperlinkManager::setLinkMarker(cmdline.linkmarkOpt.value()))
 			Message::wstream(true) << "invalid argument '"+cmdline.linkmarkOpt.value()+"' supplied for option --linkmark\n";
-		if (argc > 1 && cmdline.filenames().size() < 1) {
-			Message::estream(true) << "no input file given\n";
-			return 1;
+		if (cmdline.stdinOpt.given() || cmdline.singleDashGiven()) {
+			if (!cmdline.filenames().empty())
+				throw MessageException("option - or --stdin can't be used together with a filename");
+			cmdline.addFilename("");  // empty filename => read from stdin
 		}
-	}
-	catch (MessageException &e) {
-		Message::estream() << e.what() << '\n';
-		return 1;
-	}
+		if (argc > 1 && cmdline.filenames().empty())
+			throw MessageException("no input file given");
 
-	bool eps_given = cmdline.epsOpt.given();
-	string inputfile = ensure_suffix(cmdline.filenames()[0], eps_given);
-	ifstream ifs(inputfile.c_str(), ios::binary|ios::in);
-	if (!ifs) {
-		Message::estream(true) << "can't open file '" << inputfile << "' for reading\n";
-		return 0;
-	}
-	try {
+		SignalHandler::instance().start();
+		string inputfile = ensure_suffix(cmdline.filenames()[0],
+			cmdline.epsOpt.given() ? "eps" : cmdline.pdfOpt.given() ? "pdf" : "dvi");
+		SourceInput srcin(inputfile);
+		if (!srcin.getInputStream(true))
+			throw MessageException("can't open file '" + srcin.getMessageFileName() + "' for reading");
+
 		double start_time = System::time();
 		set_variables(cmdline);
-		SVGOutput out(cmdline.stdoutOpt.given() ? nullptr : inputfile.c_str(),
+		SVGOutput out(cmdline.stdoutOpt.given() ? "" : srcin.getFileName(),
 			cmdline.outputOpt.value(),
 			cmdline.zipOpt.given() ? cmdline.zipOpt.value() : 0);
-		SignalHandler::instance().start();
-		if (cmdline.epsOpt.given()) {
-			EPSToSVG eps2svg(inputfile, out);
-			eps2svg.convert();
-			Message::mstream().indent(0);
-			Message::mstream(false, Message::MC_PAGE_NUMBER) << "file converted in " << (System::time()-start_time) << " seconds\n";
+		pair<int,int> pageinfo;
+		if (cmdline.epsOpt.given() || cmdline.pdfOpt.given()) {
+			auto img2svg = unique_ptr<ImageToSVG>(
+				cmdline.epsOpt.given()
+				? static_cast<ImageToSVG*>(new EPSToSVG(srcin.getFilePath(), out))
+				: static_cast<ImageToSVG*>(new PDFToSVG(srcin.getFilePath(), out)));
+			img2svg->setPageTransformation(get_transformation_string(cmdline));
+			img2svg->convert(cmdline.pageOpt.value(), &pageinfo);
+			timer_message(start_time, img2svg->isSinglePageFormat() ? nullptr : &pageinfo);
 		}
 		else {
 			init_fontmap(cmdline);
-			DVIToSVG dvi2svg(ifs, out);
+			DVIToSVG dvi2svg(srcin.getInputStream(), out);
+			if (list_page_hashes(cmdline, dvi2svg))
+				return 0;
 			const char *ignore_specials=nullptr;
 			if (cmdline.noSpecialsOpt.given())
 				ignore_specials = cmdline.noSpecialsOpt.value().empty() ? "*" : cmdline.noSpecialsOpt.value().c_str();
@@ -316,13 +440,8 @@ int main (int argc, char *argv[]) {
 			dvi2svg.setPageTransformation(get_transformation_string(cmdline));
 			dvi2svg.setPageSize(cmdline.bboxOpt.value());
 
-			pair<int,int> pageinfo;
 			dvi2svg.convert(cmdline.pageOpt.value(), &pageinfo);
-			Message::mstream().indent(0);
-			Message::mstream(false, Message::MC_PAGE_NUMBER) << "\n" << pageinfo.first << " of " << pageinfo.second << " page";
-			if (pageinfo.second > 1)
-				Message::mstream(false, Message::MC_PAGE_NUMBER) << 's';
-			Message::mstream(false, Message::MC_PAGE_NUMBER) << " converted in " << (System::time()-start_time) << " seconds\n";
+			timer_message(start_time, &pageinfo);
 		}
 	}
 	catch (DVIException &e) {

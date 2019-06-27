@@ -1,3 +1,83 @@
+2019-03-26  Karl Berry  <karl@freefriends.org>
+
+	* dvisvgm-src/libs/ff-woff/Makefile.am (AM_CFLAGS): add ZLIB_INCLUDES.
+
+2019-01-31  Karl Berry  <karl@freefriends.org>
+
+	* Makefile.am (man_MANS): install dvisvgm.1.
+
+2019-01-25  Karl Berry  <karl@freefriends.org>
+
+	* version.ac: 2.6.2; import new tree, update patches.
+	
+2018-10-29  Karl Berry  <karl@freefriends.org>
+
+	* version.ac: now 2.6.1. Import new upstream source tree.
+	
+	* configure.ac (HAVE_BROTLI, ..., HAVE_XXHASH): new conditionals.
+	(DATE): October 2018 per upstream configure.ac.
+	Remove old commentary for better merging.
+	
+	* dvisvgm-src/Makefile.am,
+	* dvisvgm-src/libs/defs.am,
+	* dvisvgm-src/src/Makefile.am: import and update
+	TLpatches/patch-08-makefiles.
+
+2018-08-30  Karl Berry  <karl@freefriends.org>
+
+	* version.ac: now version 2.5.
+	* configure.ac: remove POTRACE_FLAGS, library now bundled.
+	Track upstream configure.ac somewhat more closely.
+	Implicitly specify (new) --enable-bundled-libs with
+	--enable-native-texlive-build.
+	* dvisvgm-src/Makefile.am: import TL-Changes.
+
+2018-07-19  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.4.2
+
+2018-07-08  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.4.1
+
+2018-05-04  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.4.
+
+2018-03-24  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.3.5.
+
+2018-03-16  Karl Berry  <karl@freefriends.org>
+
+	* Import 2.3.4.
+
+2018-03-11  Karl Berry  <karl@tug.org>
+
+	* configure.ac (HAVE_LIBGS): find libgs for non-native-tl builds.
+	From Ken Moffat, tlbuild 10 Mar 2018 01:19:23.
+
+2018-03-01  Karl Berry  <karl@freefriends.org>
+
+	* configure.ac (HAVE_LIBGS, gsversion): don't assume numeric values.
+	Report from Mojca, tlbuild 1 Mar 2018 00:51:37.
+
+2018-02-21  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.3.3.
+
+2018-02-09  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* Import 2.3.2.
+
+2018-01-15  Karl Berry  <karl@freefriends.org>
+
+	* Import 2.3.1 with Ghostscript.cpp patch from Martin.
+
+2018-01-08  Karl Berry  <karl@freefriends.org>
+
+	* m4/ax_cxx_compile_stdcxx.m4: move to top-level source/m4/.
+
 2017-03-17  Paul Vojta  <vojta@math.berkeley.edu>
 
 	* configure.ac (LIBGS_INCLUDES, LIBGS_LIBS): always AC_SUBST.

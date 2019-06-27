@@ -5,19 +5,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-int nt,unit,zh,zw,jfm_id;
-int *width,*height,*depth,*italic,*param;
-unsigned int rightamount;
-unsigned char *header,*char_type,*char_info,*glue_kern,*kern,*glue;
+int nt,nl,unit,zh,zw,jfm_id,rightamount;
+int *width,*height,*depth,*italic,*kern,*glue,*param;
+unsigned char *header,*char_type,*char_info,*glue_kern;
 
 int jfmread(int kcode)
 {
-	int i,ctype = 0,w_ind,w,gk_ind,k_ind,g_ind;
-	unsigned int ll,rr;
+	int i,ctype=0,w_ind,w,ll=0,rr=0,tag,gk_ind,gk2_ind;
 
 	for (i = 0 ; i < nt ; i++) {
-		if (upair(&char_type[i*4]) == kcode) {
-			ctype = upair(&char_type[i*4+2]);
+		/* support new JFM spec by texjporg */
+		if (upair(&char_type[i*4])+char_type[i*4+2]*65536 == kcode) {
+			ctype = char_type[i*4+3];
 			break;
 		}
 	}
@@ -27,45 +26,57 @@ int jfmread(int kcode)
 	w = width[w_ind];
 
 	rightamount = 0;
-	if (w != zw) {
+	if (enhanced && w != zw && ctype > 0) {
 		/* get natural length of JFM glue between <type0> and <type of kcode> */
-		gk_ind = char_info[0*4+3]; /* remainder for <type0> */
-		ll = 0;
-		if (ctype > 0) {
-			for (i = 0 ; i < MAX_LIG_STEPS ; i++) {
+		tag = char_info[0*4+2] % 4;
+		if (tag == 1) {
+			gk_ind = char_info[0*4+3]; /* remainder for <type0> */
+			if (glue_kern[gk_ind*4] > 128) /* huge gluekern table rearranged */
+				gk_ind = upair(&glue_kern[gk_ind*4+2]);
+			for (i = 0 ; i < nl-gk_ind ; i++) {
+				/* if rearrangement already handled ... */
+				if (glue_kern[(gk_ind+i)*4] > 128) break; /* ... skip loop */
 				if (glue_kern[(gk_ind+i)*4+1] == ctype) {
 					if (glue_kern[(gk_ind+i)*4+2] >= 128) {
-						k_ind = glue_kern[(gk_ind+i)*4+3];
-						ll = mquad(&kern[k_ind*4]);
+						gk2_ind = glue_kern[(gk_ind+i)*4+3];
+						ll = kern[gk2_ind];
 					}
 					else {
-						g_ind = glue_kern[(gk_ind+i)*4+3];
-						ll = mquad(&glue[3*g_ind*4]);
+						gk2_ind = glue_kern[(gk_ind+i)*4+3];
+						ll = glue[3*gk2_ind];
 					}
 					break;
 				}
-				if (glue_kern[(gk_ind+i)*4] >= 128)
+				if (glue_kern[(gk_ind+i)*4] >= 128) /* end of program */
 					break;
+				else /* SKIP */
+					i += glue_kern[(gk_ind+i)*4];
 			}
 		}
 		/* get natural length of JFM glue between <type of kcode> and <type0> */
-		gk_ind = char_info[ctype*4+3]; /* remainder for <type of kcode> */
-		rr = 0;
-		if (ctype > 0) {
-			for (i = 0 ; i < MAX_LIG_STEPS ; i++) {
+		tag = char_info[ctype*4+2] % 4;
+		if (tag == 1) {
+			gk_ind = char_info[ctype*4+3]; /* remainder for <type of kcode> */
+			if (glue_kern[gk_ind*4] > 128) /* huge gluekern table rearranged */
+				gk_ind = upair(&glue_kern[gk_ind*4+2]);
+			for (i = 0 ; i < nl-gk_ind ; i++) {
+				/* if rearrangement already handled ... */
+				if (glue_kern[(gk_ind+i)*4] > 128) break; /* ... skip loop */
 				if (glue_kern[(gk_ind+i)*4+1] == 0) {
 					if (glue_kern[(gk_ind+i)*4+2] >= 128) {
-						k_ind = glue_kern[(gk_ind+i)*4+3];
-						rr = mquad(&kern[k_ind*4]);
+						gk2_ind = glue_kern[(gk_ind+i)*4+3];
+						rr = kern[gk2_ind];
 					}
 					else {
-						g_ind = glue_kern[(gk_ind+i)*4+3];
-						rr = mquad(&glue[3*g_ind*4]);
+						gk2_ind = glue_kern[(gk_ind+i)*4+3];
+						rr = glue[3*gk2_ind];
 					}
 					break;
 				}
-				if (glue_kern[(gk_ind+i)*4] >= 128)
+				if (glue_kern[(gk_ind+i)*4] >= 128) /* end of program */
 					break;
+				else /* SKIP */
+					i += glue_kern[(gk_ind+i)*4];
 			}
 		}
 		if (abs(zw - ll - w - rr) <= 1) /* allow round-off error */
@@ -82,17 +93,18 @@ int jfmread(int kcode)
 
 int tfmget(char *name)
 {
-	char nbuff[1024];
+	char *nbuff;
 	FILE *fp;
 
+	nbuff = xmalloc(strlen(name)+4+1);
 	strcpy(nbuff,name);
+	strcat(nbuff,".tfm");
 	fp = fopen(nbuff,"rb");
 	if (fp == NULL) {
-		strcat(nbuff,".tfm");
-		fp = fopen(nbuff,"rb");
+		fp = fopen(name,"rb"); /* just in case ... */
 		if (fp == NULL) {
-			fprintf(stderr,"%s is not found.\n",name);
-			exit(0);
+			fprintf(stderr,"Cannot open %s for input.\n",nbuff);
+			exit(1);
 		}
 	}
 
@@ -100,13 +112,15 @@ int tfmget(char *name)
 
 	fclose(fp);
 
+	free(nbuff);
+
 	return 0;
 }
 
 int tfmidx(FILE *fp)
 {
 	int i;
-	int lh,ec,nw,nh,nd,ni,nl,nk,ng,np;
+	int lh,ec,nw,nh,nd,ni,nk,ng,np;
 
 	jfm_id = fpair(fp);
 
@@ -127,15 +141,15 @@ int tfmidx(FILE *fp)
 
 		header = xmalloc(lh*4);
 		for (i = 0 ; i < lh*4 ; i++) {
-			header[i] = fgetc(fp);
+			header[i] = (char)fgetc(fp);
 		}
 		char_type = xmalloc(nt*4);
 		for (i = 0 ; i < nt*4 ; i++) {
-			char_type[i] = fgetc(fp);
+			char_type[i] = (char)fgetc(fp);
 		}
 		char_info = xmalloc((ec+1)*4);
 		for (i = 0 ; i < (ec+1)*4 ; i++) {
-			char_info[i] = fgetc(fp);
+			char_info[i] = (char)fgetc(fp);
 		}
 		width = xmalloc(nw*sizeof(int));
 		for (i = 0 ; i < nw ; i++) {
@@ -155,15 +169,15 @@ int tfmidx(FILE *fp)
 		}
 		glue_kern = xmalloc(nl*4);
 		for (i = 0 ; i < nl*4 ; i++) {
-			glue_kern[i] = fgetc(fp);
+			glue_kern[i] = (char)fgetc(fp);
 		}
-		kern = xmalloc(nk*4);
-		for (i = 0 ; i < nk*4 ; i++) {
-			kern[i] = fgetc(fp);
+		kern = xmalloc(nk*sizeof(int));
+		for (i = 0 ; i < nk ; i++) {
+			kern[i] = fquad(fp);
 		}
-		glue = xmalloc(ng*4);
-		for (i = 0 ; i < ng*4 ; i++) {
-			glue[i] = fgetc(fp);
+		glue = xmalloc(ng*sizeof(int));
+		for (i = 0 ; i < ng ; i++) {
+			glue[i] = fquad(fp);
 		}
 		param = xmalloc(np*sizeof(int));
 		for (i = 0 ; i < np ; i++) {

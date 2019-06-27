@@ -2,7 +2,7 @@
 ** DVIReader.hpp                                                        **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -31,17 +31,17 @@
 
 class Font;
 class FontStyle;
+class HashFunction;
 class NativeFont;
 class VirtualFont;
 
-class DVIReader : public BasicDVIReader, public VFActions
-{
+class DVIReader : public BasicDVIReader, public VFActions {
 	protected:
 		enum class WritingMode {LR=0, TB=1, BT=3};
 		enum class SetFontMode {SF_SHORT, SF_LONG, VF_ENTER, VF_LEAVE};
+		enum class MoveMode {SETCHAR, CHANGEPOS};
 
-		struct DVIState
-		{
+		struct DVIState {
 			double h, v;        ///< horizontal and vertical cursor position
 			double x, w, y, z;  ///< additional registers to store horizontal (x, w) and vertical (y, z) positions
 			WritingMode d;      ///< direction: 0: horizontal, 1: vertical(top->bottom), 3: vertical (bottom->top)
@@ -68,9 +68,10 @@ class DVIReader : public BasicDVIReader, public VFActions
 		int executeCommand () override;
 		void collectBopOffsets ();
 		size_t numberOfPageBytes (int n) const {return _bopOffsets.size() > 1 ? _bopOffsets[n+1]-_bopOffsets[n] : 0;}
+		bool computePageHash (size_t pageno, HashFunction &hashFunc);
 		void goToPostamble ();
-		virtual void moveRight (double dx);
-		virtual void moveDown (double dy);
+		virtual void moveRight (double dx, MoveMode mode);
+		virtual void moveDown (double dy, MoveMode mode);
 		void putVFChar (Font *font, uint32_t c);
 		double putGlyphArray (bool xonly, std::vector<double> &dx, std::vector<double> &dy, std::vector<uint16_t> &glyphs);
 		const Font* defineFont (uint32_t fontnum, const std::string &name, uint32_t cs, double ds, double ss);

@@ -20,6 +20,7 @@
 
 #include "ptexlib.h"
 #include "lua/luatex-api.h"
+#include "luatex_svnversion.h"
 
 typedef struct statistic {
     const char *name;
@@ -146,12 +147,14 @@ static lua_Number get_luatexhashchars(void)
 static const char *get_luatexhashtype(void)
 {
 #ifdef LuajitTeX
-     return (const char *)jithash_hashname;
+     if (jithash_hashname)
+        return (const char *)jithash_hashname;
+     else
+        return "???";
 #else
   return "lua";
 #endif
 }
-
 
 static lua_Number get_pdf_gone(void)
 {
@@ -260,8 +263,27 @@ static lua_Number kpse_used_state(void)
     }
 }
 
+static lua_Number get_development_id(void)
+{
+    return (lua_Number) luatex_svn_revision ;
+}
+
+static lua_Number get_dvi_gone(void)
+{
+    if (static_pdf != NULL)
+        return (lua_Number) dvi_get_status_gone(static_pdf);
+    return (lua_Number) 0;
+}
+
+static lua_Number get_dvi_ptr(void)
+{
+    if (static_pdf != NULL)
+        return (lua_Number) dvi_get_status_ptr(static_pdf);
+    return (lua_Number) 0;
+}
 
 /* temp, for backward compat */
+
 static int init_pool_ptr = 0;
 
 static struct statistic stats[] = {
@@ -285,14 +307,16 @@ static struct statistic stats[] = {
 
     {"pdf_gone", 'N', &get_pdf_gone},
     {"pdf_ptr", 'N', &get_pdf_ptr},
-    {"dvi_gone", 'g', &dvi_offset},
-    {"dvi_ptr", 'g', &dvi_ptr},
+    {"dvi_gone", 'g', &get_dvi_gone},
+    {"dvi_ptr", 'g', &get_dvi_ptr},
+
     {"total_pages", 'g', &total_pages},
     {"output_file_name", 'S', (void *) &get_output_file_name},
     {"log_name", 'S', (void *) &getlogname},
     {"banner", 'S', (void *) &getbanner},
     {"luatex_version", 'G', &get_luatexversion},
     {"luatex_revision", 'S', (void *) &luatexrevision},
+    {"development_id", 'N', &get_development_id},
     {"luatex_hashtype", 'S', (void *) &get_luatexhashtype},
     {"luatex_hashchars", 'N',  &get_luatexhashchars},
     {"luatex_engine", 'S', (void *) &getenginename},
@@ -348,9 +372,14 @@ static struct statistic stats[] = {
     {"luabytecodes", 'g', &luabytecode_max},
     {"luabytecode_bytes", 'g', &luabytecode_bytes},
     {"luastate_bytes", 'g', &luastate_bytes},
-    {"callbacks", 'g', &callback_count},
 
-    {"indirect_callbacks", 'g', &saved_callback_count},
+    {"callbacks", 'g', &callback_count},
+    {"indirect_callbacks", 'g', &saved_callback_count}, /* these are file io callbacks */
+
+    {"saved_callbacks", 'g', &saved_callback_count},
+    {"late_callbacks", 'g', &late_callback_count},
+    {"direct_callbacks", 'g', &direct_callback_count},
+    {"function_callbacks", 'g', &function_callback_count},
 
     {"lc_ctype", 'S', (void *) &get_lc_ctype},
     {"lc_collate", 'S', (void *) &get_lc_collate},
@@ -471,15 +500,21 @@ static int resetmessages(lua_State * L)
     return 0;
 }
 
+static int setexitcode(lua_State * L) {
+    defaultexitcode = luaL_checkinteger(L,1);
+    return 0;
+}
+
 static const struct luaL_Reg statslib[] = {
     {"list", statslist},
     {"resetmessages", resetmessages},
+    {"setexitcode", setexitcode},
     {NULL, NULL}                /* sentinel */
 };
 
 int luaopen_stats(lua_State * L)
 {
-    luaL_register(L, "status", statslib);
+    luaL_openlib(L, "status", statslib, 0);
     luaL_newmetatable(L, "tex.stats");
     lua_pushstring(L, "__index");
     lua_pushcfunction(L, getstats);

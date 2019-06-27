@@ -2,7 +2,7 @@
 ** Matrix.cpp                                                           **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -87,6 +87,17 @@ Matrix::Matrix (const std::vector<double> &v, int start) {
 
 Matrix::Matrix (const string &cmds, Calculator &calc) {
 	parse(cmds, calc);
+}
+
+
+Matrix::Matrix (initializer_list<double> initlist) {
+	int count=0;
+	for (auto it=initlist.begin(); it != initlist.end() && count < 9; ++it) {
+		_values[count/3][count%3] = *it;
+		count++;
+	}
+	for (; count < 9; count++)
+		_values[count/3][count%3] = (count%4 ? 0 : 1);
 }
 
 

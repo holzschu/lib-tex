@@ -3,10 +3,17 @@
 @y
     cur_tok := (cur_cmd*max_char_val)+cur_chr;
 @z
+
 @x
-  cur_tok := (cur_cmd*@'400)+cur_chr;
+@d pdf_last_x_pos_code=eptex_version_code+1 {code for \.{\\pdflastxpos}}
 @y
-  cur_tok := (cur_cmd*max_char_val)+cur_chr;
+@d uptex_version_code=eptex_version_code+1 {code for \.{\\uptexversion}}
+@d pdf_last_x_pos_code=uptex_version_code+1 {code for \.{\\pdflastxpos}}
+@z
+
+@x
+@d uptex_version_code=ptex_minor_version_code+2 {code for \.{\\uptexversion}}
+@y
 @z
 
 @x

@@ -2,7 +2,7 @@
 ** StreamInputBufferTest.cpp                                            **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -76,11 +76,9 @@ TEST(StreamInputBufferTest, skip) {
 	BufferInputReader in(buffer);
 	in.skip(3);
 	EXPECT_EQ(in.peek(), 'd');
-	in.skipUntil("ijk", false);
-	EXPECT_EQ(in.peek(), 'i');
-	in.skipUntil("ijk", true);
+	in.skipUntil("ijk");
 	EXPECT_EQ(in.peek(), 'l');
-	in.skipUntil("z", true);
+	in.skipUntil("z");
 	EXPECT_TRUE(in.eof());
 }
 
@@ -117,25 +115,25 @@ TEST(StreamInputBufferTest, parseUInt_base) {
 	BufferInputReader in(buffer);
 	unsigned n;
 	EXPECT_TRUE(in.parseUInt(10, n));
-	EXPECT_EQ(n, 1234);
+	EXPECT_EQ(n, 1234u);
 	EXPECT_EQ(in.get(), ',');
 
 	EXPECT_FALSE(in.parseUInt(10, n));
 	in.get();
 	EXPECT_TRUE(in.parseUInt(10, n));
-	EXPECT_EQ(n, 5);
+	EXPECT_EQ(n, 5u);
 	EXPECT_EQ(in.get(), ',');
 
 	EXPECT_TRUE(in.parseUInt(16, n));
-	EXPECT_EQ(n, 16);
+	EXPECT_EQ(n, 16u);
 	EXPECT_EQ(in.get(), ',');
 
 	EXPECT_TRUE(in.parseUInt(16, n));
-	EXPECT_EQ(n, 0x1abc);
+	EXPECT_EQ(n, 0x1ABCu);
 	EXPECT_EQ(in.get(), ',');
 
 	EXPECT_TRUE(in.parseUInt(8, n));
-	EXPECT_EQ(n, 01234);
+	EXPECT_EQ(n, 01234u);
 	EXPECT_EQ(in.get(), 'a');
 }
 
@@ -218,13 +216,14 @@ TEST(StreamInputBufferTest, find) {
 
 
 TEST(StreamInputBufferTest, getString) {
-	istringstream iss("abcd efgh \"ijklm\"n abcdef 01234");
+	istringstream iss("abcd efgh \"ij'klm\"n abcdef '012\"34'xyz");
 	StreamInputBuffer buffer(iss);
 	BufferInputReader reader(buffer);
 	EXPECT_EQ(reader.getString(), "abcd");
 	EXPECT_EQ(reader.getString(), "efgh");
-	EXPECT_EQ(reader.getQuotedString('"'), "ijklm");
-	EXPECT_EQ(reader.getQuotedString('"'), "");
+	EXPECT_EQ(reader.getQuotedString("\""), "ij'klm");
+	EXPECT_EQ(reader.getQuotedString("\""), "");
 	EXPECT_EQ(reader.getString(4), "n ab");
 	EXPECT_EQ(reader.getQuotedString(0), "cdef");
+	EXPECT_EQ(reader.getQuotedString("\"'"), "012\"34");
 }

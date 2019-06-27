@@ -1,6 +1,7 @@
 ## texk/web2c/mplibdir/am/mplib.am: Makefile fragment for MetaPost.
 ##
-## Copyright (C) 2009-2015 Peter Breitenlohner <tex-live@tug.org>
+## Copyright 2017-2018 Luigi Scarso <tex-live@tug.org>
+## Copyright 2009-2015 Peter Breitenlohner <tex-live@tug.org>
 ## You may freely use, modify and/or distribute this file.
 
 ## MetaPost
@@ -13,14 +14,13 @@ install_exe_links += install-mpost-links
 uninstall_exe_links += uninstall-mpost-links
 else !WIN32
 bin_links += mpost$(EXEEXT):dvitomp mpost$(EXEEXT):mfplain
+bin_links += mpost$(EXEEXT):r-mpost
 endif !WIN32
 endif MP
 EXTRA_PROGRAMS += mpost
 
 mpost_CPPFLAGS = $(AM_CPPFLAGS) $(ZLIB_INCLUDES) $(LIBPNG_INCLUDES) -I$(srcdir)/mplibdir
-#mpost_LDADD = libmplib.a $(KPATHSEA_LIBS) $(MPFR_LIBS) $(GMP_LIBS) \
-#	$(CAIRO_LIBS) $(PIXMAN_LIBS) $(LIBPNG_LIBS) $(ZLIB_LIBS) libmputil.a
-mpost_LDADD = libmplibcore.a libmplibbackends.a  $(KPATHSEA_LIBS) $(MPFR_LIBS) $(GMP_LIBS) \
+mpost_LDADD = libmplibcore.a libmplibextramath.a libmplibbackends.a  $(KPATHSEA_LIBS) $(MPFR_LIBS) $(GMP_LIBS) \
 	$(CAIRO_LIBS) $(PIXMAN_LIBS) $(LIBPNG_LIBS) $(ZLIB_LIBS) libmputil.a
 
 
@@ -60,7 +60,7 @@ mpxout-tangle: ctangle$(EXEEXT) mplibdir/mpxout.w tangle-sh
 mpost_web = mplibdir/mpost.w mplibdir/mpxout.w
 
 #$(mpost_OBJECTS): $(nodist_mpost_SOURCES) libmplib.a $(LIBPNG_DEPEND)
-$(mpost_OBJECTS): $(nodist_mpost_SOURCES) libmplibcore.a libmplibbackends.a $(LIBPNG_DEPEND)
+$(mpost_OBJECTS): $(nodist_mpost_SOURCES) libmplibcore.a libmplibextramath.a libmplibbackends.a $(LIBPNG_DEPEND)
 
 EXTRA_DIST += mplibdir/ChangeLog $(mpost_web)
 

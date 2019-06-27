@@ -4,10 +4,13 @@
    // Copyright (C) 2010, 2012 Hib Eris <hib@hiberis.nl>
    // Copyright (C) 2012, 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
    // Copyright (C) 2012 Suzuki Toshiya <mpsuzuki@hiroshima-u.ac.jp>
-   // Copyright (C) 2012 Adrian Johnson <ajohnson@redneon.com>
+   // Copyright (C) 2012, 2017 Adrian Johnson <ajohnson@redneon.com>
    // Copyright (C) 2012 Mark Brand <mabrand@mabrand.nl>
-   // Copyright (C) 2013 Adam Reichold <adamreichold@myopera.com>
+   // Copyright (C) 2013, 2018 Adam Reichold <adamreichold@myopera.com>
    // Copyright (C) 2013 Dmytro Morgun <lztoad@gmail.com>
+   // Copyright (C) 2017 Christoph Cullmann <cullmann@kde.org>
+   // Copyright (C) 2017, 2018 Albert Astals Cid <aacid@kde.org>
+   // Copyright (C) 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
 
 TODO: instead of a fixed mapping defined in displayFontTab, it could
 scan the whole fonts directory, parse TTF files and build font
@@ -35,7 +38,6 @@ description for all fonts available in Windows. That's how MuPDF works.
 #include "goo/gmem.h"
 #include "goo/GooString.h"
 #include "goo/GooList.h"
-#include "goo/GooHash.h"
 #include "goo/gfile.h"
 #include "Error.h"
 #include "NameToCharCode.h"
@@ -52,7 +54,7 @@ description for all fonts available in Windows. That's how MuPDF works.
 #include "Lexer.h"
 #include "Parser.h"
 
-#if MULTITHREADED
+#ifdef MULTITHREADED
 #  define lockGlobalParams            gLockMutex(&mutex)
 #  define lockUnicodeMapCache         gLockMutex(&unicodeMapCacheMutex)
 #  define lockCMapCache               gLockMutex(&cMapCacheMutex)
@@ -76,7 +78,7 @@ description for all fonts available in Windows. That's how MuPDF works.
 #define DEFAULT_CID_FONT_AK1_MSWIN "Batang"    /* Adobe-Korea1 */
 #define DEFAULT_CID_FONT_MSWIN "ArialUnicode"  /* Unknown */
 
-static struct {
+static const struct {
     const char *name;
     const char *t1FileName;
     const char *ttFileName;
@@ -101,78 +103,78 @@ static struct {
 
     // those seem to be frequently accessed by PDF files and I kind of guess
     // which font file do the refer to
-    {"Palatino", NULL, "pala.ttf", gTrue},
-    {"Palatino-Roman", NULL, "pala.ttf", gTrue},
-    {"Palatino-Bold", NULL, "palab.ttf", gTrue},
-    {"Palatino-Italic", NULL, "palai.ttf", gTrue},
-    {"Palatino,Italic", NULL, "palai.ttf", gTrue},
-    {"Palatino-BoldItalic", NULL, "palabi.ttf", gTrue},
+    {"Palatino", nullptr, "pala.ttf", gTrue},
+    {"Palatino-Roman", nullptr, "pala.ttf", gTrue},
+    {"Palatino-Bold", nullptr, "palab.ttf", gTrue},
+    {"Palatino-Italic", nullptr, "palai.ttf", gTrue},
+    {"Palatino,Italic", nullptr, "palai.ttf", gTrue},
+    {"Palatino-BoldItalic", nullptr, "palabi.ttf", gTrue},
 
-    {"ArialBlack",        NULL, "arialbd.ttf", gTrue},
+    {"ArialBlack",        nullptr, "arialbd.ttf", gTrue},
 
-    {"ArialNarrow", NULL, "arialn.ttf", gTrue},
-    {"ArialNarrow,Bold", NULL, "arialnb.ttf", gTrue},
-    {"ArialNarrow,Italic", NULL, "arialni.ttf", gTrue},
-    {"ArialNarrow,BoldItalic", NULL, "arialnbi.ttf", gTrue},
-    {"ArialNarrow-Bold", NULL, "arialnb.ttf", gTrue},
-    {"ArialNarrow-Italic", NULL, "arialni.ttf", gTrue},
-    {"ArialNarrow-BoldItalic", NULL, "arialnbi.ttf", gTrue},
+    {"ArialNarrow", nullptr, "arialn.ttf", gTrue},
+    {"ArialNarrow,Bold", nullptr, "arialnb.ttf", gTrue},
+    {"ArialNarrow,Italic", nullptr, "arialni.ttf", gTrue},
+    {"ArialNarrow,BoldItalic", nullptr, "arialnbi.ttf", gTrue},
+    {"ArialNarrow-Bold", nullptr, "arialnb.ttf", gTrue},
+    {"ArialNarrow-Italic", nullptr, "arialni.ttf", gTrue},
+    {"ArialNarrow-BoldItalic", nullptr, "arialnbi.ttf", gTrue},
 
-    {"HelveticaNarrow", NULL, "arialn.ttf", gTrue},
-    {"HelveticaNarrow,Bold", NULL, "arialnb.ttf", gTrue},
-    {"HelveticaNarrow,Italic", NULL, "arialni.ttf", gTrue},
-    {"HelveticaNarrow,BoldItalic", NULL, "arialnbi.ttf", gTrue},
-    {"HelveticaNarrow-Bold", NULL, "arialnb.ttf", gTrue},
-    {"HelveticaNarrow-Italic", NULL, "arialni.ttf", gTrue},
-    {"HelveticaNarrow-BoldItalic", NULL, "arialnbi.ttf", gTrue},
+    {"HelveticaNarrow", nullptr, "arialn.ttf", gTrue},
+    {"HelveticaNarrow,Bold", nullptr, "arialnb.ttf", gTrue},
+    {"HelveticaNarrow,Italic", nullptr, "arialni.ttf", gTrue},
+    {"HelveticaNarrow,BoldItalic", nullptr, "arialnbi.ttf", gTrue},
+    {"HelveticaNarrow-Bold", nullptr, "arialnb.ttf", gTrue},
+    {"HelveticaNarrow-Italic", nullptr, "arialni.ttf", gTrue},
+    {"HelveticaNarrow-BoldItalic", nullptr, "arialnbi.ttf", gTrue},
 
-    {"BookAntiqua", NULL, "bkant.ttf", gTrue},
-    {"BookAntiqua,Bold", NULL, "bkant.ttf", gTrue},
-    {"BookAntiqua,Italic", NULL, "bkant.ttf", gTrue},
-    {"BookAntiqua,BoldItalic", NULL, "bkant.ttf", gTrue},
-    {"BookAntiqua-Bold", NULL, "bkant.ttf", gTrue},
-    {"BookAntiqua-Italic", NULL, "bkant.ttf", gTrue},
-    {"BookAntiqua-BoldItalic", NULL, "bkant.ttf", gTrue},
+    {"BookAntiqua", nullptr, "bkant.ttf", gTrue},
+    {"BookAntiqua,Bold", nullptr, "bkant.ttf", gTrue},
+    {"BookAntiqua,Italic", nullptr, "bkant.ttf", gTrue},
+    {"BookAntiqua,BoldItalic", nullptr, "bkant.ttf", gTrue},
+    {"BookAntiqua-Bold", nullptr, "bkant.ttf", gTrue},
+    {"BookAntiqua-Italic", nullptr, "bkant.ttf", gTrue},
+    {"BookAntiqua-BoldItalic", nullptr, "bkant.ttf", gTrue},
 
-    {"Verdana", NULL, "verdana.ttf", gTrue},
-    {"Verdana,Bold", NULL, "verdanab.ttf", gTrue},
-    {"Verdana,Italic", NULL, "verdanai.ttf", gTrue},
-    {"Verdana,BoldItalic", NULL, "verdanaz.ttf", gTrue},
-    {"Verdana-Bold", NULL, "verdanab.ttf", gTrue},
-    {"Verdana-Italic", NULL, "verdanai.ttf", gTrue},
-    {"Verdana-BoldItalic", NULL, "verdanaz.ttf", gTrue},
+    {"Verdana", nullptr, "verdana.ttf", gTrue},
+    {"Verdana,Bold", nullptr, "verdanab.ttf", gTrue},
+    {"Verdana,Italic", nullptr, "verdanai.ttf", gTrue},
+    {"Verdana,BoldItalic", nullptr, "verdanaz.ttf", gTrue},
+    {"Verdana-Bold", nullptr, "verdanab.ttf", gTrue},
+    {"Verdana-Italic", nullptr, "verdanai.ttf", gTrue},
+    {"Verdana-BoldItalic", nullptr, "verdanaz.ttf", gTrue},
 
-    {"Tahoma", NULL, "tahoma.ttf", gTrue},
-    {"Tahoma,Bold", NULL, "tahomabd.ttf", gTrue},
-    {"Tahoma,Italic", NULL, "tahoma.ttf", gTrue},
-    {"Tahoma,BoldItalic", NULL, "tahomabd.ttf", gTrue},
-    {"Tahoma-Bold", NULL, "tahomabd.ttf", gTrue},
-    {"Tahoma-Italic", NULL, "tahoma.ttf", gTrue},
-    {"Tahoma-BoldItalic", NULL, "tahomabd.ttf", gTrue},
+    {"Tahoma", nullptr, "tahoma.ttf", gTrue},
+    {"Tahoma,Bold", nullptr, "tahomabd.ttf", gTrue},
+    {"Tahoma,Italic", nullptr, "tahoma.ttf", gTrue},
+    {"Tahoma,BoldItalic", nullptr, "tahomabd.ttf", gTrue},
+    {"Tahoma-Bold", nullptr, "tahomabd.ttf", gTrue},
+    {"Tahoma-Italic", nullptr, "tahoma.ttf", gTrue},
+    {"Tahoma-BoldItalic", nullptr, "tahomabd.ttf", gTrue},
 
-    {"CCRIKH+Verdana", NULL, "verdana.ttf", gTrue},
-    {"CCRIKH+Verdana,Bold", NULL, "verdanab.ttf", gTrue},
-    {"CCRIKH+Verdana,Italic", NULL, "verdanai.ttf", gTrue},
-    {"CCRIKH+Verdana,BoldItalic", NULL, "verdanaz.ttf", gTrue},
-    {"CCRIKH+Verdana-Bold", NULL, "verdanab.ttf", gTrue},
-    {"CCRIKH+Verdana-Italic", NULL, "verdanai.ttf", gTrue},
-    {"CCRIKH+Verdana-BoldItalic", NULL, "verdanaz.ttf", gTrue},
+    {"CCRIKH+Verdana", nullptr, "verdana.ttf", gTrue},
+    {"CCRIKH+Verdana,Bold", nullptr, "verdanab.ttf", gTrue},
+    {"CCRIKH+Verdana,Italic", nullptr, "verdanai.ttf", gTrue},
+    {"CCRIKH+Verdana,BoldItalic", nullptr, "verdanaz.ttf", gTrue},
+    {"CCRIKH+Verdana-Bold", nullptr, "verdanab.ttf", gTrue},
+    {"CCRIKH+Verdana-Italic", nullptr, "verdanai.ttf", gTrue},
+    {"CCRIKH+Verdana-BoldItalic", nullptr, "verdanaz.ttf", gTrue},
 
-    {"Georgia", NULL, "georgia.ttf", gTrue},
-    {"Georgia,Bold", NULL, "georgiab.ttf", gTrue},
-    {"Georgia,Italic", NULL, "georgiai.ttf", gTrue},
-    {"Georgia,BoldItalic", NULL, "georgiaz.ttf", gTrue},
-    {"Georgia-Bold", NULL, "georgiab.ttf", gTrue},
-    {"Georgia-Italic", NULL, "georgiai.ttf", gTrue},
-    {"Georgia-BoldItalic", NULL, "georgiaz.ttf", gTrue},
+    {"Georgia", nullptr, "georgia.ttf", gTrue},
+    {"Georgia,Bold", nullptr, "georgiab.ttf", gTrue},
+    {"Georgia,Italic", nullptr, "georgiai.ttf", gTrue},
+    {"Georgia,BoldItalic", nullptr, "georgiaz.ttf", gTrue},
+    {"Georgia-Bold", nullptr, "georgiab.ttf", gTrue},
+    {"Georgia-Italic", nullptr, "georgiai.ttf", gTrue},
+    {"Georgia-BoldItalic", nullptr, "georgiaz.ttf", gTrue},
 
     // fallback for Adobe CID fonts:
-    {"MingLiU", NULL, "mingliu.ttf", gFalse},
-    {"SimSun", NULL, "simsun.ttf", gFalse},
-    {"MS-Mincho", NULL, "msmincho.ttf", gFalse},
-    {"Batang", NULL, "batang.ttf", gFalse},
-    {"ArialUnicode", NULL, "arialuni.ttf", gTrue},
-    {NULL}
+    {"MingLiU", nullptr, "mingliu.ttf", gFalse},
+    {"SimSun", nullptr, "simsun.ttf", gFalse},
+    {"MS-Mincho", nullptr, "msmincho.ttf", gFalse},
+    {"Batang", nullptr, "batang.ttf", gFalse},
+    {"ArialUnicode", nullptr, "arialuni.ttf", gTrue},
+    { }
 };
 
 #define FONTS_SUBDIR "\\fonts"
@@ -180,32 +182,32 @@ static struct {
 static void GetWindowsFontDir(char *winFontDir, int cbWinFontDirLen)
 {
     BOOL (__stdcall *SHGetSpecialFolderPathFunc)(HWND  hwndOwner,
-                                                  LPTSTR lpszPath,
+                                                  LPSTR lpszPath,
                                                   int    nFolder,
                                                   BOOL  fCreate);
     HRESULT (__stdcall *SHGetFolderPathFunc)(HWND  hwndOwner,
                                               int    nFolder,
                                               HANDLE hToken,
                                               DWORD  dwFlags,
-                                              LPTSTR pszPath);
+                                              LPSTR pszPath);
 
     // SHGetSpecialFolderPath isn't available in older versions of shell32.dll (Win95 and
     // WinNT4), so do a dynamic load of ANSI versions.
     winFontDir[0] = '\0';
 
-    HMODULE hLib = LoadLibrary("shell32.dll");
+    HMODULE hLib = LoadLibraryA("shell32.dll");
     if (hLib) {
-        SHGetFolderPathFunc = (HRESULT (__stdcall *)(HWND, int, HANDLE, DWORD, LPTSTR)) 
+        SHGetFolderPathFunc = (HRESULT (__stdcall *)(HWND, int, HANDLE, DWORD, LPSTR))
                               GetProcAddress(hLib, "SHGetFolderPathA");
         if (SHGetFolderPathFunc)
-            (*SHGetFolderPathFunc)(NULL, CSIDL_FONTS, NULL, SHGFP_TYPE_CURRENT, winFontDir);
+            (*SHGetFolderPathFunc)(nullptr, CSIDL_FONTS, nullptr, SHGFP_TYPE_CURRENT, winFontDir);
 
         if (!winFontDir[0]) {
             // Try an older function
-            SHGetSpecialFolderPathFunc = (BOOL (__stdcall *)(HWND, LPTSTR, int, BOOL))
+            SHGetSpecialFolderPathFunc = (BOOL (__stdcall *)(HWND, LPSTR, int, BOOL))
                                           GetProcAddress(hLib, "SHGetSpecialFolderPathA");
             if (SHGetSpecialFolderPathFunc)
-                (*SHGetSpecialFolderPathFunc)(NULL, winFontDir, CSIDL_FONTS, FALSE);
+                (*SHGetSpecialFolderPathFunc)(nullptr, winFontDir, CSIDL_FONTS, FALSE);
         }
         FreeLibrary(hLib);
     }
@@ -213,19 +215,19 @@ static void GetWindowsFontDir(char *winFontDir, int cbWinFontDirLen)
         return;
 
     // Try older DLL
-    hLib = LoadLibrary("SHFolder.dll");
+    hLib = LoadLibraryA("SHFolder.dll");
     if (hLib) {
-        SHGetFolderPathFunc = (HRESULT (__stdcall *)(HWND, int, HANDLE, DWORD, LPTSTR))
+        SHGetFolderPathFunc = (HRESULT (__stdcall *)(HWND, int, HANDLE, DWORD, LPSTR))
                               GetProcAddress(hLib, "SHGetFolderPathA");
         if (SHGetFolderPathFunc)
-            (*SHGetFolderPathFunc)(NULL, CSIDL_FONTS, NULL, SHGFP_TYPE_CURRENT, winFontDir);
+            (*SHGetFolderPathFunc)(nullptr, CSIDL_FONTS, nullptr, SHGFP_TYPE_CURRENT, winFontDir);
         FreeLibrary(hLib);
     }
     if (winFontDir[0])
         return;
 
     // Everything else failed so the standard fonts directory.
-    GetWindowsDirectory(winFontDir, cbWinFontDirLen);                                                       
+    GetWindowsDirectoryA(winFontDir, cbWinFontDirLen);
     if (winFontDir[0]) {
         strncat(winFontDir, FONTS_SUBDIR, cbWinFontDirLen);
         winFontDir[cbWinFontDirLen-1] = 0;
@@ -259,14 +261,14 @@ void SysFontList::scanWindowsFonts(GooString *winFontDir) {
   } else {
     path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Fonts\\";
   }
-  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, path, 0,
+  if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, path, 0,
 		   KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS,
 		   &regKey) == ERROR_SUCCESS) {
     idx = 0;
     while (1) {
       valNameLen = sizeof(valName) - 1;
       dataLen = sizeof(data) - 1;
-      if (RegEnumValue(regKey, idx, valName, &valNameLen, NULL,
+      if (RegEnumValueA(regKey, idx, valName, &valNameLen, nullptr,
 		       &type, (LPBYTE)data, &dataLen) != ERROR_SUCCESS) {
 	break;
       }
@@ -409,7 +411,7 @@ static GooString* replaceSuffix(GooString *path,
 void GlobalParams::setupBaseFonts(char * dir)
 {
     const char *dataRoot = popplerDataDir ? popplerDataDir : POPPLER_DATADIR;
-    GooString *fileName = NULL;
+    GooString *fileName = nullptr;
     GooFile *file;
 
     if (baseFontsInitialized)
@@ -420,9 +422,10 @@ void GlobalParams::setupBaseFonts(char * dir)
     GetWindowsFontDir(winFontDir, sizeof(winFontDir));
 
     for (int i = 0; displayFontTab[i].name; ++i) {
-        GooString  *fontName = new GooString(displayFontTab[i].name);
-        if (fontFiles->lookup(fontName))
+        if (fontFiles.count(displayFontTab[i].name) > 0)
             continue;
+
+        GooString  *fontName = new GooString(displayFontTab[i].name);
 
         if (dir) {
             GooString *fontPath = appendToPath(new GooString(dir), displayFontTab[i].t1FileName);
@@ -460,39 +463,30 @@ void GlobalParams::setupBaseFonts(char * dir)
     // try to open file
     file = GooFile::open(fileName);
 
-    if (file != NULL) {
+    if (file != nullptr) {
       Parser *parser;
-      Object obj1, obj2;
-
-      obj1.initNull();
-      parser = new Parser(NULL,
-	      new Lexer(NULL,
-	      new FileStream(file, 0, gFalse, file->size(), &obj1)),
+      parser = new Parser(nullptr,
+	      new Lexer(nullptr,
+	      new FileStream(file, 0, gFalse, file->size(), Object(objNull))),
 	      gTrue);
-      obj1.free();
-      parser->getObj(&obj1);
+      Object obj1 = parser->getObj();
       while (!obj1.isEOF()) {
-	    parser->getObj(&obj2);
+	    Object obj2 = parser->getObj();
 	    if (obj1.isName()) {
 	      // Substitutions
 	      if (obj2.isDict()) {
-	        Object obj3;
-	        obj2.getDict()->lookup("Path", &obj3);
+	        Object obj3 = obj2.getDict()->lookup("Path");
 	        if (obj3.isString())
 	          addFontFile(new GooString(obj1.getName()), obj3.getString()->copy());
-	        obj3.free();
 	      // Aliases
 	      } else if (obj2.isName()) {
-	        substFiles->add(new GooString(obj1.getName()), new GooString(obj2.getName()));
+                substFiles.emplace(obj1.getName(), obj2.getName());
 	      }
 	    }
-	    obj2.free();
-	    obj1.free();
-	    parser->getObj(&obj1);
+	    obj1 = parser->getObj();
 	    // skip trailing ';'
 	    while (obj1.isCmd(";")) {
-	      obj1.free();
-	      parser->getObj(&obj1);
+	      obj1 = parser->getObj();
 	    }
       }
       delete file;
@@ -503,12 +497,12 @@ void GlobalParams::setupBaseFonts(char * dir)
     }
 }
 
-static const char *findSubstituteName(GfxFont *font, GooHash *fontFiles,
-                                      GooHash *substFiles,
+static const char *findSubstituteName(GfxFont *font, const std::unordered_map<std::string, std::string>& fontFiles,
+                                      const std::unordered_map<std::string, std::string>& substFiles,
                                       const char *origName)
 {
     assert(origName);
-    if (!origName) return NULL;
+    if (!origName) return nullptr;
     GooString *name2 = new GooString(origName);
     int n = strlen(origName);
     // remove trailing "-Identity-H"
@@ -521,10 +515,10 @@ static const char *findSubstituteName(GfxFont *font, GooHash *fontFiles,
       name2->del(n - 11, 11);
       n -= 11;
     }
-    GooString *substName = (GooString *)substFiles->lookup(name2);
-    if (substName != NULL) {
+    const auto substFile = substFiles.find(name2->getCString());
+    if (substFile != substFiles.end()) {
       delete name2;
-      return substName->getCString();
+      return substFile->second.c_str();
     }
 
     /* TODO: try to at least guess bold/italic/bolditalic from the name */
@@ -532,7 +526,7 @@ static const char *findSubstituteName(GfxFont *font, GooHash *fontFiles,
     if (font->isCIDFont()) {
       GooString *collection = ((GfxCIDFont *)font)->getCollection();
 
-      const char* name3 = NULL;
+      const char* name3 = nullptr;
       if ( !collection->cmp("Adobe-CNS1") )
         name3 = DEFAULT_CID_FONT_AC1_MSWIN;
       else if ( !collection->cmp("Adobe-GB1") )
@@ -544,10 +538,10 @@ static const char *findSubstituteName(GfxFont *font, GooHash *fontFiles,
       else if ( !collection->cmp("Adobe-Korea1") )
         name3 = DEFAULT_CID_FONT_AK1_MSWIN;
 
-      if (name3 && fontFiles->lookup(name3))
+      if (name3 && fontFiles.count(name3) != 0)
         return name3;
 
-      if (fontFiles->lookup(DEFAULT_CID_FONT_MSWIN))
+      if (fontFiles.count(DEFAULT_CID_FONT_MSWIN) != 0)
         return DEFAULT_CID_FONT_MSWIN;
     } 
     return DEFAULT_SUBSTITUTE_FONT;
@@ -559,11 +553,11 @@ GooString *GlobalParams::findSystemFontFile(GfxFont *font,
 					  int *fontNum, GooString *substituteFontName,
                                           GooString *base14Name) {
   SysFontInfo *fi;
-  GooString *path = NULL;
-  GooString *fontName = font->getName();
-  if (!fontName) return NULL;
+  GooString *path = nullptr;
+  const GooString *fontName = font->getName();
+  if (!fontName) return nullptr;
   lockGlobalParams;
-  setupBaseFonts(NULL);
+  setupBaseFonts(nullptr);
 
   // TODO: base14Name should be changed?
   // In the system using FontConfig, findSystemFontFile() uses
@@ -579,10 +573,10 @@ GooString *GlobalParams::findSystemFontFile(GfxFont *font,
     GooString *substFontName = new GooString(findSubstituteName(font, fontFiles,
                                                                 substFiles,
                                                                 fontName->getCString()));
-    GooString *path2 = NULL;
     error(errSyntaxError, -1, "Couldn't find a font for '{0:t}', subst is '{1:t}'", fontName, substFontName);
-    if ((path2 = (GooString *)fontFiles->lookup(substFontName))) {
-      path = new GooString(path2);
+    const auto fontFile = fontFiles.find(substFontName->toStr());
+    if (fontFile != fontFiles.end()) {
+      path = new GooString(fontFile->second.c_str());
       if (substituteFontName)
 	substituteFontName->Set(path->getCString());
       if (!strcasecmp(path->getCString() + path->getLength() - 4, ".ttc")) {

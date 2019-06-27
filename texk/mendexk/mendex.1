@@ -1,6 +1,11 @@
-.if t .ds TX T\\h'-0.1667m'\\v'0.20v'E\\v'-0.20v'\\h'-0.125m'X
-.if t .ds LX L\\h'-0.36m'\\v'-0.15v'\\s-2A\\s+2\\h'-0.15m'\\v'0.15v'T\\h'-0.1667m'\\v'0.20v'E\\v'-0.20v'\\h'-0.125m'X
-.TH MENDEX L
+.TH MENDEX 1
+\"=====================================================================
+.if t .ds TX \fRT\\h'-0.1667m'\\v'0.20v'E\\v'-0.20v'\\h'-0.125m'X\fP
+.if n .ds TX TeX
+.\" LX definition must follow TX so LX can use TX
+.if t .ds LX \fRL\\h'-0.36m'\\v'-0.15v'\s-2A\s0\\h'-0.15m'\\v'0.15v'\fP\*(TX
+.if n .ds LX LaTeX
+\"=====================================================================
 .SH NAME
 mendex \- Japanese index processor
 .SH SYNOPSIS
@@ -73,22 +78,21 @@ the following: \fIany\fR (the next page to the end of contents), \fIodd\fR
 (the next odd page to the end of contents), \fIeven\fR (the next even page to the end of contents).
 .TP 10
 \fB-E\fR
-Set input/output kanji encoding to EUC-JP.
+Set input/output character encoding to EUC-JP.
 .TP 10
 \fB-J\fR
-Set input/output kanji encoding to JIS (ISO-2022-JP).
+Set input/output character encoding to JIS (ISO-2022-JP).
 .TP 10
 \fB-S\fR
-Set input/output kanji encoding to Shift_JIS.
+Set input/output character encoding to Shift_JIS.
 .TP 10
 \fB-U\fR
-Set input/output kanji encoding to UTF-8.
+Set input/output character encoding to UTF-8.
 .TP 10
 \fB-I\fI enc\fR
-Set internal encoding to \fIenc\fR. The argument \fIenc\fR
+Set internal character encoding to \fIenc\fR. The argument \fIenc\fR
 may be \fIeuc\fR (EUC-JP) or \fIutf8\fR (UTF-8).
-The normal default is set to \fIeuc\fR, but the default is changed to \fIutf8\fR
-when the option \fB-U\fR is specified explicitly.
+The default is set to \fIutf8\fR.
 .TP 10
 \fB--help\fR
 Show summary of options.
@@ -241,14 +245,14 @@ Suffix of heading for newly appeared heading letter.
 Same as \fBlethead_suffix\fR.
 .RE
 .TP 30
-\fBlethead_flag\fR  <string>
+\fBlethead_flag\fR  <number>
 0
 .RS
 Flag to control output of heading letters.
 \'0\', \'1\' and \'-1\' respectively denotes no output, uppercase and lowercase.
 .RE
 .TP 30
-\fBheading_flag\fR  <string>
+\fBheading_flag\fR  <number>
 0
 .RS
 Same as \fBlethead_flag\fR.
@@ -347,7 +351,7 @@ It works only when the parameter is defined.
 \fBsuffix_3p\fR  <string>
 ""
 .RS
-String to be inserted in place of \fBdelim_r\fR and the last page
+String to be inserted in place of \fBdelim_r\fR and the third page
 number when the three pages are contiguous.
 The parameter is prior to \fBsuffix_mp\fR.
 .RE
@@ -577,6 +581,6 @@ specified along with the order of page numbers. Otherwise,
 wrong page numbers might be output.
 .PP
 .SH "SEE ALSO"
-tex(l), latex(l), makeindex(l)
+tex(1), latex(1), makeindex(1)
 .SH AUTHOR
 This manual page was written by Japanese \*(TX Development Community.

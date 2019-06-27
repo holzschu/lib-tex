@@ -2,7 +2,7 @@
 ** MetafontWrapper.cpp                                                  **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -18,7 +18,6 @@
 ** along with this program; if not, see <http://www.gnu.org/licenses/>. **
 *************************************************************************/
 
-#include <config.h>
 #include <cstdlib>
 #include <cctype>
 #include <fstream>
@@ -76,7 +75,7 @@ bool MetafontWrapper::call (const string &mode, double mag) {
 		"batchmode;"                     // don't halt on errors and don't print informational messages
 		"input " << _fontname << "\"";   // load font description
 	Message::mstream(false, Message::MC_STATE) << "\nrunning Metafont for " << _fontname << '\n';
-	Process mf_process(cmd, oss.str().c_str());
+	Process mf_process(cmd, oss.str());
 	string mf_messages;
 	mf_process.run(_dir, &mf_messages);
 
@@ -107,8 +106,8 @@ bool MetafontWrapper::call (const string &mode, double mag) {
  *  @param[in] mag magnification factor
  *  @return true on success */
 bool MetafontWrapper::make (const string &mode, double mag) {
-	ifstream tfm((_dir+_fontname+".tfm").c_str());
-	ifstream gf((_dir+_fontname+".gf").c_str());
+	ifstream tfm(_dir+_fontname+".tfm");
+	ifstream gf(_dir+_fontname+".gf");
 	if (gf && tfm) // @@ distinguish between gf and tfm
 		return true;
 	return call(mode, mag);
@@ -116,7 +115,7 @@ bool MetafontWrapper::make (const string &mode, double mag) {
 
 
 bool MetafontWrapper::success () const {
-	ifstream tfm((_dir+_fontname+".tfm").c_str());
-	ifstream gf((_dir+_fontname+".gf").c_str());
+	ifstream tfm(_dir+_fontname+".tfm");
+	ifstream gf(_dir+_fontname+".gf");
 	return tfm && gf;
 }

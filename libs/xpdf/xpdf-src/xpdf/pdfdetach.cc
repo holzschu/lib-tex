@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include "gtypes.h"
 #include "gmem.h"
+#include "gmempp.h"
 #include "parseargs.h"
 #include "GlobalParams.h"
 #include "PDFDoc.h"
@@ -60,7 +61,7 @@ static ArgDesc argDesc[] = {
 };
 
 int main(int argc, char *argv[]) {
-  GString *fileName;
+  char *fileName;
   UnicodeMap *uMap;
   GString *ownerPW, *userPW;
   PDFDoc *doc;
@@ -74,10 +75,8 @@ int main(int argc, char *argv[]) {
 
   exitCode = 99;
 
-#ifdef _MSC_VER
-  (void)kpse_set_program_name(argv[0], NULL);
-#endif
   // parse args
+  fixCommandLine(&argc, &argv);
   ok = parseArgs(argDesc, &argc, argv);
   if ((doList ? 1 : 0) +
       ((saveNum != 0) ? 1 : 0) +
@@ -92,7 +91,7 @@ int main(int argc, char *argv[]) {
     }
     goto err0;
   }
-  fileName = new GString(argv[1]);
+  fileName = argv[1];
 
   // read config file
   globalParams = new GlobalParams(cfgFileName);
@@ -103,7 +102,6 @@ int main(int argc, char *argv[]) {
   // get mapping to output encoding
   if (!(uMap = globalParams->getTextEncoding())) {
     error(errConfig, -1, "Couldn't get text encoding");
-    delete fileName;
     goto err1;
   }
 

@@ -17,6 +17,8 @@
 // Copyright (C) 2005 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2010 Jakub Wilk <jwilk@jwilk.net>
 // Copyright (C) 2014 Carlos Garcia Campos <carlosgc@gnome.org>
+// Copyright (C) 2017 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2017 Jean Ghali <jghali@libertysurf.fr>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -31,6 +33,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include "goo/glibc.h"
 #include "goo/gmem.h"
 #include "goo/GooLikely.h"
 #include "FoFiEncodings.h"
@@ -50,7 +54,7 @@ FoFiType1 *FoFiType1::load(char *fileName) {
   int lenA;
 
   if (!(fileA = FoFiBase::readFile(fileName, &lenA))) {
-    return NULL;
+    return nullptr;
   }
   return new FoFiType1(fileA, lenA, gTrue);
 }
@@ -58,8 +62,8 @@ FoFiType1 *FoFiType1::load(char *fileName) {
 FoFiType1::FoFiType1(char *fileA, int lenA, GBool freeFileDataA):
   FoFiBase(fileA, lenA, freeFileDataA)
 {
-  name = NULL;
-  encoding = NULL;
+  name = nullptr;
+  encoding = nullptr;
   fontMatrix[0] = 0.001;
   fontMatrix[1] = 0;
   fontMatrix[2] = 0;
@@ -146,7 +150,7 @@ void FoFiType1::writeEncoded(const char **newEncoding,
     // skip "/Encoding" + one whitespace char,
     // then look for 'def' preceded by PostScript whitespace
     p = line + 10;
-    line = NULL;
+    line = nullptr;
     for (; p < (char *)file + len; ++p) {
       if ((*p == ' ' || *p == '\t' || *p == '\x0a' ||
 	   *p == '\x0d' || *p == '\x0c' || *p == '\0') &&
@@ -172,7 +176,7 @@ void FoFiType1::writeEncoded(const char **newEncoding,
 	// skip "/Encoding" + one whitespace char,
 	// then look for 'def' preceded by PostScript whitespace
 	p = line2 + 10;
-	line = NULL;
+	line = nullptr;
 	for (; p < (char *)file + len; ++p) {
 	  if ((*p == ' ' || *p == '\t' || *p == '\x0a' ||
 	       *p == '\x0d' || *p == '\x0c' || *p == '\0') &&
@@ -203,18 +207,18 @@ char *FoFiType1::getNextLine(char *line) {
     ++line;
   }
   if (line >= (char *)file + len) {
-    return NULL;
+    return nullptr;
   }
   return line;
 }
 
 void FoFiType1::parse() {
-  char *line, *line1, *p, *p2;
+  char *line, *line1, *firstLine, *p, *p2;
   char buf[256];
   char c;
   int n, code, base, i, j;
   char *tokptr;
-  GBool gotMatrix;
+  GBool gotMatrix, continueLine;
 
   gotMatrix = gFalse;
   for (i = 1, line = (char *)file;
@@ -222,9 +226,13 @@ void FoFiType1::parse() {
        ++i) {
 
     // get font name
-    if (!name && !strncmp(line, "/FontName", 9)) {
-      strncpy(buf, line, 255);
-      buf[255] = '\0';
+    if (!name &&
+	(line + 9 <= (char*)file + len) &&
+	!strncmp(line, "/FontName", 9)) {
+      const auto availableFile = (char*)file + len - line;
+      const int lineLen = availableFile < 255 ? availableFile : 255;
+      strncpy(buf, line, lineLen);
+      buf[lineLen] = '\0';
       if ((p = strchr(buf+9, '/')) &&
 	  (p = strtok_r(p+1, " \t\n\r", &tokptr))) {
 	name = copyString(p);
@@ -233,14 +241,17 @@ void FoFiType1::parse() {
 
     // get encoding
     } else if (!encoding &&
+	       (line + 30 <= (char*)file + len) &&
 	       !strncmp(line, "/Encoding StandardEncoding def", 30)) {
       encoding = (char **)fofiType1StandardEncoding;
     } else if (!encoding &&
+	       (line + 19 <= (char*)file + len) &&
 	       !strncmp(line, "/Encoding 256 array", 19)) {
       encoding = (char **)gmallocn(256, sizeof(char *));
       for (j = 0; j < 256; ++j) {
-	encoding[j] = NULL;
+	encoding[j] = nullptr;
       }
+      continueLine = gFalse;
       for (j = 0, line = getNextLine(line);
 	   j < 300 && line && (line1 = getNextLine(line));
 	   ++j, line = line1) {
@@ -248,8 +259,26 @@ void FoFiType1::parse() {
 	  error(errSyntaxWarning, -1, "FoFiType1::parse a line has more than 255 characters, we don't support this");
 	  n = 255;
 	}
-	strncpy(buf, line, n);
-	buf[n] = '\0';
+	if (continueLine) {
+	  continueLine = gFalse;
+	  if ((line1 - firstLine) + 1 > (int)sizeof(buf))
+	    break;
+	  p = firstLine;
+	  p2 = buf;
+	  while (p < line1) {
+	    if (*p == '\n' || *p == '\r') {
+	      *p2++ = ' ';
+	      p++;
+	    } else {
+	      *p2++ = *p++;
+	    }
+	  }
+	  *p2 = '\0';
+	} else {
+	  firstLine = line;
+	  strncpy(buf, line, n);
+	  buf[n] = '\0';
+	}
 	for (p = buf; *p == ' ' || *p == '\t'; ++p) ;
 	if (!strncmp(p, "dup", 3)) {
 	  while (1) {
@@ -261,6 +290,9 @@ void FoFiType1::parse() {
 	      p += 2;
 	    } else if (*p >= '0' && *p <= '9') {
 	      base = 10;
+	    } else if (*p == '\n' || *p == '\r') {
+	      continueLine = gTrue;
+	      break;
 	    } else {
 	      break;
 	    }
@@ -268,7 +300,10 @@ void FoFiType1::parse() {
 	      code = code * base + (*p - '0');
 	    }
 	    for (; *p == ' ' || *p == '\t'; ++p) ;
-	    if (*p != '/') {
+	    if (*p == '\n' || *p == '\r') {
+	      continueLine = gTrue;
+	      break;
+	    } else if (*p != '/') {
 	      break;
 	    }
 	    ++p;
@@ -276,10 +311,15 @@ void FoFiType1::parse() {
 	    if (code >= 0 && code < 256) {
 	      c = *p2;
 	      *p2 = '\0';
+	      gfree(encoding[code]);
 	      encoding[code] = copyString(p);
 	      *p2 = c;
 	    }
 	    for (p = p2; *p == ' ' || *p == '\t'; ++p) ;
+	    if (*p == '\n' || *p == '\r') {
+	      continueLine = gTrue;
+	      break;
+	    }
 	    if (strncmp(p, "put", 3)) {
 	      break;
 	    }
@@ -290,22 +330,26 @@ void FoFiType1::parse() {
 	  }
 	} else {
 	  if (strtok_r(buf, " \t", &tokptr) &&
-	      (p = strtok_r(NULL, " \t\n\r", &tokptr)) && !strcmp(p, "def")) {
+	      (p = strtok_r(nullptr, " \t\n\r", &tokptr)) && !strcmp(p, "def")) {
 	    break;
 	  }
 	}
       }
       //~ check for getinterval/putinterval junk
 
-    } else if (!gotMatrix && !strncmp(line, "/FontMatrix", 11)) {
-      strncpy(buf, line + 11, 255);
-      buf[255] = '\0';
+    } else if (!gotMatrix &&
+	       (line + 11 <= (char*)file + len) &&
+	       !strncmp(line, "/FontMatrix", 11)) {
+      const auto availableFile = (char*)file + len - (line + 11);
+      const int bufLen = availableFile < 255 ? availableFile : 255;
+      strncpy(buf, line + 11, bufLen);
+      buf[bufLen] = '\0';
       if ((p = strchr(buf, '['))) {
 	++p;
 	if ((p2 = strchr(p, ']'))) {
 	  *p2 = '\0';
 	  for (j = 0; j < 6; ++j) {
-	    if ((p = strtok(j == 0 ? p : (char *)NULL, " \t\n\r"))) {
+	    if ((p = strtok(j == 0 ? p : (char *)nullptr, " \t\n\r"))) {
 	      fontMatrix[j] = atof(p);
 	    } else {
 	      break;

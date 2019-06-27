@@ -264,17 +264,6 @@ setinputfileencoding(UFILE* f, integer mode, integer encodingData)
     }
 }
 
-void
-uclose(UFILE* f)
-{
-    if (f != 0) {
-        fclose(f->f);
-        if ((f->encodingMode == ICUMAPPING) && (f->conversionData != NULL))
-            ucnv_close((UConverter*)(f->conversionData));
-        free((void*)f);
-    }
-}
-
 static void
 buffer_overflow(void)
 {
@@ -466,8 +455,9 @@ static uint32_t *utf32Buf = NULL;
     if (last >= maxbufstack)
         maxbufstack = last;
 
-    /* Trim trailing whitespace.  */
-    while (last > first && ISBLANK(buffer[last - 1]))
+    /* Trim trailing space or EOL characters. */
+#define IS_SPC_OR_EOL(c) ((c) == ' ' || (c) == '\r' || (c) == '\n')
+    while (last > first && IS_SPC_OR_EOL(buffer[last - 1]))
         --last;
 
     return true;
@@ -2622,6 +2612,17 @@ u_open_in(unicodefile* f, integer filefmt, const_string fopen_mode, integer mode
     return rval;
 }
 
+void
+u_close_inout(unicodefile* f)
+{
+    if (f != 0) {
+        fclose((*f)->f);
+        if (((*f)->encodingMode == ICUMAPPING) && ((*f)->conversionData != NULL))
+            ucnv_close((*f)->conversionData);
+        free(*f);
+    }
+}
+
 #if defined(WIN32)
 static int
 Isspace(char c)
@@ -2785,6 +2786,10 @@ get_uni_c(UFILE* f)
                         return 0xfffd;      /* return without adjusting by offsetsFromUTF8 */
                 };
                 rval -= offsetsFromUTF8[extraBytes];
+                if (rval < 0 || rval > 0x10ffff) {
+                    badutf8warning();
+                    return 0xfffd;
+                }
             }
             break;
 

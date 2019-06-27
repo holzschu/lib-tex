@@ -1,3 +1,105 @@
+2019-04-02  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* eptex.ech: \fontcharwd etc. for Japanese fonts correctly
+	returns a dimension for all kanji codes.
+
+2019-03-01  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* eptex.ech: Fix \show\savinghyphcodes. (Bug introduced in
+	2018-09-01).
+
+2019-01-31  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* pdfutils.ch: Improve \pdfsavepos when papersize special
+	at the middle of shipout procedure is involved.
+	Pointed out by N. Abe.
+	https://oku.edu.mie-u.ac.jp/tex/mod/forum/discuss.php?d=2564
+	* tests/pdfsavepos.tex: Added.
+
+2019-01-23  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* eptex.defines: Add dumpkanji and undumpkanji.
+
+2018-09-09  Karl Berry  <karl@tug.org>
+
+	* eptriptest.test,
+	* pdfprimitive.test: LC_ALL=LANGUAGE=C.
+
+2018-09-01  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* eptex.ech, pdfutils.ch: New primitive \readpapersizespecial.
+	* eptex.ech, eptex_version.h: e-pTeX version 180901.
+	* tests/pdforigin.tex, tests/pdfpagewidth.tex: Added.
+
+2018-05-18  Joseph Wright  <joseph.wright@morningstar2.co.uk>
+            Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* eptex-base.ch, pdfutils.ch: New primitive \expanded
+	* eptex.ech, eptex_version.h: e-pTeX version 180518.
+
+2018-03-24  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+            Hironobu Yamashita <h.y.acetaminophen@gmail.com>
+
+	* etex.ch1: Recover the right \lastnodesubtype initialization
+	value ignored by tex.ch.
+	* eptex.ech: Describe \lastnodesubtype.
+
+2018-02-26  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* eptex.ech, eptex_version.h: e-pTeX version 180226.
+
+2018-02-25  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* eptex.ech: New primitive \lastnodesubtype.
+
+2018-01-21  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* eptex.ech, etex.ch0, etex.ch1, pdfutils.ch: New primitive \epTeXversion.
+	* eptex.ech, eptex_version.h: e-pTeX version 180121.
+
+2017-12-22  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* fam256.ch: \delcode defaults to -1, not -4097, to be compatible
+	with TeX82. Correct assignment of negative \delcode.
+
+2017-12-15  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* pdfutils.ch: Fix a error message "! File ended while ..."
+	while \pdfstrcmp, \pdfmdfivesum, etc. are used.
+
+2017-12-13  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* fam256.ch: \show\odelimiter should be \odelimiter, etc.
+
+2017-11-30  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* pdfutils.ch: \pdfprimitive gives no error if argument is not a
+	primitive, just do nothing. (Synchronized pdftex r784, tl r45936)
+	* tests/pdfprimitive-test.tex, tests/pdfprimitive-eptex.log:
+	Add more tests for \pdfprimitive.
+
+2017-10-06  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* pdfutils.ch: Merge prim_eqtb into eqtb, to avoid a bug in
+	the use of \pdfprimitive inside vertical mode.
+	* tests/pdfprimitive-test.tex, tests/pdfprimitive-eptex.log:
+	Add more tests for \pdfprimitive.
+
+2017-09-24  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* pdfutils.ch: Avoid overwriting prim_* entries by primitive().
+	* eptex.ech, eptex_version.h: Change version to 170924.
+
+2017-09-09  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+	and Noriyuki Abe  <abenori@math.sci.hokudai.ac.jp>
+
+	* eptex.ech: \epTeXinputencoding works also with the terminal.
+	* eptex.defines: Add a new function setstdinenc().
+
+2017-09-06  Noriyuki Abe  <abenori@math.sci.hokudai.ac.jp>
+
+	* eptex.ech: fix a bug in \epTeXinputencoding.
+
 2017-04-24  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
 
 	* eptex.ech, etex.ch1, euptex.ch0, pdfutils.ch:

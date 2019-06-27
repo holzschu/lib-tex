@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
@@ -8,7 +8,7 @@
 *
 *******************************************************************************
 *   file name:  listformattertest.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -19,6 +19,7 @@
 #ifndef __LISTFORMATTERTEST_H__
 #define __LISTFORMATTERTEST_H__
 
+#include "unicode/fpositer.h"
 #include "unicode/listformatter.h"
 #include "intltest.h"
 
@@ -33,28 +34,76 @@ class ListFormatterTest : public IntlTest {
     void TestBogus();
     void TestEnglish();
     void TestEnglishUS();
+    void TestEnglishGB();
+    void TestNynorsk();
+    void TestChineseTradHK();
     void TestRussian();
     void TestMalayalam();
     void TestZulu();
     void TestOutOfOrderPatterns();
     void Test9946();
+    void TestFieldPositionIteratorWontCrash();
+    void TestFieldPositionIteratorWith1Item();
+    void TestFieldPositionIteratorWith2Items();
+    void TestFieldPositionIteratorWith3Items();
+    void TestFieldPositionIteratorWith1ItemAndDataBefore();
+    void TestFieldPositionIteratorWith2ItemsAndDataBefore();
+    void TestFieldPositionIteratorWith3ItemsAndDataBefore();
+    void TestFieldPositionIteratorWith2ItemsPatternShift();
+    void TestFieldPositionIteratorWith3ItemsPatternShift();
 
   private:
-    void CheckFormatting(const ListFormatter* formatter, UnicodeString data[], int32_t data_size, const UnicodeString& expected_result);
+    void CheckFormatting(
+        const ListFormatter* formatter,
+        UnicodeString data[],
+        int32_t data_size,
+        const UnicodeString& expected_result,
+        const char* testName);
+    void ExpectPositions(
+        FieldPositionIterator& iter,
+        int32_t *values,
+        int32_t tupleCount);
+    void RunTestFieldPositionIteratorWithNItems(
+        UnicodeString *data,
+        int32_t n,
+        int32_t *values,
+        int32_t tupleCount,
+        UnicodeString& appendTo,
+        const char16_t *expectedFormatted,
+        const char* testName);
+    void RunTestFieldPositionIteratorWithNItemsPatternShift(
+        UnicodeString *data,
+        int32_t n,
+        int32_t *values,
+        int32_t tupleCount,
+        UnicodeString& appendTo,
+        const char16_t *expectedFormatted,
+        const char* testName);
+    void RunTestFieldPositionIteratorWithFormatter(
+        ListFormatter* formatter,
+        UnicodeString *data,
+        int32_t n,
+        int32_t *values,
+        int32_t tupleCount,
+        UnicodeString& appendTo,
+        const char16_t *expectedFormatted,
+        const char* testName);
     void CheckFourCases(
         const char* locale_string,
         UnicodeString one,
         UnicodeString two,
         UnicodeString three,
         UnicodeString four,
-        UnicodeString results[4]);
+        UnicodeString results[4],
+        const char* testName);
     UBool RecordFourCases(
         const Locale& locale,
         UnicodeString one,
         UnicodeString two,
         UnicodeString three,
         UnicodeString four,
-        UnicodeString results[4]);
+        UnicodeString results[4],
+        const char* testName);
 
   private:
     // Reused test data.

@@ -1,28 +1,38 @@
 ## This file is part of dvisvgm
-## Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>
+## Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>
 ##
 ## Process this file with automake.
 
-bin_PROGRAMS         = dvisvgm
-noinst_LIBRARIES     = libdvisvgm.a
+bin_PROGRAMS     = dvisvgm
+noinst_LIBRARIES = libdvisvgm.a
 
-dvisvgm_SOURCES      = dvisvgm.cpp
+dvisvgm_SOURCES = \
+	CommandLine.hpp \
+	dvisvgm.cpp
+
+include ../libs/defs.am
 
 dvisvgm_LDADD = \
 	$(noinst_LIBRARIES) \
 	../libs/clipper/libclipper.a \
-	../libs/xxHash/libxxhash.a
+	$(POTRACE_LIBS) \
+	$(XXHASH_LIBS)
 
 if ENABLE_WOFF
 dvisvgm_LDADD += \
 	../libs/ff-woff/libfontforge.a \
-	../libs/woff2/libwoff2.a \
-	../libs/woff2/brotli/libbrotli.a
+	$(WOFF2_LIBS) \
+	$(BROTLI_LIBS)
+endif
+
+if USE_BUNDLED_MD5
+dvisvgm_LDADD += ../libs/md5/libmd5.a
+else
+dvisvgm_LDADD += $(LIBCRYPTO_LIBS)
 endif
 
 dvisvgm_LDADD += \
 	$(KPATHSEA_LIBS) \
-	$(POTRACE_LIBS) \
 	$(FREETYPE2_LIBS) \
 	$(FONTFORGE_LIBS) \
 	$(ZLIB_LIBS) \
@@ -61,7 +71,6 @@ libdvisvgm_a_SOURCES = \
 	Color.hpp \
 	ColorSpecialHandler.cpp \
 	ColorSpecialHandler.hpp \
-	CommandLine.hpp \
 	CRC32.cpp \
 	CRC32.hpp \
 	DependencyGraph.hpp \
@@ -84,7 +93,6 @@ libdvisvgm_a_SOURCES = \
 	EncFile.hpp \
 	EPSFile.cpp \
 	EPSFile.hpp \
-	EPSToSVG.cpp \
 	EPSToSVG.hpp \
 	FileFinder.cpp \
 	FileFinder.hpp \
@@ -121,8 +129,14 @@ libdvisvgm_a_SOURCES = \
 	Glyph.hpp \
 	GlyphTracerMessages.hpp \
 	GraphicsPath.hpp \
+	HashFunction.cpp \
+	HashFunction.hpp \
 	HtmlSpecialHandler.cpp \
 	HtmlSpecialHandler.hpp \
+	HyperlinkManager.cpp \
+	HyperlinkManager.hpp \
+	ImageToSVG.cpp \
+	ImageToSVG.hpp \
 	InputBuffer.cpp \
 	InputBuffer.hpp \
 	InputReader.cpp \
@@ -136,6 +150,7 @@ libdvisvgm_a_SOURCES = \
 	MapLine.hpp \
 	Matrix.cpp \
 	Matrix.hpp \
+	MD5HashFunction.hpp \
 	Message.cpp \
 	Message.hpp \
 	MessageException.hpp \
@@ -153,6 +168,9 @@ libdvisvgm_a_SOURCES = \
 	PapersizeSpecialHandler.hpp \
 	PathClipper.cpp \
 	PathClipper.hpp \
+	PDFParser.cpp \
+	PDFParser.hpp \
+	PDFToSVG.hpp \
 	PdfSpecialHandler.cpp \
 	PdfSpecialHandler.hpp \
 	PreScanDVIReader.cpp \
@@ -175,6 +193,8 @@ libdvisvgm_a_SOURCES = \
 	ShadingPatch.hpp \
 	SignalHandler.cpp \
 	SignalHandler.hpp \
+	SourceInput.cpp \
+	SourceInput.hpp \
 	SpecialActions.hpp \
 	SpecialHandler.hpp \
 	SpecialManager.cpp \
@@ -213,6 +233,10 @@ libdvisvgm_a_SOURCES = \
 	TpicSpecialHandler.hpp \
 	TriangularPatch.cpp \
 	TriangularPatch.hpp \
+	TrueTypeFont.cpp \
+	TrueTypeFont.hpp \
+	TTFAutohint.cpp \
+	TTFAutohint.hpp \
 	Unicode.cpp \
 	Unicode.hpp \
 	utility.hpp \
@@ -223,12 +247,14 @@ libdvisvgm_a_SOURCES = \
 	VFActions.hpp \
 	VFReader.cpp \
 	VFReader.hpp \
+	windows.hpp \
 	XMLDocument.cpp \
 	XMLDocument.hpp \
 	XMLNode.cpp \
 	XMLNode.hpp \
 	XMLString.cpp \
 	XMLString.hpp \
+	XXHashFunction.hpp \
 	ZLibOutputStream.hpp
 
 if ENABLE_WOFF
@@ -237,24 +263,40 @@ endif
 
 EXTRA_DIST = options.xml options.dtd iapi.h ierrors.h MiKTeXCom.hpp MiKTeXCom.cpp
 
-dvisvgm_srcdir = $(top_srcdir)/dvisvgm-src
-
 AM_CFLAGS = $(WARNING_CFLAGS) \
 	$(ZLIB_INCLUDES) \
 	$(CODE_COVERAGE_CFLAGS)
 
-AM_CXXFLAGS = $(WARNING_CFLAGS) -Wnon-virtual-dtor \
+AM_CXXFLAGS = $(WARNING_CXXFLAGS) -Wnon-virtual-dtor \
 	-I$(dvisvgm_srcdir)/libs/clipper \
-	-I$(dvisvgm_srcdir)/libs/xxHash
+	-I$(dvisvgm_srcdir)/libs/variant/include
+
+AM_CXXFLAGS += \
+	$(POTRACE_CFLAGS) \
+	$(XXHASH_CFLAGS)
+
+AM_LDFLAGS = \
+	$(KPSE_LIBS) \
+	$(CODE_COVERAGE_LDFLAGS)
 
 if ENABLE_WOFF
 AM_CFLAGS +=  \
 	-I$(dvisvgm_srcdir)/libs/ff-woff/fontforge \
 	-I$(dvisvgm_srcdir)/libs/ff-woff/inc
 
+AM_CXXFLAGS += $(TTFAUTOHINT_CFLAGS)
+
 AM_CXXFLAGS +=  \
-	-I$(dvisvgm_srcdir)/libs/woff2/brotli/enc \
-	-I$(dvisvgm_srcdir)/libs/woff2/src
+	$(BROTLI_CFLAGS) \
+	$(WOFF2_CFLAGS)
+
+if USE_BUNDLED_MD5
+AM_CXXFLAGS += -I$(dvisvgm_srcdir)/libs/md5
+else
+AM_CXXFLAGS += $(LIBCRYPTO_CFLAGS)
+endif
+
+AM_LDFLAGS += $(TTFAUTOHINT_LIBS)
 endif
 
 AM_CXXFLAGS += \
@@ -269,13 +311,11 @@ if WIN32
 AM_CXXFLAGS += -DTEXLIVEWIN32
 endif WIN32
 
-AM_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
-
 if ! TEXLIVE_BUILD
 # TL: do not try to rebuild these source files.
 # the command-line parser class is generated from options.xml by opt2cpp
 $(srcdir)/CommandLine.hpp: options.xml
-	rm -f $@ $*.hpp
+	rm -f $@
 	python $(srcdir)/opt2cpp.py $< >$@
 
 # Create a C string definition containing the PostScript routines psdefs.ps needed by class PSInterpreter
@@ -291,11 +331,9 @@ endif ! TEXLIVE_BUILD
 
 CLEANFILES = *.gcda *.gcno
 
-## Rebuild libkpathsea
+# Rebuild libkpathsea:
 @KPATHSEA_RULE@
-## Rebuild libpotrace
-@POTRACE_RULE@
-## Rebuild libfreetype
+# Rebuild libfreetype:
 @FREETYPE2_RULE@
-## Rebuild libz
+# Rebuild libz:
 @ZLIB_RULE@

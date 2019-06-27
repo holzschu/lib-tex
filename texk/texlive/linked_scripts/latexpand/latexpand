@@ -1,13 +1,13 @@
 #!/usr/bin/perl
 # Inspired by latexpand by D. Musliner, University of Michigan
-# 2012, 2013, 2014, 2015, 2016: Matthieu Moy <Matthieu.Moy@imag.fr>
+# 2012, 2013, 2014, 2015, 2016, 2017: Matthieu Moy <git@matthieu-moy.fr>
 # BSD License
 
 use strict;
 use Cwd;
 use Getopt::Long;
-use Pod::Usage;
 use IO::Handle;
+use File::Spec;
 
 my $TEXINPUTS = $ENV{'TEXINPUTS'};
 if (!$TEXINPUTS) { $TEXINPUTS = getcwd(); }
@@ -27,6 +27,9 @@ my $expand_bbl;
 my $fatal;
 my $version;
 my $makeatletter;
+my $inside_import;
+my $in_enc = "bytes";
+my $out_enc = "bytes";
 
 GetOptions (
 	'h' => \$help,
@@ -44,16 +47,40 @@ GetOptions (
 	'fatal' => \$fatal,
 	'version' => \$version,
         'makeatletter' => \$makeatletter,
-) or pod2usage(2);
+	'in-encoding=s' => \$in_enc,
+	'out-encoding=s' => \$out_enc,
+) or pod2usage_wrapper(2);
 version() if $version;
-pod2usage(1) if $help;
-pod2usage(-exitstatus => 0, -verbose => 2) if $long_help;
+pod2usage_wrapper(0) if $help;
+pod2usage_wrapper(-exitstatus => 0, -output => \*STDOUT, -verbose => 2) if $long_help;
+
+sub pod2usage_wrapper
+{
+	# Like pod2usage, but fall back to a simpler implem in case
+	# pod2usage can't be found.
+	if  (eval {require Pod::Usage;1;} ne 1) {
+		print "Please install perldoc and Pod::Usage to get proper help.\n";
+		my $started = 0;
+		open (my $in, '<', "$0") or die $!;
+		while (<$in>) {
+			if ($started) {
+				print;
+			}
+			if (/^__END__$/) {
+				$started = 1;
+			}
+		}
+	} else {
+		Pod::Usage->import();
+		pod2usage(@_);
+	}
+}
 
 sub get_version
 {
 	# $VERSION's value will be substituted by 'make dist', but the
 	# next line won't (the string has to be broken to avoid it).
-	my $VERSION = 'v1.3';
+	my $VERSION = 'v1.5';
 	if ($VERSION eq '@LATEXPAND' . '_VERSION@') {
 		my($vol,$dir,$file) = File::Spec->splitpath($0);
 		chdir($dir);
@@ -92,11 +119,14 @@ sub say
 my $makeatletter_found;
 my $in_preamble;
 
+use open IN  => ":$in_enc", OUT => ":$out_enc";
+
 foreach my $file (@ARGV)
 {
 	say "processing $file\n";
 	$makeatletter_found = 0;
 	$in_preamble = 1;
+        $inside_import = "";
 	process_file($file, "  ");
 }
 
@@ -106,14 +136,15 @@ sub process_file
 	my $prefix = (shift || "");
 	my $in_comment = 0;
 	open(my $FILE, "<", $file) or die "could not open input file '$file'\n";
+	my $commented_newline = 0;
 	while (my $line = <$FILE>) {
 		if ($line =~ /^[ \t]*\\endinput/) {
 			$line =~ s/(\\endinput.*)\n/% $1/;
 			$in_comment = 1;
-			process_line($line, $prefix);
+			process_line($line, $prefix, \$commented_newline);
 			last;
 		}
-		process_line($line, $prefix, $file);
+		process_line($line, $prefix, \$commented_newline, $file);
 		if ($line =~ /^%.*[^\n]\z/ || $line =~ /[^\\]%.*[^\n]\z/) {
 			# file ends with a comment not ending with a newline
 			print "\n";
@@ -132,8 +163,30 @@ sub process_file
 
 sub process_line
 {
-	my ($line, $prefix, $file) = @_;
+	my ($line, $prefix, $commented_newline, $file) = @_;
 	$_ = $line;
+	if ($$commented_newline) {
+		# Leading whitespaces after a comment is ignored.
+		# There's no space in:
+		# Line 1%
+		#    Line 2.
+		# Match just space and tabs (\s would match \n)
+		s/^[ \t]*//;
+		if (/^$/) {
+			# Deal with:
+			#
+			# Line 1 % comment
+			#
+			# Line 2
+			#
+			# The newline after Line 1 is commented, but we still
+			# want a new paragraph. We strip the comment together
+			# with its newline, but re-add a newline to chnge
+			# paragraph here if needed:
+			print "\n";
+		}
+	}
+	$$commented_newline = 0;
 	# Consider \makeatletter only in preamble, because we do want
 	# to warn on \someCommand{\makeatletter\command@with@arobase}.
 	if ($in_preamble && /^[^%]*\\makeatletter/) {
@@ -148,29 +201,42 @@ sub process_line
 		print STDERR "Warning: $file.\n";
 		print STDERR "Warning: consider using --makeatletter if the result is not compilable.\n";
 	}
+
+        # non-comment is a sequence of:
+        # - escaped character (\\.), including \% and \\
+        # - neither '%' nor '\'.
+        my $NON_COMMENT = '([^\\\\%]|\\\\.)*';
+
 	unless ($keep_comments) {
 		if (!$empty_comments) {
 			# Include \n in pattern to avoid matching
 			# comments at end of files
 
 			# remove comments + whitespace-only lines completely
-			s/^\s*%.*\n//;
+			if (s/^\s*%.*\n//) {
+				$$commented_newline = 1;
+			}
 
-			# remove only the comment if the line has actual content
-			s/([^\\])%.*\n/$1\n/;
+			# Special-case commands at end of line. We
+			# don't want "\\foo%\nbar" to become
+			# "\\foobar"
+			if (s/^($NON_COMMENT\\[[:alpha:]@]+)%.*\n/$1 /) {
+				$$commented_newline = 1;
+			} elsif (s/^($NON_COMMENT)%.*\n/$1/) {
+				# remove only the comment if the line has actual content
+				$$commented_newline = 1;
+			}
 		}
 		# Apply the "empty comments" treatment unconditionally
-		# for end-of-files comments not matched above (it
-		# doesn't harm to keep an empty comment sometimes, but
-		# it may harm to leave a real comment if the goal was
-		# to strip them).
-		s/^%.*$/%/;
-		s/([^\\])%.*$/$1%/;
+		# for comments not matched above (it doesn't harm to
+		# keep an empty comment sometimes, but it may harm to
+		# leave a real comment if the goal was to strip them).
+		s/^(([^\\%]|\\.)*)%.*$/$1%/;
 	}
 
 	unless ($keep_includes) {
 		if (my ($before, $ignored, $full_filename, $after)
-		    = /^(([^%]|[^\\]%)*)\\include[{\s]+(.*?)[\s}](.*)$/) {
+		    = /^($NON_COMMENT)\\include[{\s]+(.*?)[\s}](.*)$/) {
 			$full_filename = find_tex_file($full_filename . ".tex");
 			if ($full_filename) {
 				say $prefix . "Found include for file: $full_filename\n";
@@ -188,7 +254,10 @@ sub process_line
 				$_ = "";
 			}
 		} elsif (my ($before, $ignored, $full_filename, $after)
-			 = /^(([^%]|[^\\]%)*)\\input[{\s]+(.*?)[\s}](.*)$/) {
+			 = /^($NON_COMMENT)\\input[{\s]+(.*?)[\s}](.*)$/) {
+                        if ($inside_import) {
+                              $full_filename = $inside_import . $full_filename;
+                        }
 			$full_filename = find_tex_file($full_filename, ":.tex");
 			if ($full_filename) {
 				say $prefix . "Found input for file: $full_filename\n";
@@ -208,6 +277,71 @@ sub process_line
 				}
 				$_ = "";
 			}
+		} elsif (my ($before, $ignored, $dir, $full_filename, $after)
+			 = /^($NON_COMMENT)\\(?:sub)?import[{\s]+(.*?)[\s}][{\s]+(.*?)[\s}](.*)$/) {
+                        if ($explain) {
+                              print "% dir " . $dir ."\n";
+                              print "% full_filename " . $full_filename ."\n";
+                              print "% after " . $after ."\n";
+                              print "% inside_import $inside_import\n";
+                        }
+                        $full_filename = $dir . $full_filename;
+                        if ($inside_import) {
+                              $full_filename = $inside_import . $full_filename;
+                        }
+                        print "% cat(inside_import,dir,full_filename) " . $full_filename ."\n" if ($explain);
+			$full_filename = find_tex_file($full_filename, ":.tex");
+			if ($full_filename) {
+				say $prefix . "Found input for file: $full_filename\n";
+				print $before . $nl;
+				print "% start input $full_filename\n" if ($explain);
+                                my $previous_import_dir = $inside_import;
+                                $inside_import = $inside_import . $dir;
+				my $in_comment = process_file($full_filename, $prefix . "  ");
+                                $inside_import = $previous_import_dir;
+				if ($explain) {
+				    print " % end input $full_filename\n";
+				} elsif ($in_comment) {
+				    print "\n";
+				}
+				if ($after =~ /[^\s]/) {
+				    # LaTeX produces this space, so let's do it also
+				    print " " . $nl . $after . "\n";
+				} else {
+				    print " ";
+				}
+				$_ = "";
+			}
+		} elsif (my ($before, $ignored, $args, $full_filename, $after)
+			 = /^($NON_COMMENT)\\includegraphics[\[\s]+(.*?)[\s\]][{\s]+(.*?)[\s}](.*)$/) {
+                        if ($explain) {
+                                print "% inside_import " . $inside_import ."\n";
+                                print "% before " . $before ."\n";
+                                print "% ignored " . $ignored ."\n";
+                                print "% args " . $args ."\n";
+                                print "% full_filename " . $full_filename ."\n";
+                                print "% after " . $after ."\n";
+                        }
+                        if ($inside_import) {
+                                $full_filename = $inside_import . $full_filename;
+                                print "$before\\includegraphics[$args]{$full_filename}$after\n";
+                                $_ = "";
+                        }
+		} elsif (my ($before, $ignored, $args, $full_filename, $after)
+			 = /^($NON_COMMENT)\\lstinputlisting[\[\s]+(.*?)[\s\]][{\s]+(.*?)[\s}](.*)$/) {
+                        if ($explain) {
+                                print "% inside_import " . $inside_import ."\n";
+                                print "% before " . $before ."\n";
+                                print "% ignored " . $ignored ."\n";
+                                print "% args " . $args ."\n";
+                                print "% full_filename " . $full_filename ."\n";
+                                print "% after " . $after ."\n";
+                        }
+                        if ($inside_import) {
+                                $full_filename = $inside_import . $full_filename;
+                                print "$before\\lstinputlisting[$args]{$full_filename}$after\n";
+                                $_ = "";
+                        }
 		}
 	}
 	if ($expand_usepackage) {
@@ -219,6 +353,9 @@ sub process_line
 				say $prefix . "Found package file: $full\n";
 				process_file($full, $prefix . "  ");
 				$_ = "";
+				# Forget about any commented newline
+				# before the \usepackage:
+				$$commented_newline = 0;
 			} else {
 				say $prefix . "Not including external package $package_name\n";
 			}
@@ -226,7 +363,7 @@ sub process_line
 	}
 	if ($expand_bbl) {
 		if (my ($before, $bib_name, $after)
-			 = /^(.*)\\bibliography\{([^\}]*)\}(.*)$/) {
+			 = /^(.*)\\(?:bibliography|bibselect)\{([^\}]*)\}(.*)$/) {
 			# The BBL file is not necessarily $bib_name.
 			# Take it from the command-line.
 			print $before . $nl;
@@ -238,7 +375,11 @@ sub process_line
 	}
 	if ($show_graphics) {
 		if (/\\includegraphics(\[[^\]]*\])?{([^}]*)}/) {
-			my $full = find_tex_file($2, $graphics_extensions);
+                        my $full_filename = $2;
+                        if ($inside_import) {
+                                $full_filename = $inside_import . $full_filename;
+                        }
+			my $full = find_tex_file($full_filename, $graphics_extensions);
 			say $prefix . "needs graphics file: ";
 			print STDERR "$full\n";
 		}
@@ -258,7 +399,7 @@ sub find_tex_file
 	my $file = shift;
 	my $extensions = (shift || ":");
 	foreach my $ext (split(':', $extensions, -1)) {
-		my $full = find_file($file . $ext, $TEXINPUTS);
+		my $full = find_file_global($file . $ext);
 		if ($full) {
 			return $full;
 		}
@@ -269,6 +410,20 @@ sub find_tex_file
 		print STDERR "Warning: Could not find file [$file]\n";
 		return;
 	}
+}
+
+sub find_file_global
+{
+	my $file = shift;
+	if (open(my $fh, "-|", "kpsewhich", $file)) {
+		my $full = <$fh>;
+		chomp($full);
+		close($fh);
+		if ($full) {
+			return $full;
+		}
+	}
+	return find_file($file, $TEXINPUTS);
 }
 
 sub find_file
@@ -329,6 +484,12 @@ latexpand [options] FILE...
 	                 rare cases it may break your document, but it
 	                 may help fixing bad interactions between
 	                 @-commands and inclusion (see BUGS section).
+	--in-encoding FMT, --out-encoding FMT
+			 File encoding used by input and output files.
+			 This uses the same syntax as PerlIO's layers.
+			 Example:
+			 --in-encoding 'encoding(UTF-8)'
+			 The default is 'bytes' and should always work.
 
 =head1 USES
 
@@ -355,9 +516,6 @@ Versions are uploaded to ctan.org from time to time:
 Please, report bugs on the issue tracker on the project site:
 
   https://gitlab.com/latexpand/latexpand/issues
-
-Alternatively, you may email directly the author: Matthieu Moy
-<Matthieu.Moy@imag.fr>.
 
 =head2 Known bugs
 
@@ -419,4 +577,4 @@ https://lacl.fr/~caubert/notes/portabilite-du-tex.html#dependances
 
 =head1 VERSION
 
-This is latexpand version v1.3.
+This is latexpand version v1.5.

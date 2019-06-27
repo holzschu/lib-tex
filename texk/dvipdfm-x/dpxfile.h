@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2002-2016 by Jin-Hwan Cho and Shunsaku Hirata,
+    Copyright (C) 2002-2018 by Jin-Hwan Cho and Shunsaku Hirata,
     the dvipdfmx project team.
     
     Copyright (C) 1998, 1999 by Mark A. Wicks <mwicks@kettering.edu>
@@ -56,15 +56,12 @@ extern char * dpx_find_dfont_file (const char *filename);
 #define DPXFOPEN(n,t)  dpx_open_file((const char *)(n),(t))
 #define DPXFCLOSE(f)   MFCLOSE((f))
 
-extern void  dpx_file_set_verbose  (void);
-
 extern int   dpx_file_apply_filter (const char *cmdtmpl,
                                    const char *input, const char *output,
-                                   unsigned char version);
+                                   int version);
 extern char *dpx_create_temp_file  (void);
 extern char *dpx_create_fix_temp_file (const char *filename);
 extern void  dpx_delete_old_cache  (int life);
 extern void  dpx_delete_temp_file  (char *tmp, int force); /* tmp freed here */
 
-extern int   keep_cache;
 #endif /* _DPXFILE_H_ */

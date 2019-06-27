@@ -6,8 +6,10 @@
 //
 // Copyright 2013, 2014 Igalia S.L.
 // Copyright 2014 Luigi Scarso <luigi.scarso@gmail.com>
-// Copyright 2014 Albert Astals Cid <aacid@kde.org>
+// Copyright 2014, 2017, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright 2015 Dmytro Morgun <lztoad@gmail.com>
+// Copyright 2018 Adrian Johnson <ajohnson@redneon.com>
+// Copyright 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
 //
 //========================================================================
 
@@ -170,18 +172,15 @@ static GBool isRGBColor(Object *value)
 
   GBool okay = gTrue;
   for (int i = 0; i < 3; i++) {
-    Object obj;
-    if (!value->arrayGet(i, &obj)->isNum()) {
+    Object obj = value->arrayGet(i);
+    if (!obj.isNum()) {
       okay = gFalse;
-      obj.free();
       break;
     }
     if (obj.getNum() < 0.0 || obj.getNum() > 1.0) {
       okay = gFalse;
-      obj.free();
       break;
     }
-    obj.free();
   }
 
   return okay;
@@ -220,25 +219,22 @@ static GBool isTextString(Object *value)
                                                                         \
       GBool okay = gTrue;                                               \
       for (int i = 0; i < value->arrayGetLength(); i++) {               \
-        Object obj;                                                     \
-        value->arrayGet(i, &obj);                                       \
+        Object obj = value->arrayGet(i);                                \
         if ((!allowNulls && obj.isNull()) || !checkItem(&obj)) {        \
           okay = gFalse;                                                \
-          obj.free();                                                   \
           break;                                                        \
         }                                                               \
-        obj.free();                                                     \
       }                                                                 \
       return okay;                                                      \
     }
 
-ARRAY_CHECKER(isRGBColorOrOptionalArray4, isRGBColor,        4, gTrue,  gTrue );
-ARRAY_CHECKER(isPositiveOrOptionalArray4, isPositive,        4, gTrue,  gTrue );
-ARRAY_CHECKER(isPositiveOrArray4,         isPositive,        4, gTrue,  gFalse);
-ARRAY_CHECKER(isBorderStyle,              isBorderStyleName, 4, gTrue,  gTrue );
-ARRAY_CHECKER(isNumberArray4,             isNumber,          4, gFalse, gFalse);
-ARRAY_CHECKER(isNumberOrArrayN,           isNumber,          0, gTrue,  gFalse);
-ARRAY_CHECKER(isTableHeaders,             isTextString,      0, gFalse, gFalse);
+ARRAY_CHECKER(isRGBColorOrOptionalArray4, isRGBColor,        4, gTrue,  gTrue )
+ARRAY_CHECKER(isPositiveOrOptionalArray4, isPositive,        4, gTrue,  gTrue )
+ARRAY_CHECKER(isPositiveOrArray4,         isPositive,        4, gTrue,  gFalse)
+ARRAY_CHECKER(isBorderStyle,              isBorderStyleName, 4, gTrue,  gTrue )
+ARRAY_CHECKER(isNumberArray4,             isNumber,          4, gFalse, gFalse)
+ARRAY_CHECKER(isNumberOrArrayN,           isNumber,          0, gTrue,  gFalse)
+ARRAY_CHECKER(isTableHeaders,             isTextString,      0, gFalse, gFalse)
 
 
 // Type of functions used to do type-checking on attribute values
@@ -254,53 +250,26 @@ struct AttributeMapEntry {
 };
 
 struct AttributeDefaults {
-  Object Inline;
-  Object LrTb;
-  Object Normal;
-  Object Distribute;
-  Object off;
-  Object Zero;
-  Object Auto;
-  Object Start;
-  Object None;
-  Object Before;
-  Object Nat1;
+  AttributeDefaults() {}; // needed to support old clang
 
-  AttributeDefaults() {
-    Inline.initName("Inline");
-    LrTb.initName("LrTb");
-    Normal.initName("Normal");
-    Distribute.initName("Distribute");
-    off.initName("off");
-
-    Zero.initReal(0.0);
-    Auto.initName("Auto");
-    Start.initName("Start");
-    None.initName("None");
-    Before.initName("Before");
-    Nat1.initInt(1);
-  }
-
-  ~AttributeDefaults() {
-    Inline.free();
-    LrTb.free();
-    Normal.free();
-    Distribute.free();
-    off.free();
-    Zero.free();
-    Auto.free();
-    Start.free();
-    None.free();
-    Before.free();
-    Nat1.free();
-  }
+  Object Inline  = Object(objName, "Inline");
+  Object LrTb = Object(objName, "LrTb");
+  Object Normal = Object(objName, "Normal");
+  Object Distribute = Object(objName, "Distribute");
+  Object off = Object(objName, "off");
+  Object Zero = Object(0.0);
+  Object Auto = Object(objName, "Auto");
+  Object Start = Object(objName, "Start");
+  Object None = Object(objName, "None");
+  Object Before = Object(objName, "Before");
+  Object Nat1 = Object(1);
 };
 
 static const AttributeDefaults attributeDefaults;
 
 
 #define ATTR_LIST_END \
-  { Attribute::Unknown, NULL, NULL, gFalse, NULL }
+  { Attribute::Unknown, nullptr, nullptr, gFalse, nullptr }
 
 #define ATTR_WITH_DEFAULT(name, inherit, check, defval) \
   { Attribute::name,           \
@@ -312,7 +281,7 @@ static const AttributeDefaults attributeDefaults;
 #define ATTR(name, inherit, check) \
   { Attribute::name,           \
     #name,                     \
-    NULL,                      \
+    nullptr,                   \
     inherit,                   \
     check }
 
@@ -415,24 +384,24 @@ static const AttributeMapEntry *attributeMapAll[] = {
   attributeMapCommonPrintField,
   attributeMapCommonTable,
   attributeMapCommonTableCell,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapShared[] = {
   attributeMapCommonShared,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapBlock[] = {
   attributeMapCommonShared,
   attributeMapCommonBlock,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapInline[] = {
   attributeMapCommonShared,
   attributeMapCommonInline,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapTableCell[] = {
@@ -440,34 +409,34 @@ static const AttributeMapEntry *attributeMapTableCell[] = {
   attributeMapCommonBlock,
   attributeMapCommonTable,
   attributeMapCommonTableCell,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapRubyText[] = {
   attributeMapCommonShared,
   attributeMapCommonInline,
   attributeMapCommonRubyText,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapColumns[] = {
   attributeMapCommonShared,
   attributeMapCommonInline,
   attributeMapCommonColumns,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapList[] = {
   attributeMapCommonShared,
   attributeMapCommonList,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapTable[] = {
   attributeMapCommonShared,
   attributeMapCommonBlock,
   attributeMapCommonTable,
-  NULL,
+  nullptr,
 };
 
 static const AttributeMapEntry *attributeMapIllustration[] = {
@@ -477,7 +446,7 @@ static const AttributeMapEntry *attributeMapIllustration[] = {
   attributeMapCommonShared,
   attributeMapCommonBlock,
   attributeMapCommonInline,
-  NULL,
+  nullptr,
 };
 
 // Table mapping owners of attributes to their names.
@@ -604,7 +573,7 @@ getAttributeMapEntry(const AttributeMapEntry **entryList, Attribute::Type type)
     }
     entryList++;
   }
-  return NULL;
+  return nullptr;
 }
 
 static inline const AttributeMapEntry *
@@ -621,7 +590,7 @@ getAttributeMapEntry(const AttributeMapEntry **entryList, const char *name)
     }
     entryList++;
   }
-  return NULL;
+  return nullptr;
 }
 
 static inline const OwnerMapEntry *getOwnerMapEntry(Attribute::Owner owner)
@@ -630,7 +599,7 @@ static inline const OwnerMapEntry *getOwnerMapEntry(Attribute::Owner owner)
     if (owner == ownerMap[i].owner)
       return &ownerMap[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 static inline const OwnerMapEntry *getOwnerMapEntry(const char *name)
@@ -639,7 +608,7 @@ static inline const OwnerMapEntry *getOwnerMapEntry(const char *name)
     if (strcmp(name, ownerMap[i].name) == 0)
       return &ownerMap[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 static const char *ownerToName(Attribute::Owner owner)
@@ -660,7 +629,7 @@ static inline const TypeMapEntry *getTypeMapEntry(StructElement::Type type)
     if (type == typeMap[i].type)
       return &typeMap[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 static inline const TypeMapEntry *getTypeMapEntry(const char *name)
@@ -669,7 +638,7 @@ static inline const TypeMapEntry *getTypeMapEntry(const char *name)
     if (strcmp(name, typeMap[i].name) == 0)
       return &typeMap[i];
   }
-  return NULL;
+  return nullptr;
 }
 
 static const char *typeToName(StructElement::Type type)
@@ -701,24 +670,24 @@ Attribute::Attribute(const char *nameA, int nameLenA, Object *valueA):
   name(nameA, nameLenA),
   value(),
   hidden(gFalse),
-  formatted(NULL)
+  formatted(nullptr)
 {
   assert(valueA);
-  valueA->copy(&value);
+  value = valueA->copy();
 }
 
-Attribute::Attribute(Type type, Object *valueA):
-  type(type),
+Attribute::Attribute(Type typeA, Object *valueA):
+  type(typeA),
   owner(UserProperties), // TODO: Determine corresponding owner from Type
   revision(0),
   name(),
   value(),
   hidden(gFalse),
-  formatted(NULL)
+  formatted(nullptr)
 {
   assert(valueA);
 
-  valueA->copy(&value);
+  value = valueA->copy();
 
   if (!checkType())
     type = Unknown;
@@ -727,7 +696,6 @@ Attribute::Attribute(Type type, Object *valueA):
 Attribute::~Attribute()
 {
   delete formatted;
-  value.free();
 }
 
 const char *Attribute::getTypeName() const
@@ -750,7 +718,7 @@ const char *Attribute::getOwnerName() const
 Object *Attribute::getDefaultValue(Attribute::Type type)
 {
   const AttributeMapEntry *entry = getAttributeMapEntry(attributeMapAll, type);
-  return entry ? const_cast<Object*>(entry->defval) : NULL;
+  return entry ? const_cast<Object*>(entry->defval) : nullptr;
 }
 
 void Attribute::setFormattedValue(const char *formattedA)
@@ -762,7 +730,7 @@ void Attribute::setFormattedValue(const char *formattedA)
       formatted = new GooString(formattedA);
   } else {
     delete formatted;
-    formatted = NULL;
+    formatted = nullptr;
   }
 }
 
@@ -805,45 +773,41 @@ Attribute::Type Attribute::getTypeForName(const char *name, StructElement *eleme
 Attribute *Attribute::parseUserProperty(Dict *property)
 {
   Object obj, value;
-  const char *name = NULL;
+  const char *name = nullptr;
   int nameLen = GooString::CALC_STRING_LEN;
 
-  if (property->lookup("N", &obj)->isString()) {
-    GooString *s = obj.getString();
+  obj = property->lookup("N");
+  if (obj.isString()) {
+    const GooString *s = obj.getString();
     name = s->getCString();
     nameLen = s->getLength();
   } else if (obj.isName())
     name = obj.getName();
   else {
     error(errSyntaxError, -1, "N object is wrong type ({0:s})", obj.getTypeName());
-    obj.free();
-    return NULL;
+    return nullptr;
   }
 
-  if (property->lookup("V", &value)->isNull()) {
+  value = property->lookup("V");
+  if (value.isNull()) {
     error(errSyntaxError, -1, "V object is wrong type ({0:s})", value.getTypeName());
-    value.free();
-    obj.free();
-    return NULL;
+    return nullptr;
   }
 
   Attribute *attribute = new Attribute(name, nameLen, &value);
-  value.free();
-  obj.free();
-
-  if (property->lookup("F", &obj)->isString()) {
+  obj = property->lookup("F");
+  if (obj.isString()) {
     attribute->setFormattedValue(obj.getString()->getCString());
   } else if (!obj.isNull()) {
     error(errSyntaxWarning, -1, "F object is wrong type ({0:s})", obj.getTypeName());
   }
-  obj.free();
 
-  if (property->lookup("H", &obj)->isBool()) {
+  obj = property->lookup("H");
+  if (obj.isBool()) {
     attribute->setHidden(obj.getBool());
   } else if (!obj.isNull()) {
     error(errSyntaxWarning, -1, "H object is wrong type ({0:s})", obj.getTypeName());
   }
-  obj.free();
 
   return attribute;
 }
@@ -854,12 +818,12 @@ Attribute *Attribute::parseUserProperty(Dict *property)
 //------------------------------------------------------------------------
 
 StructElement::StructData::StructData():
-  altText(0),
-  actualText(0),
-  id(0),
-  title(0),
-  expandedAbbr(0),
-  language(0),
+  altText(nullptr),
+  actualText(nullptr),
+  id(nullptr),
+  title(nullptr),
+  expandedAbbr(nullptr),
+  language(nullptr),
   revision(0)
 {
 }
@@ -871,7 +835,6 @@ StructElement::StructData::~StructData()
   delete id;
   delete title;
   delete language;
-  parentRef.free();
   for (ElemPtrArray::iterator i = elements.begin(); i != elements.end(); ++i) delete *i;
   for (AttrPtrArray::iterator i = attributes.begin(); i != attributes.end(); ++i) delete *i;
 }
@@ -919,7 +882,6 @@ StructElement::~StructElement()
     delete c;
   else
     delete s;
-  pageRef.free();
 }
 
 GBool StructElement::isBlock() const
@@ -970,9 +932,9 @@ const Attribute *StructElement::findAttribute(Attribute::Type attributeType, GBo
     return parent->findAttribute(attributeType, inherit, attributeOwner);
 
   if (attributeType == Attribute::Unknown || attributeType == Attribute::UserProperty)
-    return NULL;
+    return nullptr;
 
-  const Attribute *result = NULL;
+  const Attribute *result = nullptr;
 
   if (attributeOwner == Attribute::UnknownOwner) {
     // Search for the attribute, no matter who the owner is
@@ -1007,7 +969,7 @@ const Attribute *StructElement::findAttribute(Attribute::Type attributeType, GBo
       return parent->findAttribute(attributeType, inherit, attributeOwner);
   }
 
-  return NULL;
+  return nullptr;
 }
 
 GooString* StructElement::appendSubTreeText(GooString *string, GBool recursive) const
@@ -1026,7 +988,7 @@ GooString* StructElement::appendSubTreeText(GooString *string, GBool recursive) 
   }
 
   if (!recursive)
-    return NULL;
+    return nullptr;
 
   // Do a depth-first traversal, to get elements in logical order
   if (!string)
@@ -1058,21 +1020,22 @@ const TextSpanArray& StructElement::getTextSpansInternal(MarkedContentOutputDev&
   return mcdev.getTextSpans();
 }
 
-static StructElement::Type roleMapResolve(Dict *roleMap, const char *name, const char *curName, Object *resolved)
+static StructElement::Type roleMapResolve(Dict *roleMap, const char *name, const char *curName)
 {
   // Circular reference
   if (curName && !strcmp(name, curName))
     return StructElement::Unknown;
 
-  if (roleMap->lookup(curName ? curName : name, resolved)->isName()) {
-    StructElement::Type type = nameToType(resolved->getName());
+  Object resolved = roleMap->lookup(curName ? curName : name);
+  if (resolved.isName()) {
+    StructElement::Type type = nameToType(resolved.getName());
     return type == StructElement::Unknown
-      ? roleMapResolve(roleMap, name, resolved->getName(), resolved)
+      ? roleMapResolve(roleMap, name, resolved.getName())
       : type;
   }
 
-  if (!resolved->isNull())
-    error(errSyntaxWarning, -1, "RoleMap entry is wrong type ({0:s})", resolved->getTypeName());
+  if (!resolved.isNull())
+    error(errSyntaxWarning, -1, "RoleMap entry is wrong type ({0:s})", resolved.getTypeName());
   return StructElement::Unknown;
 }
 
@@ -1081,31 +1044,30 @@ void StructElement::parse(Dict *element)
   Object obj;
 
   // Type is optional, but if present must be StructElem
-  if (!element->lookup("Type", &obj)->isNull() && !obj.isName("StructElem")) {
+  obj = element->lookup("Type");
+  if (!obj.isNull() && !obj.isName("StructElem")) {
     error(errSyntaxError, -1, "Type of StructElem object is wrong");
-    obj.free();
     return;
   }
-  obj.free();
 
   // Parent object reference (required).
-  if (!element->lookupNF("P", &s->parentRef)->isRef()) {
+  s->parentRef = element->lookupNF("P");
+  if (!s->parentRef.isRef()) {
     error(errSyntaxError, -1, "P object is wrong type ({0:s})", obj.getTypeName());
     return;
   }
 
   // Check whether the S-type is valid for the top level
   // element and create a node of the appropriate type.
-  if (!element->lookup("S", &obj)->isName()) {
+  obj = element->lookup("S");
+  if (!obj.isName()) {
     error(errSyntaxError, -1, "S object is wrong type ({0:s})", obj.getTypeName());
-    obj.free();
     return;
   }
 
   // Type name may not be standard, resolve through RoleMap first.
   if (treeRoot->getRoleMap()) {
-    Object resolvedName;
-    type = roleMapResolve(treeRoot->getRoleMap(), obj.getName(), NULL, &resolvedName);
+    type = roleMapResolve(treeRoot->getRoleMap(), obj.getName(), nullptr);
   }
 
   // Resolving through RoleMap may leave type as Unknown, e.g. for types
@@ -1116,67 +1078,66 @@ void StructElement::parse(Dict *element)
   // At this point either the type name must have been resolved.
   if (type == Unknown) {
     error(errSyntaxError, -1, "StructElem object is wrong type ({0:s})", obj.getName());
-    obj.free();
     return;
   }
-  obj.free();
 
   // Object ID (optional), to be looked at the IDTree in the tree root.
-  if (element->lookup("ID", &obj)->isString()) {
+  obj = element->lookup("ID");
+  if (obj.isString()) {
     s->id = obj.takeString();
   }
-  obj.free();
 
   // Page reference (optional) in which at least one of the child items
   // is to be rendered in. Note: each element stores only the /Pg value
   // contained by it, and StructElement::getPageRef() may look in parent
   // elements to find the page where an element belongs.
-  element->lookupNF("Pg", &pageRef);
+  pageRef = element->lookupNF("Pg");
 
   // Revision number (optional).
-  if (element->lookup("R", &obj)->isInt()) {
+  obj = element->lookup("R");
+  if (obj.isInt()) {
     s->revision = obj.getInt();
   }
-  obj.free();
 
   // Element title (optional).
-  if (element->lookup("T", &obj)->isString()) {
+  obj = element->lookup("T");
+  if (obj.isString()) {
     s->title = obj.takeString();
   }
-  obj.free();
 
   // Language (optional).
-  if (element->lookup("Lang", &obj)->isString()) {
+  obj = element->lookup("Lang");
+  if (obj.isString()) {
     s->language = obj.takeString();
   }
-  obj.free();
 
   // Alternative text (optional).
-  if (element->lookup("Alt", &obj)->isString()) {
+  obj = element->lookup("Alt");
+  if (obj.isString()) {
     s->altText = obj.takeString();
   }
-  obj.free();
 
   // Expanded form of an abbreviation (optional).
-  if (element->lookup("E", &obj)->isString()) {
+  obj = element->lookup("E");
+  if (obj.isString()) {
     s->expandedAbbr = obj.takeString();
   }
-  obj.free();
 
   // Actual text (optional).
-  if (element->lookup("ActualText", &obj)->isString()) {
+  obj = element->lookup("ActualText");
+  if (obj.isString()) {
     s->actualText = obj.takeString();
   }
-  obj.free();
 
   // Attributes directly attached to the element (optional).
-  if (element->lookup("A", &obj)->isDict()) {
+  obj = element->lookup("A");
+  if (obj.isDict()) {
     parseAttributes(obj.getDict());
   } else if (obj.isArray()) {
-    Object iobj;
     unsigned attrIndex = getNumAttributes();
     for (int i = 0; i < obj.arrayGetLength(); i++) {
-      if (obj.arrayGet(i, &iobj)->isDict()) {
+      Object iobj = obj.arrayGet(i);
+      if (iobj.isDict()) {
         attrIndex = getNumAttributes();
         parseAttributes(iobj.getDict());
       } else if (iobj.isInt()) {
@@ -1187,25 +1148,23 @@ void StructElement::parse(Dict *element)
       } else {
         error(errSyntaxWarning, -1, "A item is wrong type ({0:s})", iobj.getTypeName());
       }
-      iobj.free();
     }
   } else if (!obj.isNull()) {
     error(errSyntaxWarning, -1, "A is wrong type ({0:s})", obj.getTypeName());
   }
-  obj.free();
 
   // Attributes referenced indirectly through the ClassMap (optional).
   if (treeRoot->getClassMap()) {
-    Object classes;
-    if (element->lookup("C", &classes)->isName()) {
-      Object attr;
-      if (treeRoot->getClassMap()->lookup(classes.getName(), &attr)->isDict()) {
+    Object classes = element->lookup("C");
+    if (classes.isName()) {
+      Object attr = treeRoot->getClassMap()->lookup(classes.getName());
+      if (attr.isDict()) {
         parseAttributes(attr.getDict(), gTrue);
       } else if (attr.isArray()) {
         for (int i = 0; i < attr.arrayGetLength(); i++) {
-          Object iobj;
           unsigned attrIndex = getNumAttributes();
-          if (attr.arrayGet(i, &iobj)->isDict()) {
+          Object iobj = attr.arrayGet(i);
+          if (iobj.isDict()) {
             attrIndex = getNumAttributes();
             parseAttributes(iobj.getDict(), gTrue);
           } else if (iobj.isInt()) {
@@ -1216,13 +1175,10 @@ void StructElement::parse(Dict *element)
           } else {
             error(errSyntaxWarning, -1, "C item is wrong type ({0:s})", iobj.getTypeName());
           }
-          iobj.free();
         }
       } else if (!attr.isNull()) {
         error(errSyntaxWarning, -1, "C object is wrong type ({0:s})", classes.getTypeName());
       }
-      classes.free();
-      attr.free();
     }
   }
 }
@@ -1234,7 +1190,7 @@ StructElement *StructElement::parseChild(Object *ref,
   assert(childObj);
   assert(ref);
 
-  StructElement *child = NULL;
+  StructElement *child = nullptr;
 
   if (childObj->isInt()) {
     child = new StructElement(childObj->getInt(), treeRoot, this);
@@ -1243,40 +1199,31 @@ StructElement *StructElement::parseChild(Object *ref,
      * TODO: The optional Stm/StwOwn attributes are not handled, so all the
      *      page will be always scanned when calling StructElement::getText().
      */
-    Object mcidObj;
-    Object pageRefObj;
-
-    if (!childObj->dictLookup("MCID", &mcidObj)->isInt()) {
+    Object mcidObj = childObj->dictLookup("MCID");
+    if (!mcidObj.isInt()) {
       error(errSyntaxError, -1, "MCID object is wrong type ({0:s})", mcidObj.getTypeName());
-      mcidObj.free();
-      return NULL;
+      return nullptr;
     }
 
     child = new StructElement(mcidObj.getInt(), treeRoot, this);
-    mcidObj.free();
 
-    if (childObj->dictLookupNF("Pg", &pageRefObj)->isRef()) {
-      child->pageRef = pageRefObj;
-    } else {
-      pageRefObj.free();
+    Object pageRefObj = childObj->dictLookupNF("Pg");
+    if (pageRefObj.isRef()) {
+      child->pageRef = std::move(pageRefObj);
     }
   } else if (childObj->isDict("OBJR")) {
-    Object refObj;
-
-    if (childObj->dictLookupNF("Obj", &refObj)->isRef()) {
-      Object pageRefObj;
+    Object refObj = childObj->dictLookupNF("Obj");
+    if (refObj.isRef()) {
 
       child = new StructElement(refObj.getRef(), treeRoot, this);
 
-      if (childObj->dictLookupNF("Pg", &pageRefObj)->isRef()) {
-        child->pageRef = pageRefObj;
-      } else {
-        pageRefObj.free();
+      Object pageRefObj = childObj->dictLookupNF("Pg");
+      if (pageRefObj.isRef()) {
+        child->pageRef = std::move(pageRefObj);
       }
     } else {
       error(errSyntaxError, -1, "Obj object is wrong type ({0:s})", refObj.getTypeName());
     }
-    refObj.free();
   } else if (childObj->isDict()) {
     if (!ref->isRef()) {
       error(errSyntaxError, -1,
@@ -1301,7 +1248,7 @@ StructElement *StructElement::parseChild(Object *ref,
         treeRoot->parentTreeAdd(ref->getRef(), child);
     } else {
       delete child;
-      child = NULL;
+      child = nullptr;
     }
   }
 
@@ -1310,34 +1257,29 @@ StructElement *StructElement::parseChild(Object *ref,
 
 void StructElement::parseChildren(Dict *element, std::set<int> &seen)
 {
-  Object kids;
-
-  if (element->lookup("K", &kids)->isArray()) {
+  Object kids = element->lookup("K");
+  if (kids.isArray()) {
     for (int i = 0; i < kids.arrayGetLength(); i++) {
-      Object obj, ref;
-      parseChild(kids.arrayGetNF(i, &ref), kids.arrayGet(i, &obj), seen);
-      obj.free();
-      ref.free();
+      Object obj = kids.arrayGet(i);
+      Object ref = kids.arrayGetNF(i);
+      parseChild(&ref, &obj, seen);
     }
   } else if (kids.isDict() || kids.isInt()) {
-    Object ref;
-    parseChild(element->lookupNF("K", &ref), &kids, seen);
-    ref.free();
+    Object ref = element->lookupNF("K");
+    parseChild(&ref, &kids, seen);
   }
-
-  kids.free();
 }
 
 void StructElement::parseAttributes(Dict *attributes, GBool keepExisting)
 {
-  Object owner;
-  if (attributes->lookup("O", &owner)->isName("UserProperties")) {
+  Object owner = attributes->lookup("O");
+  if (owner.isName("UserProperties")) {
     // In this case /P is an array of UserProperty dictionaries
-    Object userProperties;
-    if (attributes->lookup("P", &userProperties)->isArray()) {
+    Object userProperties = attributes->lookup("P");
+    if (userProperties.isArray()) {
       for (int i = 0; i < userProperties.arrayGetLength(); i++) {
-        Object property;
-        if (userProperties.arrayGet(i, &property)->isDict()) {
+        Object property = userProperties.arrayGet(i);
+        if (property.isDict()) {
           Attribute *attribute = Attribute::parseUserProperty(property.getDict());
           if (attribute && attribute->isOk()) {
             appendAttribute(attribute);
@@ -1348,10 +1290,8 @@ void StructElement::parseAttributes(Dict *attributes, GBool keepExisting)
         } else {
           error(errSyntaxWarning, -1, "Item in P is wrong type ({0:s})", property.getTypeName());
         }
-        property.free();
       }
     }
-    userProperties.free();
   } else if (owner.isName()) {
     // In this case /P contains standard attributes.
     // Check first if the owner is a valid standard one.
@@ -1378,10 +1318,9 @@ void StructElement::parseAttributes(Dict *attributes, GBool keepExisting)
           }
 
           if (type != Attribute::Unknown) {
-            Object value;
+            Object value = attributes->getVal(i);
             GBool typeCheckOk = gTrue;
-            Attribute *attribute = new Attribute(type, attributes->getVal(i, &value));
-            value.free();
+            Attribute *attribute = new Attribute(type, &value);
 
             if (attribute->isOk() && (typeCheckOk = attribute->checkType(this))) {
               appendAttribute(attribute);
@@ -1405,5 +1344,4 @@ void StructElement::parseAttributes(Dict *attributes, GBool keepExisting)
   } else if (!owner.isNull()) {
     error(errSyntaxWarning, -1, "O is wrong type ({0:s})", owner.getTypeName());
   }
-  owner.free();
 }

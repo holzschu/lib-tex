@@ -14,6 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2013 Christoph Duelli <duelli@melosgmbh.de>
+// Copyright (C) 2018 Albert Astals Cid <aacid@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -36,6 +37,9 @@ namespace { // do not pollute global namespace
 
 class Reader {
 public:
+  Reader() = default;
+  Reader(const Reader &) = delete;
+  Reader& operator=(const Reader &other) = delete;
 
   virtual ~Reader() {}
 
@@ -69,13 +73,13 @@ class MemReader: public Reader {
 public:
 
   static MemReader *make(char *bufA, int lenA);
-  virtual ~MemReader();
-  virtual int getByte(int pos);
-  virtual GBool getU16BE(int pos, int *val);
-  virtual GBool getU32BE(int pos, Guint *val);
-  virtual GBool getU32LE(int pos, Guint *val);
-  virtual GBool getUVarBE(int pos, int size, Guint *val);
-  virtual GBool cmp(int pos, const char *s);
+  ~MemReader();
+  int getByte(int pos) override;
+  GBool getU16BE(int pos, int *val) override;
+  GBool getU32BE(int pos, Guint *val) override;
+  GBool getU32LE(int pos, Guint *val) override;
+  GBool getUVarBE(int pos, int size, Guint *val) override;
+  GBool cmp(int pos, const char *s) override;
 
 private:
 
@@ -164,13 +168,13 @@ class FileReader: public Reader {
 public:
 
   static FileReader *make(char *fileName);
-  virtual ~FileReader();
-  virtual int getByte(int pos);
-  virtual GBool getU16BE(int pos, int *val);
-  virtual GBool getU32BE(int pos, Guint *val);
-  virtual GBool getU32LE(int pos, Guint *val);
-  virtual GBool getUVarBE(int pos, int size, Guint *val);
-  virtual GBool cmp(int pos, const char *s);
+  ~FileReader();
+  int getByte(int pos) override;
+  GBool getU16BE(int pos, int *val) override;
+  GBool getU32BE(int pos, Guint *val) override;
+  GBool getU32LE(int pos, Guint *val) override;
+  GBool getUVarBE(int pos, int size, Guint *val) override;
+  GBool cmp(int pos, const char *s) override;
 
 private:
 
@@ -186,7 +190,7 @@ FileReader *FileReader::make(char *fileName) {
   FILE *fA;
 
   if (!(fA = fopen(fileName, "rb"))) {
-    return NULL;
+    return nullptr;
   }
   return new FileReader(fA);
 }
@@ -287,13 +291,13 @@ class StreamReader: public Reader {
 public:
 
   static StreamReader *make(int (*getCharA)(void *data), void *dataA);
-  virtual ~StreamReader();
-  virtual int getByte(int pos);
-  virtual GBool getU16BE(int pos, int *val);
-  virtual GBool getU32BE(int pos, Guint *val);
-  virtual GBool getU32LE(int pos, Guint *val);
-  virtual GBool getUVarBE(int pos, int size, Guint *val);
-  virtual GBool cmp(int pos, const char *s);
+  ~StreamReader();
+  int getByte(int pos) override;
+  GBool getU16BE(int pos, int *val) override;
+  GBool getU32BE(int pos, Guint *val) override;
+  GBool getU32LE(int pos, Guint *val) override;
+  GBool getUVarBE(int pos, int size, Guint *val) override;
+  GBool cmp(int pos, const char *s) override;
 
 private:
 
@@ -374,13 +378,12 @@ GBool StreamReader::getUVarBE(int pos, int size, Guint *val) {
 }
 
 GBool StreamReader::cmp(int pos, const char *s) {
-  int n;
-
-  n = (int)strlen(s);
+  const int n = (int)strlen(s);
   if (!fillBuf(pos, n)) {
     return gFalse;
   }
-  return !memcmp(buf - bufPos + pos, s, n);
+  const int posDiff = pos - bufPos;
+  return !memcmp(buf + posDiff, s, n);
 }
 
 GBool StreamReader::fillBuf(int pos, int len) {

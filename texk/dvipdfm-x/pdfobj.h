@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2007-2016 by Jin-Hwan Cho and Shunsaku Hirata,
+    Copyright (C) 2007-2018 by Jin-Hwan Cho and Shunsaku Hirata,
     the dvipdfmx project team.
     
     Copyright (C) 1998, 1999 by Mark A. Wicks <mwicks@kettering.edu>
@@ -51,16 +51,18 @@ typedef struct pdf_obj  pdf_obj;
 typedef struct pdf_file pdf_file;
 
 /* External interface to pdf routines */
-
-extern int      pdf_obj_get_verbose (void);
-extern void     pdf_obj_set_verbose (void);
 extern void     pdf_error_cleanup   (void);
 
+extern FILE    *pdf_get_output_file (void);
+
 extern void     pdf_out_init      (const char *filename,
-                                   int enable_encrypt, int enable_objstm);
+                                   int enable_encrypt, int enable_objstm,
+                                   int enable_predictor);
 extern void     pdf_out_flush     (void);
-extern void     pdf_set_version   (unsigned version);
-extern unsigned pdf_get_version   (void);
+extern void     pdf_set_version   (int version);
+extern int      pdf_get_version   (void);
+extern int      pdf_get_version_major (void);
+extern int      pdf_get_version_minor (void);
 
 extern void     pdf_release_obj (pdf_obj *object);
 extern int      pdf_obj_typeof  (pdf_obj *object);
@@ -175,7 +177,6 @@ extern int         pdf_compare_reference (pdf_obj *ref1, pdf_obj *ref2);
  */
 
 extern void      pdf_set_compression (int level);
-extern void      pdf_set_use_predictor (int bval);
 
 extern void      pdf_set_info     (pdf_obj *obj);
 extern void      pdf_set_root     (pdf_obj *obj);
@@ -188,8 +189,8 @@ extern int      check_for_pdf     (FILE *file);
 extern pdf_file *pdf_open          (const char *ident, FILE *file);
 extern void      pdf_close         (pdf_file *pf);
 extern pdf_obj  *pdf_file_get_trailer (pdf_file *pf);
-extern int       pdf_file_get_version (pdf_file *pf);
 extern pdf_obj  *pdf_file_get_catalog (pdf_file *pf);
+extern int       pdf_file_get_version (pdf_file *pf);
 
 extern pdf_obj *pdf_deref_obj     (pdf_obj *object);
 extern pdf_obj *pdf_import_object (pdf_obj *object);
@@ -198,7 +199,6 @@ extern int      pdfobj_escape_str (char *buffer, int size, const unsigned char *
 
 extern pdf_obj *pdf_new_indirect  (pdf_file *pf, unsigned label, unsigned short generation);
 
-extern time_t get_unique_time_if_given(void);
-#define INVALID_EPOCH_VALUE ((time_t)-1)
+extern int pdf_check_version (int major, int minor);
 
 #endif  /* _PDFOBJ_H_ */

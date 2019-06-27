@@ -1,4 +1,4 @@
-/*
+/* $Id: color.c 50641 2019-03-29 18:02:17Z karl $
  *  This is a set of routines for dvips that are used to process color
  *  commands in the TeX file (passed by \special commands).  This was
  *  orignally written by J. Hafner, E. Blanz and M. Flickner of IBM
@@ -27,6 +27,7 @@
 #define COLORHASH (89)
 #define MAXCOLORLEN (120)     /* maximum color length for background */
 #define INITCOLORLEN (10000)  /* initial stack size in chars */
+#define OUTBUFSIZ (100)       /* base limit on special length */
 /*
  *   This is where we store the color information for a particular page.
  *   If we free all of these, we free all of the allocated color
@@ -37,7 +38,7 @@ static struct colorpage {
    struct colorpage *next;
    integer boploc; /* we use the bop loc as a page indicator */
    char *bg;
-   char colordat[2];
+   char *colordat;
 } *colorhash[COLORHASH];
 static char *cstack, *csp, *cend, *bg;
 /*
@@ -51,7 +52,8 @@ static void
 colorcmdout(char *s)
 {
    char *p;
-   char tempword[100];
+   char tempword[OUTBUFSIZ];
+   integer templen;
 
    while (*s && *s <= ' ')
       s++;
@@ -66,7 +68,17 @@ colorcmdout(char *s)
       return;
    }
    cmdout(p);
+   
    strcpy(tempword, "TeXcolor");
+   templen = strlen("TeXcolor") + strlen(s) + 2; /* 2 is slop, just in case */
+   if (templen >= OUTBUFSIZ) {
+      /* PostScript names get truncated to around 128 characters anyway,
+         so there's no reason to allow longer here. */
+      sprintf(errbuf, "! TeXcolor special name longer than %d characters",
+              OUTBUFSIZ);
+      error (errbuf);
+   }
+     
    for (p=tempword + strlen(tempword); *s && *s > ' '; p++, s++)
       *p = *s;
    *p = 0;
@@ -84,6 +96,7 @@ void initcolor(void) {
    for (i=0; i<COLORHASH; i++) {
       for (p=colorhash[i]; p; p = q) {
          q = p->next;
+         free(p->colordat);
          free(p);
       }
       colorhash[i] = 0;
@@ -216,7 +229,8 @@ bopcolor(int outtops)
       }
    } else {
       p = (struct colorpage *)mymalloc((integer)
-                  (strlen(cstack) + sizeof(struct colorpage) + MAXCOLORLEN));
+                  (sizeof(struct colorpage)));
+      p->colordat = mymalloc(strlen(cstack) + MAXCOLORLEN + 2);
       p->next = colorhash[h];
       p->boploc = pageloc;
       strcpy(p->colordat, cstack);

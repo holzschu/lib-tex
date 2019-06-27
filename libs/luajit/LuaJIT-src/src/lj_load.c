@@ -1,6 +1,6 @@
 /*
 ** Load and dump code.
-** Copyright (C) 2005-2016 Mike Pall. See Copyright Notice in luajit.h
+** Copyright (C) 2005-2017 Mike Pall. See Copyright Notice in luajit.h
 */
 
 #include <errno.h>
@@ -166,6 +166,17 @@ LUA_API int lua_dump(lua_State *L, lua_Writer writer, void *data)
     return 1;
 }
 
+/* -- Luajittex needs this one because it's faster than make it Lua  -- */
+LUA_API int RESERVED_lua_dump(lua_State *L, lua_Writer writer, void *data, int strip)
+{
+  cTValue *o = L->top-1;
+  api_check(L, L->top > L->base);
+  if (tvisfunc(o) && isluafunc(funcV(o)))
+    return lj_bcwrite(L, funcproto(funcV(o)), writer, data, strip);
+  else
+    return 1;
+}
+
 /* -- Luajittex needs this one because it overloads loadfile  -- */
 LUALIB_API int RESERVED_load_aux_JIT(lua_State *L, int status, int envarg)
 {
@@ -182,3 +193,4 @@ LUALIB_API int RESERVED_load_aux_JIT(lua_State *L, int status, int envarg)
     return 2;
   }
 }
+

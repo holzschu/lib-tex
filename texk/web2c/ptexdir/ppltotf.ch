@@ -1,5 +1,6 @@
 % This is a change file for PLtoTF
 %
+% (2018-01-27) HY pPLtoTF p2.0 - new JFM spec by texjporg
 % (07/18/2006) ST PLtoTF p1.8 (3.5, Web2c 7.2)
 % (11/13/2000) KN PLtoTF p1.4 (3.5, Web2c 7.2)
 % (03/27/1998) KN PLtoTF p1.3 (3.5, Web2c 7.2)
@@ -15,7 +16,7 @@
 @d banner=='This is PLtoTF, Version 3.6' {printed when the program starts}
 @y
 @d my_name=='ppltotf'
-@d banner=='This is pPLtoTF, Version 3.6-p1.8'
+@d banner=='This is pPLtoTF, Version 3.6-p2.0'
   {printed when the program starts}
 @z
 
@@ -230,6 +231,13 @@ else
     memory[italic]+nl+lk_offset+nk+ne+np;
 @z
 
+@x [131] pTeX:
+@ @d out_size(#)==out((#) div 256); out((#) mod 256)
+@y
+@ @d out_size(#)==out((#) div 256); out((#) mod 256)
+@d out_kanji_code(#)==out_size((#) mod 65536); out((#) div 65536)
+@z
+
 @x [131] l.2256 - pTeX:
 out_size(lf); out_size(lh); out_size(bc); out_size(ec);
 out_size(memory[width]); out_size(memory[height]);
@@ -337,16 +345,6 @@ const n_options = 5; {Pascal won't count array lengths for us.}
 @x
 @ An element with all zeros always ends the list.
 @y
-@ Shift-JIS terminal (the flag is ignored except for WIN32).
-@.-sjis-terminal@>
-
-@<Define the option...@> =
-long_options[current_option].name := 'sjis-terminal';
-long_options[current_option].has_arg := 0;
-long_options[current_option].flag := address_of (sjis_terminal);
-long_options[current_option].val := 1;
-incr (current_option);
-
 @ Kanji option.
 @.-kanji@>
 
@@ -367,7 +365,8 @@ incr(current_option);
 We need to include some routines for handling kanji characters.
 
 @<Constants...@>=
-max_kanji=7237; { maximam number of 2byte characters }
+max_kanji=7237; { maximum number of 2byte characters }
+max_kanji_code=@"7E7E; { maximum jis code }
 yoko_id_number=11; { is identifier for YOKO-kumi font}
 tate_id_number=9; { is identifier for TATE-kumi font}
 
@@ -431,6 +430,7 @@ if cur_code=comment_code then skip_to_end_of_item
 else  begin case cur_code of
   label_code:@<Read a glue label step@>;
   stop_code:@<Read a stop step@>;
+  skip_code:@<Read a skip step@>;
   krn_code:@<Read a (glue) kerning step@>;
   glue_code:@<Read a glue step@>;
   others:
@@ -572,13 +572,23 @@ skip_to_paren;
 end
 
 @ Next codes used to write |kanji_type| to \.{JFM}.
+In the original JFM spec by ASCII Corporation, |jis_code| and |char_type|
+were packed into upper (2~bytes) and lower (2~bytes) halfword respectively.
+However, |char_type| is allowed only 0..255,
+so the upper byte of lower halfword was always 0.
+
+In the new JFM spec by texjporg, |jis_code| ``XXyyzz'' is packed into
+first 3~bytes in the form ``yy zz XX'', and |char_type| is packed into
+remaining 1~byte. The new spec is effectively upper compatible with
+the original, and it allows |jis_code| larger than 0x10000 (not really
+useful for me \.{pPLtoTF} but necessary for \.{upPLtoTF}).
 
 @<Output the kanji character type info@>=
 begin out_size(0); out_size(0); { the default }
 for kanji_type_index:=0 to max_kanji do
   begin if kanji_type[kanji_type_index]>0 then
-    begin out_size(index_to_jis(kanji_type_index));
-    out_size(kanji_type[kanji_type_index]);
+    begin out_kanji_code(index_to_jis(kanji_type_index));
+    out(kanji_type[kanji_type_index]);
     if verbose then begin
       print('char index = ', kanji_type_index);
       print(' (jis ');
@@ -616,7 +626,7 @@ else  begin skip_error('This expression is out of JIS-code encoding.');
 end;
 @#
 procedure print_jis_hex(jis_code:integer); {prints jiscode as four digits}
-var dig:array[0..4] of byte; {holds jis hex codes}
+var dig:array[0..3] of byte; {holds jis hex codes}
 i:byte; {index of array}
 begin dig[0]:=Hi(jis_code) div 16; dig[1]:=Hi(jis_code) mod 16;
 dig[2]:=Lo(jis_code) div 16; dig[3]:=Lo(jis_code) mod 16;
@@ -665,11 +675,9 @@ if ch=')' then
   begin decr(loc); jis_code:=0;
   end
 else if (ch='J')or(ch='j') then
-  begin repeat ch:=get_next_raw; until ch<>' ';
-  cx:=todig(xord[ch])*@"1000;
-  incr(loc); ch:=xord[buffer[loc]]; cx:=cx+todig(ch)*@"100;
-  incr(loc); ch:=xord[buffer[loc]]; cx:=cx+todig(ch)*@"10;
-  incr(loc); ch:=xord[buffer[loc]]; cx:=cx+todig(ch);
+  begin repeat ch:=get_next_raw;
+  until ch<>' '; {skip the blanks after the type code}
+  @<Scan a Kanji hexadecimal code@>;
   jis_code:=toDVI(fromJIS(cx)); cur_char:=ch;
   if not valid_jis_code(jis_code) then
     err_print('jis code ', jis_code:1, ' is invalid');
@@ -683,6 +691,20 @@ else if multistrlen(ustringcast(buffer), loc+2, loc)=2 then
 else jis_code:=-1;
 get_kanji:=jis_code;
 end;
+
+@ @<Scan a Kanji hex...@>=
+begin cx:=todig(xord[ch]);
+  incr(loc); ch:=xord[buffer[loc]];
+  while ((ch>="0")and(ch<="9"))or((ch>="A")and(ch<="F")) do
+    begin cx:=cx*16+todig(ch); {overflow might happen, but rare...}
+    incr(loc); ch:=xord[buffer[loc]];
+    end;
+  decr(loc); ch:=xord[buffer[loc]];
+  if cx>max_kanji_code then
+    begin skip_error('This value shouldn''t exceed jis code');
+    cx:=0; ch:=" ";
+    end;
+end
 
 @* Index.
 @z

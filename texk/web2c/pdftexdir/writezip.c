@@ -51,9 +51,8 @@ void writezip(boolean finish)
                 c_stream.zfree = (free_func) 0;
                 c_stream.opaque = (voidpf) 0;
                 check_err(deflateInit(&c_stream, level), "deflateInit");
-            } else {
+            } else
                 check_err(deflateReset(&c_stream), "deflateReset");
-			}
         }
         level_old = level;
         c_stream.next_out = (Bytef *) zipbuf;
@@ -92,6 +91,5 @@ void zip_free(void)
     if (zipbuf != NULL) {
         check_err(deflateEnd(&c_stream), "deflateEnd");
         free(zipbuf);
-        zipbuf = NULL; 
     }
 }

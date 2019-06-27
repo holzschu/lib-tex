@@ -2,7 +2,7 @@
 ** Ghostscript.cpp                                                      **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -19,7 +19,9 @@
 *************************************************************************/
 
 #include <config.h>
+#include "FilePath.hpp"
 #include "Ghostscript.hpp"
+#include "utility.hpp"
 #if !defined(DISABLE_GS)
 #include <cstring>
 #include <iomanip>
@@ -51,21 +53,19 @@ static string get_path_from_registry () {
 	mode |= KEY_WOW64_32KEY;
 #endif
 #endif
-	static const char *gs_companies[] = {"GPL", "GNU", "AFPL", "Aladdin"};
-	for (size_t i=0; i < sizeof(gs_companies)/sizeof(char*); i++) {
-		const string reg_path = string("SOFTWARE\\") + gs_companies[i] + " Ghostscript";
-		static HKEY reg_roots[] = {HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
-		for (size_t j=0; j < sizeof(reg_roots)/sizeof(HKEY); j++) {
+	for (const char *gs_company : {"GPL", "GNU", "AFPL", "Aladdin"}) {
+		const string reg_path = string("SOFTWARE\\") + gs_company + " Ghostscript";
+		for (HKEY reg_root : {HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE}) {
 			HKEY hkey;
-			if (RegOpenKeyExA(reg_roots[j], reg_path.c_str(), 0, mode, &hkey) == ERROR_SUCCESS) {
+			if (RegOpenKeyExA(reg_root, reg_path.c_str(), 0, mode, &hkey) == ERROR_SUCCESS) {
 				char subkey[16];
 				for (int k=0; RegEnumKeyA(hkey, k, subkey, 16) == ERROR_SUCCESS; k++) {
 					istringstream iss(subkey);
 					int major_version;
 					iss >> major_version;
 					if (major_version >= 7) {
-						char dll_path[256];  // path to Ghostscript DLL stored in the registry
-						DWORD length;
+						char dll_path[512];  // path to Ghostscript DLL stored in the registry
+						DWORD length = 512;
 						if (RegGetValueA(hkey, subkey, "GS_DLL", RRF_RT_REG_SZ, 0, dll_path, &length) == ERROR_SUCCESS) {
 							RegCloseKey(hkey);
 							return dll_path;
@@ -79,7 +79,27 @@ static string get_path_from_registry () {
 #endif  // RRF_RT_REG_SZ
 	return "";
 }
-#endif  // _WIN32
+#endif // _WIN32
+
+#if defined(_WIN32) && !defined(_WIN64)
+static string get_gsdll32 () {
+	string pathstr;
+#if defined(TEXLIVEWIN32)
+	char exepath[256];
+	if (GetModuleFileNameA(NULL, exepath, 256)) {
+		FilePath path(exepath);
+		path.set(path.absolute(false)+"/../../tlpkg/tlgs");
+		pathstr = util::replace(path.absolute(false)+"/", "/", "\\");
+		string envvar = "GS_LIB=";
+		for (string dirs : {"lib", "fonts", "Resource\\Init", "Resource", "kanji"})
+			envvar += pathstr+dirs+";";
+		_putenv(envvar.c_str());
+		pathstr += "bin\\";
+	}
+#endif
+	return pathstr+"gsdll32.dll";
+}
+#endif  // _WIN32  && !_WIN64
 
 
 /** Try to detect name of the Ghostscript shared library depending on the user settings.
@@ -103,24 +123,28 @@ static string get_libgs (const string &fname) {
 	string gsdll_path = get_path_from_registry();
 	if (!gsdll_path.empty())
 		return gsdll_path;
-#endif
+#endif //_WIN32
 #if defined(_WIN64)
 	return "gsdll64.dll";
 #elif defined(_WIN32)
-	return "gsdll32.dll";
+	return get_gsdll32();
 #else
 	// try to find libgs.so.X on the user's system
 	const int abi_min=7, abi_max=9; // supported libgs ABI versions
 	for (int i=abi_max; i >= abi_min; i--) {
-		ostringstream oss;
 #if defined(__CYGWIN__)
-		oss << "cyggs-" << i << ".dll";
+		string dlname = "cyggs-" + to_string(i) + ".dll";
 #else
-		oss << "libgs.so." << i;
+		string dlname = "libgs.so." + to_string(i);
 #endif
-		DLLoader loader(oss.str().c_str());
+		DLLoader loader(dlname);
 		if (loader.loaded())
-			return oss.str();
+			return dlname;
+#if defined(__APPLE__)
+		dlname = "libgs." + to_string(i) + ".dylib";
+		if (loader.loadLibrary(dlname))
+			return dlname;
+#endif
 	}
 #endif
 	// no appropriate library found
@@ -133,7 +157,7 @@ static string get_libgs (const string &fname) {
  *  constructor should only be used to call available() and revision(). */
 Ghostscript::Ghostscript ()
 #if !defined(HAVE_LIBGS)
-	: DLLoader(get_libgs(LIBGS_NAME).c_str())
+	: DLLoader(get_libgs(LIBGS_NAME))
 #endif
 {
 	_inst = 0;
@@ -146,7 +170,7 @@ Ghostscript::Ghostscript ()
  * @param[in] caller this parameter is passed to all callback functions */
 Ghostscript::Ghostscript (int argc, const char **argv, void *caller)
 #if !defined(HAVE_LIBGS)
-	: DLLoader(get_libgs(LIBGS_NAME).c_str())
+	: DLLoader(get_libgs(LIBGS_NAME))
 #endif
 {
 	_inst = 0;
@@ -169,7 +193,7 @@ bool Ghostscript::init (int argc, const char **argv, void *caller) {
 		if (status < 0)
 			_inst = 0;
 		else {
-			init_with_args(argc, (char**)argv);
+			init_with_args(argc, const_cast<char**>(argv));
 		}
 	}
 	return _inst != 0;
@@ -194,25 +218,32 @@ bool Ghostscript::revision (gsapi_revision_t *r) {
 #if defined(HAVE_LIBGS)
 	return (gsapi_revision(r, sizeof(gsapi_revision_t)) == 0);
 #else
-	if (PFN_gsapi_revision fn = (PFN_gsapi_revision)loadSymbol("gsapi_revision"))
+	if (auto fn = LOAD_SYMBOL(gsapi_revision))
 		return (fn(r, sizeof(gsapi_revision_t)) == 0);
 	return false;
 #endif
 }
 
 
-/** Returns product name and revision number of the GS library.
- *  @param[in] revonly if true, only the revision number is returned */
-string Ghostscript::revision (bool revonly) {
+/** Returns the revision number of the GS library. */
+int Ghostscript::revision () {
 	gsapi_revision_t r;
-	if (revision(&r)) {
-		ostringstream oss;
-		if (!revonly)
-			oss << r.product << ' ';
-		oss << (r.revision/100) << '.' << setfill('0') << setw(2) << (r.revision%100);
-		return oss.str();
+	if (revision(&r))
+		return static_cast<int>(r.revision);
+	return 0;
+}
+
+
+/** Returns the revision of the GS library as a string of the form "MAJOR.MINOR". */
+string Ghostscript::revisionstr () {
+	string revstr;
+	if (int rev = revision()) {
+		revstr = to_string(rev/100) + ".";
+		if (rev % 100 < 10)
+			revstr += "0";
+	  	revstr += to_string(rev%100);
 	}
-	return "";
+	return revstr;
 }
 
 
@@ -224,7 +255,7 @@ int Ghostscript::new_instance (void **psinst, void *caller) {
 #if defined(HAVE_LIBGS)
 	return gsapi_new_instance(psinst, caller);
 #else
-	if (PFN_gsapi_new_instance fn = (PFN_gsapi_new_instance)loadSymbol("gsapi_new_instance"))
+	if (auto fn = LOAD_SYMBOL(gsapi_new_instance))
 		return fn(psinst, caller);
 	*psinst = 0;
 	return 0;
@@ -238,7 +269,7 @@ void Ghostscript::delete_instance () {
 #if defined(HAVE_LIBGS)
 	gsapi_delete_instance(_inst);
 #else
-	if (PFN_gsapi_delete_instance fn = (PFN_gsapi_delete_instance)loadSymbol("gsapi_delete_instance"))
+	if (auto fn = LOAD_SYMBOL(gsapi_delete_instance))
 		fn(_inst);
 #endif
 }
@@ -249,7 +280,7 @@ int Ghostscript::exit () {
 #if defined(HAVE_LIBGS)
 	return gsapi_exit(_inst);
 #else
-	if (PFN_gsapi_exit fn = (PFN_gsapi_exit)loadSymbol("gsapi_exit"))
+	if (auto fn = LOAD_SYMBOL(gsapi_exit))
 		return fn(_inst);
 	return 0;
 #endif
@@ -264,7 +295,7 @@ int Ghostscript::set_stdio (Stdin in, Stdout out, Stderr err) {
 #if defined(HAVE_LIBGS)
 	return gsapi_set_stdio(_inst, in, out, err);
 #else
-	if (PFN_gsapi_set_stdio fn = (PFN_gsapi_set_stdio)loadSymbol("gsapi_set_stdio"))
+	if (auto fn = LOAD_SYMBOL(gsapi_set_stdio))
 		return fn(_inst, in, out, err);
 	return 0;
 #endif
@@ -279,7 +310,7 @@ int Ghostscript::init_with_args (int argc, char **argv) {
 #if defined(HAVE_LIBGS)
 	return gsapi_init_with_args(_inst, argc, argv);
 #else
-	if (PFN_gsapi_init_with_args fn = (PFN_gsapi_init_with_args)loadSymbol("gsapi_init_with_args"))
+	if (auto fn = LOAD_SYMBOL(gsapi_init_with_args))
 		return fn(_inst, argc, argv);
 	return 0;
 #endif
@@ -291,7 +322,7 @@ int Ghostscript::run_string_begin (int user_errors, int *pexit_code) {
 #if defined(HAVE_LIBGS)
 	return gsapi_run_string_begin(_inst, user_errors, pexit_code);
 #else
-	if (PFN_gsapi_run_string_begin fn = (PFN_gsapi_run_string_begin)loadSymbol("gsapi_run_string_begin"))
+	if (auto fn = LOAD_SYMBOL(gsapi_run_string_begin))
 		return fn(_inst, user_errors, pexit_code);
 	*pexit_code = 0;
 	return 0;
@@ -310,7 +341,7 @@ int Ghostscript::run_string_continue (const char *str, unsigned length, int user
 #if defined(HAVE_LIBGS)
 	return gsapi_run_string_continue(_inst, str, length, user_errors, pexit_code);
 #else
-	if (PFN_gsapi_run_string_continue fn = (PFN_gsapi_run_string_continue)loadSymbol("gsapi_run_string_continue"))
+	if (auto fn = LOAD_SYMBOL(gsapi_run_string_continue))
 		return fn(_inst, str, length, user_errors, pexit_code);
 	*pexit_code = 0;
 	return 0;
@@ -323,7 +354,7 @@ int Ghostscript::run_string_end (int user_errors, int *pexit_code) {
 #if defined(HAVE_LIBGS)
 	return gsapi_run_string_end(_inst, user_errors, pexit_code);
 #else
-	if (PFN_gsapi_run_string_end fn = (PFN_gsapi_run_string_end)loadSymbol("gsapi_run_string_end"))
+	if (auto fn = LOAD_SYMBOL(gsapi_run_string_end))
 		return fn(_inst, user_errors, pexit_code);
 	*pexit_code = 0;
 	return 0;
@@ -336,7 +367,7 @@ const char* Ghostscript::error_name (int code) {
 		code = -code;
 	const char *error_names[] = { ERROR_NAMES };
 	if (code == 0 || (size_t)code > sizeof(error_names)/sizeof(error_names[0]))
-		return 0;
+		return nullptr;
 #if defined(HAVE_LIBGS)
 	// use array defined in libgs to avoid linking the error strings into the binary
 	return gs_error_names[code-1];
@@ -344,9 +375,9 @@ const char* Ghostscript::error_name (int code) {
 	// gs_error_names is private in the Ghostscript DLL so we can't access it here
 	return error_names[code-1];
 #else
-	if (const char **error_names = (const char**)loadSymbol("gs_error_names"))
+	if (auto error_names = loadSymbol<const char**>("gs_error_names"))
 		return error_names[code-1];
-	return 0;
+	return nullptr;
 #endif
 }
 

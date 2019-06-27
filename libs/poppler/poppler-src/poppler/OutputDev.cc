@@ -15,10 +15,11 @@
 //
 // Copyright (C) 2005 Jonathan Blandford <jrb@redhat.com>
 // Copyright (C) 2006 Thorkild Stray <thorkild@ifi.uio.no>
-// Copyright (C) 2007 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2007, 2017 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2009 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2009, 2012, 2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2012 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2018 Adam Reichold <adam.reichold@t-online.de>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -36,7 +37,6 @@
 #include "Stream.h"
 #include "GfxState.h"
 #include "OutputDev.h"
-#include "goo/GooHash.h"
 
 //------------------------------------------------------------------------
 // OutputDev
@@ -143,7 +143,7 @@ void OutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				int maskWidth, int maskHeight,
 				GBool maskInvert,
 				GBool maskInterpolate) {
-  drawImage(state, ref, str, width, height, colorMap, interpolate, NULL, gFalse);
+  drawImage(state, ref, str, width, height, colorMap, interpolate, nullptr, gFalse);
 }
 
 void OutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
@@ -154,23 +154,23 @@ void OutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				    int maskWidth, int maskHeight,
 				    GfxImageColorMap *maskColorMap,
 				    GBool maskInterpolate) {
-  drawImage(state, ref, str, width, height, colorMap, interpolate, NULL, gFalse);
+  drawImage(state, ref, str, width, height, colorMap, interpolate, nullptr, gFalse);
 }
 
 void OutputDev::endMarkedContent(GfxState *state) {
 }
 
-void OutputDev::beginMarkedContent(char *name, Dict *properties) {
+void OutputDev::beginMarkedContent(const char *name, Dict *properties) {
 }
 
-void OutputDev::markPoint(char *name) {
+void OutputDev::markPoint(const char *name) {
 }
 
-void OutputDev::markPoint(char *name, Dict *properties) {
+void OutputDev::markPoint(const char *name, Dict *properties) {
 }
 
 
-#if OPI_SUPPORT
+#ifdef OPI_SUPPORT
 void OutputDev::opiBegin(GfxState *state, Dict *opiDict) {
 }
 
@@ -179,18 +179,11 @@ void OutputDev::opiEnd(GfxState *state, Dict *opiDict) {
 #endif
 
 void OutputDev::startProfile() {
-  if (profileHash)
-    delete profileHash;
-
-  profileHash = new GooHash (true);
+  profileHash.reset(new std::unordered_map<std::string, ProfileData>);
 }
 
-GooHash *OutputDev::endProfile() {
-  GooHash *profile = profileHash;
-
-  profileHash = NULL;
-
-  return profile;
+std::unique_ptr<std::unordered_map<std::string, ProfileData>> OutputDev::endProfile() {
+  return std::move(profileHash);
 }
 
 #ifdef USE_CMS

@@ -1,6 +1,7 @@
 ## texk/web2c/pmpostdir/am/pmpost.am: Makefile fragment for pMetaPost.
 ##
-## Copyright (C) 2014, 2015 Peter Breitenlohner <tex-live@tug.org>
+## Copyright 2018 Karl Berry <tex-live@tug.org>
+## Copyright 2014-2015 Peter Breitenlohner <tex-live@tug.org>
 ## You may freely use, modify and/or distribute this file.
 
 ## pMetaPost and upMetaPost
@@ -13,6 +14,7 @@ install_exe_links += install-pmpost-links
 uninstall_exe_links += uninstall-pmpost-links
 else !WIN32
 bin_links += pmpost$(EXEEXT):pdvitomp
+bin_links += pmpost$(EXEEXT):r-pmpost
 endif !WIN32
 endif PMP
 if UPMP
@@ -23,6 +25,7 @@ install_exe_links += install-upmpost-links
 uninstall_exe_links += uninstall-upmpost-links
 else !WIN32
 bin_links += upmpost$(EXEEXT):updvitomp
+bin_links += upmpost$(EXEEXT):r-upmpost
 endif !WIN32
 endif UPMP
 EXTRA_PROGRAMS += pmpost upmpost
@@ -182,6 +185,7 @@ TESTS += $(upmpost_tests)
 endif UPMP
 
 EXTRA_DIST += pmpostdir/tests/psample.mp
+EXTRA_DIST += pmpostdir/README pmpostdir/README.old.ja pmpostdir/Changes.old.ja
 ## pmpostdir/pmpsamp.test
 DISTCLEANFILES += pmpsamp.*
 ## pmpostdir/upmpsamp.test

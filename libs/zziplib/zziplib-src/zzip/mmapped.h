@@ -28,7 +28,7 @@ typedef struct zzip_disk       ZZIP_DISK;
 
 /* we expose this structure so third party applications can augment
  * on them. The mmapped zip access usually just needs the two pointers
- * specifying the mmapped area, whereever you have that from.
+ * specifying the mmapped area, wherever you have that from.
  */
 struct zzip_disk
 {
@@ -37,11 +37,7 @@ struct zzip_disk
     void* reserved;    /* - for later extensions (might be renamed) */
     void* user;        /* - free for applications (use this!) */
     long  flags;       /* bit 0: findfile searches case-insensitive */
-#ifdef _WIN64
-    __int64  mapped;
-#else
     long  mapped;      /* used for mmap() wrappers of zzip/__mmap.h */
-#endif
     long  unused;      /* - for later extensions (might be renamed) */
     long  code;        /* - free for applications (use this!) */
 };

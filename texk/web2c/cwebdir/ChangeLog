@@ -1,3 +1,89 @@
+2019-02-16  Andreas Scherer  <https://ascherer.github.io>
+
+	* cwebinputs/c++1xlib.w: Add some C++1x class names.
+
+2019-01-20  Andreas Scherer  <https://ascherer.github.io>
+
+	* comm-w2c.ch: Use braced evaluation and save a macro variable.
+
+2019-01-19  Andreas Scherer  <https://ascherer.github.io>
+
+	* comm-w2c.ch: Extended notes about NLS activation.
+	* po/web2c-help.pot, po/de/web2c-help.po: Fix typos.
+
+2019-01-18  Andreas Scherer  <https://ascherer.github.io>
+
+	* po/cweb.pot, po/de/cweb.po, po/it/cweb.po:
+	Update NLS references for TP notification.
+
+2019-01-17  Andreas Scherer  <https://ascherer.github.io>
+
+	* comm-w2c.ch, comm-w2c.h,
+	* ctang-w2c.ch, ctwill-w2c.ch, cweav-w2c.ch:
+	Translate 'banner' if HAVE_GETTEXT set and cweb-tl.mo available.
+
+2019-01-16  Andreas Scherer  <https://ascherer.github.io>
+
+	* comm-w2c.ch: Correct usage of 'kpse_var_expand';
+	skip numeric argument of '-d' flag.
+
+2019-01-15  Andreas Scherer  <https://ascherer.github.io>
+
+	* comm-w2c.ch: Provisional 'bindtextdomain' lookup in TDS.
+	* cwebinputs/texinputs: Add prefix 'cweb_' to TeX macros
+	and transliteration files.
+	* po/cweb-tl.pot: Realign NLS modules with texlive changes.
+
+2019-01-05  Andreas Scherer  <https://ascherer.github.io>
+
+	Integration of CWEBbin as the new CWEB in TeX Live,
+	https://github.com/ascherer/cwebbin.
+	
+	Purge cwebboot.h[in] from CWEB build process;
+	see ../ChangeLog for more changes in ../am/, etc.
+	
+	* comm-w2c.h: new file.
+	* ctang-w2c.ch,
+	* cweav-w2c.ch: cwebbin changes for translations and everything else.
+	
+	* ctproofmac.tex,
+	* cttwinxmac.tex,
+	* ctwimac.tex: new macro files.
+	
+	* po/: new subdirectory for translations.
+	* cwebinputs,
+	* texinputs: new subdirs to include entire original cweb distribution.
+	
+	Add CTWILL material on top of CWEAVE.
+	* prod-twill.w,
+	* refsort.w,
+	* twinx.w,
+	* ctwill-w2c.ch: new files.
+
+2018-12-30  Andreas Scherer  <https://ascherer.github.io>
+
+	* cweave.w,
+	* common.w,
+	* common.c,
+	* ../cwebboot.cin: do not change the CWEB sources, use
+	changefile entries instead.
+	* examples: add directory (unchanged) from cweb-3.64c.tar.gz.
+
+2018-11-02  Andreas Scherer  <https://ascherer.github.io>
+
+	* ctang-w2c.ch,
+	* cweav-w2c.ch,
+	* ../ctangleboot.cin: clean build with non-implicit 'int change_depth'.
+	tex-k mail, 2 Nov 2018 18:03:39.
+
+2018-01-18  Karl Berry  <karl@tug.org>
+
+	* cweave.w,
+	* common.w,
+	* common.c,
+	* ../cwebboot.cin: printf %s instead of direct string (from Debian).
+	(Also sent to DEK.)
+
 2017-01-29  Karl Berry  <karl@tug.org>
 
 	* ../cwebboot.cin,

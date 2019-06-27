@@ -2,7 +2,7 @@
 ** NoPsSpecialHandler.hpp                                               **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -23,14 +23,13 @@
 
 #include "SpecialHandler.hpp"
 
-class NoPsSpecialHandler : public SpecialHandler, public DVIEndPageListener
-{
+class NoPsSpecialHandler : public SpecialHandler {
 	public:
 		NoPsSpecialHandler () : _count(0) {}
-		bool process (const char *prefix, std::istream &is, SpecialActions &actions) override;
+		bool process (const std::string &prefix, std::istream &is, SpecialActions &actions) override;
 		const char* name () const override {return 0;}
 		const char* info () const override {return 0;}
-		const char** prefixes () const override;
+		std::vector<const char*> prefixes() const override;
 
 	protected:
 		void dviEndPage (unsigned pageno, SpecialActions &actions) override;

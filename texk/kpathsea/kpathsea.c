@@ -34,11 +34,7 @@ kpathsea_new (void)
 
 #if KPATHSEA_CAN_FREE
 
-#ifdef __IPHONE__ 
-#define string_free(a) do { if (a != NULL) free((char*) a); a = NULL; } while (0)
-#else
 #define string_free(a) if ((a) != NULL) free((char *)(a))
-#endif
 
 static void
 str_llist_free (str_llist_type p)
@@ -83,10 +79,6 @@ kpathsea_finish (kpathsea kpse)
     str_list_free (&kpse->db_dir_list);
     hash_free (kpse->link_table);
     cache_free (kpse->the_cache, kpse->cache_length);
-#ifdef __IPHONE__
-    kpse->the_cache = NULL;
-    kpse->cache_length = 0;
-#endif
     hash_free (kpse->map);
     string_free (kpse->map_path);
     string_free (kpse->elt);
@@ -105,7 +97,7 @@ kpathsea_finish (kpathsea kpse)
         string_free (f.path);
         string_free (f.override_path);
         string_free (f.client_path);
-        /* string_free (f.cnf_path); */
+        /*string_free (f.cnf_path);*/
     }
 
     if (kpse->missfont != (FILE *)NULL)
@@ -115,21 +107,11 @@ kpathsea_finish (kpathsea kpse)
         string_free (kpse->expansions[i].var);
     }
     free (kpse->expansions);
-#ifdef __IPHONE__
-    kpse->expansions = 0;
-    kpse->expansion_len = 0;
-    // Do not erase the environment, do not erase the hash tables...
-    // maybe just erase the format list, and keep the rest?
-    // See reset_format? 
-    // Remove all comments, and don't call this one
-    /* We can't alter the environment inside a library / iOS */
-#else 
     if (kpse->saved_env != NULL) {
         for (i = 0; i != kpse->saved_count; ++i)
             string_free (kpse->saved_env[i]);
         free (kpse->saved_env);
     }
-#endif
 #endif /* KPATHSEA_CAN_FREE */
 #if defined(WIN32) || defined(__CYGWIN__)
     if (kpse->suffixlist != NULL) {
@@ -145,7 +127,6 @@ kpathsea_finish (kpathsea kpse)
         return;
 #endif
     free (kpse);
-    kpse = NULL; 
 }
 
 

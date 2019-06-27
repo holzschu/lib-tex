@@ -73,8 +73,8 @@ register int n;
 {
     register char *dd = (char *)d, *ss = (char *)s;
     if (dd < ss || dd - ss >= n) {
-#if defined(bcopy) && defined(memcpy)
-        my_memcpy(dd, ss, n);
+#if defined(bcopy) && defined(memcpy) 
+        Anyptr my_memcpy(Anyptr d, Const Anyptr s, size_t n);
 #else
 	memcpy(dd, ss, n);
 #endif
@@ -86,7 +86,6 @@ register int n;
     }
     return d;
 }
-
 
 #ifdef __STDC__
 Anyptr my_memcpy(Anyptr d, Const Anyptr s, size_t n)
@@ -101,6 +100,7 @@ register int n;
 	*dd++ = *ss++;
     return d;
 }
+
 
 #ifdef __STDC__
 int my_memcmp(Const Anyptr s1, Const Anyptr s2, size_t n)

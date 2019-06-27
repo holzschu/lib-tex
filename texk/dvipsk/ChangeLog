@@ -1,3 +1,88 @@
+2019-04-07  Karl Berry  <karl@freefriends.org>
+
+	* TeX Live 2019.
+
+2019-04-05  Karl Berry  <karl@tug.org>
+
+	* dospecial.c (dospecial): off by one with PSFILESIZ.
+	Report from Andy Nguyen of ETH Zurich.
+
+2019-03-30  Karl Berry  <karl@freefriends.org>
+
+	* emspecial.c (bmpgraph): avoid writing after isblack
+	if clrtablesize is >256.
+	Report from Andy Nguyen of ETH Zurich.
+
+2019-03-29  Karl Berry  <karl@freefriends.org>
+
+	* loadfont.c (errbuf),
+	* protos.h (errbuf): increase to 1500.
+	* dospecial.c,
+	* flib.c,
+	* makefont.c,
+	* output.c,
+	* pprescan.c,
+	* scanpage.c,
+	* tfmload.c: limit sprintf %s arguments into buffers.
+
+	* dospecial.c (dospecial) <bare psfile>: reverse sense of maccess
+	test, as intended; check for buffer overflow.
+	(maccess): add doc.
+
+	* color.c (colorcmdout),
+	* dospecial.c (dospecial) <epsfile>, <postscriptbox>, <psfile>:
+	check for buffer overflows.
+	* test-overflow-buffers.test,
+	* testdata/color.pro,
+	* testdata/overflow-color-push.dvi,
+	* testdata/overflow-color-push.tex,
+	* testdata/overflow-epsfile.dvi,
+	* testdata/overflow-epsfile.tex,
+	* testdata/overflow-psbox.dvi,
+	* testdata/overflow-psbox.tex: new test files and support.
+	* Makefile.am (TESTS, EXTRA_DIST, DISTCLEANFILES): add new tests.
+	Report from Andy Nguyen of ETH Zurich.
+
+2019-02-26  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* afm2tfm.c: Forbid too long file name.
+
+2019-02-11  Karl Berry  <karl@tug.org>
+
+	* dvips.texi,
+	* dvips.h,
+	* configure.ac,
+	* afm2tfm.c: 5.999 for TL'19.
+
+2018-10-24  Karl Berry  <karl@tug.org>
+
+	* writet1.c (t1_check_unusual_charstring): don't call
+	strlen(t1_buf_array) if it is null.
+	From Luigi, 22 Oct 2018 22:43:03.
+
+2018-09-18  Nick Roessler  <nicholas.e.roessler@gmail.com>
+
+	* writet1.c (t1_check_unusual_charstring): protect against buffer
+	overflow.
+
+2018-04-14  Karl Berry  <karl@tug.org>
+
+	* Version 5.998 for TeX Live 2018 release.
+
+2018-02-20  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* color.c (colorpage),
+	* dospecial.c (bangspecial),
+	* dvips.h (header_list):	
+	don't use ersatz array as last struct member; change usage.
+	Reported (implicitly, as part of)
+	https://trac.macports.org/ticket/53974
+
+2018-01-27  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* tfmload.c, dvips.h: Support new JFM spec (3-byte characters
+	in TYPE > 0).
+
 2017-05-19  Karl Berry  <karl@tug.org>
 
 	* Version 5.997 for TeX Live 2017 release.

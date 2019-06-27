@@ -95,6 +95,10 @@ public:
   // for OpenType CFF fonts.)
   void getFontMatrix(double *mat);
 
+  // Returns true if this looks like a CJK font that uses bytecode
+  // instructions to assemble glyphs.
+  GBool checkForTrickyCJK();
+
   // Convert to a Type 42 font, suitable for embedding in a PostScript
   // file.  <psName> will be used as the PostScript font name (so we
   // don't need to depend on the 'name' table in the font).  The
@@ -151,9 +155,9 @@ public:
   // to <name>.  If <codeToGID> is non-NULL, the font is re-encoded,
   // using a Windows Unicode cmap.  If <name> is NULL and the font is
   // complete and correct, it will be written unmodified.  (Not useful
-  // for OpenType CFF fonts.)
-  void writeTTF(FoFiOutputFunc outputFunc, void *outputStream,
-		char *name = NULL, int *codeToGID = NULL);
+  // for OpenType CFF fonts.)  Returns true if the font was modified.
+  GBool writeTTF(FoFiOutputFunc outputFunc, void *outputStream,
+		 char *name = NULL, int *codeToGID = NULL);
 
   // Returns a pointer to the CFF font embedded in this OpenType font.
   // If successful, sets *<start> and *<length>, and returns true.

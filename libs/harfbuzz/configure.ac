@@ -1,6 +1,8 @@
+dnl $Id: configure.ac 48947 2018-10-19 21:35:02Z kakuto $
 dnl Process this file with autoconf to produce a configure script.
 dnl
-dnl   Copyright (C) 2012-2015 Peter Breitenlohner <tex-live@tug.org>
+dnl   Copyright 2016-2017 Karl Berry <tex-live@tug.org>
+dnl   Copyright 2012-2015 Peter Breitenlohner <tex-live@tug.org>
 dnl
 dnl   This file is free software; the copyright holder
 dnl   gives unlimited permission to copy and/or distribute it,
@@ -13,7 +15,7 @@ AC_CONFIG_SRCDIR([harfbuzz-src/src/harfbuzz.pc.in])
 AC_CONFIG_AUX_DIR([../../build-aux])
 AC_CONFIG_MACRO_DIR([../../m4])
 
-KPSE_BASIC([harfbuzz])
+KPSE_BASIC([harfbuzz], no-define)
 
 KPSE_LIB_VERSION([harfbuzz])[]dnl
 AC_SUBST([HB_VERSION_MAJOR], [harfbuzz_major])[]dnl
@@ -26,26 +28,49 @@ AC_PROG_CXX
 AC_PROG_RANLIB
 AC_PROG_LN_S
 
+# Theoretically harfbuzz does not require C++11?
+AX_CXX_COMPILE_STDCXX([11],,[optional])
+
+KPSE_COMPILER_VISIBILITY
+
 KPSE_GRAPHITE2_FLAGS
 KPSE_ICU_FLAGS
 
 # Functions and headers
-AC_CHECK_FUNCS([atexit mprotect sysconf getpagesize sched_yield mmap _setmode isatty])
-AC_CHECK_HEADERS([unistd.h sys/mman.h sched.h io.h])
+AC_CHECK_FUNCS(atexit mprotect sysconf getpagesize mmap isatty newlocale strtod_l posix_memalign)
+
+save_libs="$LIBS"
+LIBS="$LIBS -lm"
+AC_CHECK_FUNCS([round], ,[AC_CHECK_DECLS([round], , ,[#include <math.h>])])
+LIBS="$save_libs"
+
+AC_CHECK_HEADERS(unistd.h sys/mman.h xlocale.h stdbool.h)
 
 # Compiler flags
 AC_CANONICAL_HOST
 AC_CHECK_ALIGNOF([struct{char;}])
 if test "x$GCC" = "xyes"; then
+
+	# Make symbols link locally
+	LDFLAGS="$LDFLAGS -Bsymbolic-functions"
+
+	# Make sure we don't link to libstdc++
+	CXXFLAGS="$CXXFLAGS -fno-rtti -fno-exceptions"
+
+	# Assorted warnings
+	CXXFLAGS="$CXXFLAGS -Wcast-align"
+
 	case "$host" in
 		arm-*-*)
 			if test "x$ac_cv_alignof_struct_char__" != x1; then
 				# Request byte alignment
-				AM_CXXFLAGS="-mstructure-size-boundary=8"
+				CXXFLAGS="$CXXFLAGS -mstructure-size-boundary=8"
 			fi
 		;;
 	esac
 fi
+AM_CONDITIONAL(HAVE_GCC, test "x$GCC" = "xyes")
+
 AC_SUBST([AM_CXXFLAGS])
 
 AC_CONFIG_HEADERS([config.h])
@@ -60,6 +85,7 @@ fi
 if :; then
   AC_DEFINE([HAVE_OT], 1, [Use native OpenType Layout backend])
   AC_DEFINE([HAVE_ICU], 1, [Use ICU library])
+  AC_DEFINE([HAVE_ICU_BUILTIN], 1, [ICU support is not a seperate library])
   AC_DEFINE([HAVE_GRAPHITE2], 1, [Use Graphite library])
 else
 dnl add all these to config.h.in but do not define them in config.h

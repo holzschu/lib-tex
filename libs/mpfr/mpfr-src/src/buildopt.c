@@ -1,7 +1,7 @@
 /* buildopt.c -- functions giving information about options used during the
    mpfr library compilation
 
-Copyright 2009-2016 Free Software Foundation, Inc.
+Copyright 2009-2019 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -18,7 +18,7 @@ License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
+https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
 
 #include "mpfr-impl.h"
@@ -27,6 +27,16 @@ int
 mpfr_buildopt_tls_p (void)
 {
 #ifdef MPFR_USE_THREAD_SAFE
+  return 1;
+#else
+  return 0;
+#endif
+}
+
+int
+mpfr_buildopt_float128_p (void)
+{
+#ifdef MPFR_WANT_FLOAT128
   return 1;
 #else
   return 0;
@@ -53,11 +63,18 @@ mpfr_buildopt_gmpinternals_p (void)
 #endif
 }
 
+int
+mpfr_buildopt_sharedcache_p (void)
+{
+#ifdef MPFR_WANT_SHARED_CACHE
+  return 1;
+#else
+  return 0;
+#endif
+}
+
 const char *mpfr_buildopt_tune_case (void)
 {
-#ifdef MPFR_TUNE_CASE
+  /* MPFR_TUNE_CASE is always defined (can be "default"). */
   return MPFR_TUNE_CASE;
-#else
-  return "Generic thresholds";
-#endif
 }

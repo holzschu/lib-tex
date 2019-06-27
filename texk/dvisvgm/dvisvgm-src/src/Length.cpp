@@ -2,7 +2,7 @@
 ** Length.cpp                                                           **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -138,4 +138,20 @@ void Length::set (double val, string unitstr) {
 	else if (unitstr.length() != 2)
 		throw UnitException(string("invalid length unit: ")+unitstr);
 	set(val, stringToUnit(unitstr));
+}
+
+
+map<string,Length::Unit> Length::getUnits () {
+	map<string,Length::Unit> units = {
+		{"pt", Unit::PT},
+		{"bp", Unit::BP},
+		{"in", Unit::IN},
+		{"cm", Unit::CM},
+		{"mm", Unit::MM},
+		{"pc", Unit::PC},
+		{"dd", Unit::DD},
+		{"cc", Unit::CC},
+		{"sp", Unit::SP},
+	};
+	return units;
 }

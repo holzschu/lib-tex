@@ -14,6 +14,10 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2010 Jakub Wilk <jwilk@jwilk.net>
+// Copyright (C) 2017 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2017 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2017 Jean Ghali <jghali@libertysurf.fr>
+// Copyright (C) 2018 Adam Reichold <adam.reichold@t-online.de>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -28,6 +32,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "goo/glibc.h"
 #include "goo/gmem.h"
 #include "goo/gfile.h"
 #include "goo/GooString.h"
@@ -55,7 +60,7 @@ UnicodeMap *UnicodeMap::parse(GooString *encodingNameA) {
   UnicodeMapExt *eMap;
   int size, eMapsSize;
   char buf[256];
-  int line, nBytes, i, x;
+  int line, nBytes, i;
   char *tok1, *tok2, *tok3;
   char *tokptr;
 
@@ -63,7 +68,7 @@ UnicodeMap *UnicodeMap::parse(GooString *encodingNameA) {
     error(errSyntaxError, -1,
 	  "Couldn't find unicodeMap file for the '{0:t}' encoding",
 	  encodingNameA);
-    return NULL;
+    return nullptr;
   }
 
   map = new UnicodeMap(encodingNameA->copy());
@@ -75,8 +80,8 @@ UnicodeMap *UnicodeMap::parse(GooString *encodingNameA) {
   line = 1;
   while (getLine(buf, sizeof(buf), f)) {
     if ((tok1 = strtok_r(buf, " \t\r\n", &tokptr)) &&
-	(tok2 = strtok_r(NULL, " \t\r\n", &tokptr))) {
-      if (!(tok3 = strtok_r(NULL, " \t\r\n", &tokptr))) {
+	(tok2 = strtok_r(nullptr, " \t\r\n", &tokptr))) {
+      if (!(tok3 = strtok_r(nullptr, " \t\r\n", &tokptr))) {
 	tok3 = tok2;
 	tok2 = tok1;
       }
@@ -102,6 +107,7 @@ UnicodeMap *UnicodeMap::parse(GooString *encodingNameA) {
 	eMap = &map->eMaps[map->eMapsLen];
 	sscanf(tok1, "%x", &eMap->u);
 	for (i = 0; i < nBytes; ++i) {
+	  unsigned int x;
 	  sscanf(tok3 + i*2, "%2x", &x);
 	  eMap->code[i] = (char)x;
 	}
@@ -129,14 +135,11 @@ UnicodeMap::UnicodeMap(GooString *encodingNameA) {
   encodingName = encodingNameA;
   unicodeOut = gFalse;
   kind = unicodeMapUser;
-  ranges = NULL;
+  ranges = nullptr;
   len = 0;
-  eMaps = NULL;
+  eMaps = nullptr;
   eMapsLen = 0;
   refCnt = 1;
-#if MULTITHREADED
-  gInitMutex(&mutex);
-#endif
 }
 
 UnicodeMap::UnicodeMap(const char *encodingNameA, GBool unicodeOutA,
@@ -146,12 +149,9 @@ UnicodeMap::UnicodeMap(const char *encodingNameA, GBool unicodeOutA,
   kind = unicodeMapResident;
   ranges = rangesA;
   len = lenA;
-  eMaps = NULL;
+  eMaps = nullptr;
   eMapsLen = 0;
   refCnt = 1;
-#if MULTITHREADED
-  gInitMutex(&mutex);
-#endif
 }
 
 UnicodeMap::UnicodeMap(const char *encodingNameA, GBool unicodeOutA,
@@ -160,12 +160,9 @@ UnicodeMap::UnicodeMap(const char *encodingNameA, GBool unicodeOutA,
   unicodeOut = unicodeOutA;
   kind = unicodeMapFunc;
   func = funcA;
-  eMaps = NULL;
+  eMaps = nullptr;
   eMapsLen = 0;
   refCnt = 1;
-#if MULTITHREADED
-  gInitMutex(&mutex);
-#endif
 }
 
 UnicodeMap::~UnicodeMap() {
@@ -176,32 +173,88 @@ UnicodeMap::~UnicodeMap() {
   if (eMaps) {
     gfree(eMaps);
   }
-#if MULTITHREADED
-  gDestroyMutex(&mutex);
-#endif
+}
+
+UnicodeMap::UnicodeMap(UnicodeMap &&other) noexcept
+  : encodingName{other.encodingName}
+  , kind{other.kind}
+  , unicodeOut{other.unicodeOut}
+  , len{other.len}
+  , eMaps{other.eMaps}
+  , eMapsLen{other.eMapsLen}
+  , refCnt{1}
+{
+  switch (kind) {
+  case unicodeMapUser:
+  case unicodeMapResident:
+    ranges = other.ranges;
+    other.ranges = nullptr;
+    break;
+  case unicodeMapFunc:
+    func = other.func;
+    break;
+  }
+  other.encodingName = nullptr;
+  other.eMaps = nullptr;
+}
+
+UnicodeMap& UnicodeMap::operator=(UnicodeMap &&other) noexcept
+{
+  if (this != &other)
+    swap(other);
+  return *this;
+}
+
+void UnicodeMap::swap(UnicodeMap &other) noexcept
+{
+  using std::swap;
+  swap(encodingName, other.encodingName);
+  swap(unicodeOut, other.unicodeOut);
+  switch (kind) {
+  case unicodeMapUser:
+  case unicodeMapResident:
+    switch (other.kind) {
+    case unicodeMapUser:
+    case unicodeMapResident:
+      swap(ranges, other.ranges);
+      break;
+    case unicodeMapFunc:
+    {
+      const auto tmp = ranges;
+      func = other.func;
+      other.ranges = tmp;
+      break;
+    }
+    }
+    break;
+  case unicodeMapFunc:
+    switch (other.kind) {
+    case unicodeMapUser:
+    case unicodeMapResident:
+    {
+      const auto tmp = func;
+      ranges = other.ranges;
+      other.func = tmp;
+      break;
+    }
+    case unicodeMapFunc:
+      swap(func, other.func);
+      break;
+    }
+    break;
+  }
+  swap(kind, other.kind);
+  swap(len, other.len);
+  swap(eMaps, other.eMaps);
+  swap(eMapsLen, other.eMapsLen);
 }
 
 void UnicodeMap::incRefCnt() {
-#if MULTITHREADED
-  gLockMutex(&mutex);
-#endif
-  ++refCnt;
-#if MULTITHREADED
-  gUnlockMutex(&mutex);
-#endif
+  refCnt.fetch_add(1);
 }
 
 void UnicodeMap::decRefCnt() {
-  GBool done;
-
-#if MULTITHREADED
-  gLockMutex(&mutex);
-#endif
-  done = --refCnt == 0;
-#if MULTITHREADED
-  gUnlockMutex(&mutex);
-#endif
-  if (done) {
+  if (refCnt.fetch_sub(1) == 1) {
     delete this;
   }
 }
@@ -263,7 +316,7 @@ UnicodeMapCache::UnicodeMapCache() {
   int i;
 
   for (i = 0; i < unicodeMapCacheSize; ++i) {
-    cache[i] = NULL;
+    cache[i] = nullptr;
   }
 }
 
@@ -307,5 +360,5 @@ UnicodeMap *UnicodeMapCache::getUnicodeMap(GooString *encodingName) {
     map->incRefCnt();
     return map;
   }
-  return NULL;
+  return nullptr;
 }

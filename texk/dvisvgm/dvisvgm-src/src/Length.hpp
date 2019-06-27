@@ -2,7 +2,7 @@
 ** Length.hpp                                                           **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -21,27 +21,27 @@
 #ifndef LENGTH_HPP
 #define LENGTH_HPP
 
-#include <string>
+#include <map>
+#include <vector>
 #include "MessageException.hpp"
 
 #ifdef IN
 #undef IN
 #endif
 
-struct UnitException : MessageException
-{
+struct UnitException : MessageException {
 	UnitException (const std::string &msg) : MessageException(msg) {}
 };
 
 
-class Length
-{
+class Length {
 	public:
 		enum class Unit {PT, BP, CM, MM, IN, PC, DD, CC, SP};
 
 	public:
-		Length () : _pt(0) {}
-		Length (double val, Unit unit=Unit::PT)         {set(val, unit);}
+		constexpr Length () : _pt(0) {}
+		constexpr Length (long double pt) : _pt(static_cast<double>(pt)) {}
+		Length (double val, Unit unit)                  {set(val, unit);}
 		Length (double val, const std::string &unitstr) {set(val, unitstr);}
 		Length (const std::string &lenstr)              {set(lenstr);}
 		void set (double val, Unit unit);
@@ -58,9 +58,12 @@ class Length
 		double sp () const {return _pt*pt2sp;}
 		double get (Unit unit) const;
 		std::string toString (Unit unit) const;
+		bool operator == (Length len) const {return _pt == len._pt;}
+		bool operator != (Length len) const {return _pt != len._pt;}
 
 		static Unit stringToUnit (const std::string &unitstr);
 		static std::string unitToString (Unit unit);
+		static std::map<std::string,Unit> getUnits ();
 
 	public:
 		static constexpr double pt2in = 1.0/72.27;
@@ -75,5 +78,15 @@ class Length
 	private:
 		double _pt;  // length in TeX point units (72.27pt = 1in)
 };
+
+
+constexpr Length operator "" _pt (long double pt) {return Length(pt);}
+constexpr Length operator "" _bp (long double bp) {return Length(bp/Length::pt2bp);}
+constexpr Length operator "" _mm (long double mm) {return Length(mm/Length::pt2mm);}
+constexpr Length operator "" _in (long double in) {return Length(in/Length::pt2in);}
+constexpr Length operator "" _pt (unsigned long long pt) {return Length(static_cast<double>(pt));}
+constexpr Length operator "" _bp (unsigned long long bp) {return Length(static_cast<double>(bp)/Length::pt2bp);}
+constexpr Length operator "" _mm (unsigned long long mm) {return Length(static_cast<double>(mm)/Length::pt2mm);}
+constexpr Length operator "" _in (unsigned long long in) {return Length(static_cast<double>(in)/Length::pt2in);}
 
 #endif

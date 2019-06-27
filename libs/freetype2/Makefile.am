@@ -26,6 +26,7 @@ noinst_DATA = libfreetype.a
 # There is no apparent reason for this.  Using --without-zlib evidently
 # causes freetype2 to use its internal zlib, so no functionality should
 # be lost, even though it is not the cleanest solution.
+# __IPHONE__ : add CFLAGS='$(CFLAGS)' or it won't compile
 ft-config:
 	rm -rf ft-build
 	$(MKDIR_P) ft-build

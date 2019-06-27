@@ -37,7 +37,7 @@ authorization from the copyright holders.
  */
 
 #define EXTERN extern
-// #include "xetexd.h"
+#include "xetexd.h"
 
 #ifndef __IPHONE__
 #include <ApplicationServices/ApplicationServices.h>

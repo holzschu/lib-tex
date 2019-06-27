@@ -2,7 +2,7 @@
 ** DVIActions.hpp                                                       **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -27,15 +27,14 @@
 class BoundingBox;
 class Font;
 
-
-struct DVIActions
-{
+struct DVIActions {
 	virtual ~DVIActions () =default;
+	virtual void reset () {}
 	virtual void setChar (double x, double y, unsigned c, bool vertical, const Font &f) {}
 	virtual void setRule (double x, double y, double height, double width) {}
 	virtual void setTextOrientation (bool vertical) {}
-	virtual void moveToX (double x) {}
-	virtual void moveToY (double y) {}
+	virtual void moveToX (double x, bool forceSVGMove) {}
+	virtual void moveToY (double y, bool forceSVGMove) {}
 	virtual void setFont (int num, const Font &font) {}
 	virtual void special (const std::string &s, double dvi2bp, bool preprocessing=false) {}
 	virtual void beginPage (unsigned pageno, const std::vector<int32_t> &c) {}

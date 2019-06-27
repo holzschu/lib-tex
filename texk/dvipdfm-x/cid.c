@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2002-2016 by Jin-Hwan Cho and Shunsaku Hirata,
+    Copyright (C) 2002-2018 by Jin-Hwan Cho and Shunsaku Hirata,
     the dvipdfmx project team.
     
     This program is free software; you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 #include "system.h"
 #include "mem.h"
 #include "error.h"
+#include "dpxconf.h"
 #include "dpxutil.h"
 
 #include "pdfobj.h"
@@ -62,15 +63,22 @@ static struct {
   /* Heighest Supplement values supported by PDF-1.0, 1.1, ...; see
    * also http://partners.adobe.com/public/developer/font/index.html#ckf
    */
-  int   supplement[16];
+  int   supplement[21];
 } CIDFont_stdcc_def[] = {
-  {"Adobe", "UCS",      {-1, -1, 0, 0, 0, 0, 0, 0}}, 
-  {"Adobe", "GB1",      {-1, -1, 0, 2, 4, 4, 4, 4}}, 
-  {"Adobe", "CNS1",     {-1, -1, 0, 0, 3, 4, 4, 4}},
-  {"Adobe", "Japan1",   {-1, -1, 2, 2, 4, 5, 6, 6}},
-  {"Adobe", "Korea1",   {-1, -1, 1, 1, 2, 2, 2, 2}},
-  {"Adobe", "Identity", {-1, -1, 0, 0, 0, 0, 0, 0}},
-  {NULL,    NULL,       { 0,  0, 0, 0, 0, 0, 0, 0}}
+  {"Adobe", "UCS",      {-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0}},
+  {"Adobe", "GB1",      {-1, -1, 0, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4}},
+  {"Adobe", "CNS1",     {-1, -1, 0, 0, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4}},
+  {"Adobe", "Japan1",   {-1, -1, 2, 2, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+    6, 6, 6, 6, 6}},
+  {"Adobe", "Korea1",   {-1, -1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2, 2, 2, 2}},
+  {"Adobe", "Identity", {-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0}},
+  {NULL,    NULL,       { 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0}}
 };
 #define UCS_CC    0
 #define ACC_START 1
@@ -108,16 +116,7 @@ static struct {
 static void release_opt (cid_opt *opt);
 static CIDSysInfo *get_cidsysinfo (const char *map_name, fontmap_opt *fmap_opt);
 
-static int   __verbose   = 0;
-static int   cidoptflags = 0;
-
-void
-CIDFont_set_verbose (void)
-{
-  CIDFont_type0_set_verbose();
-  CIDFont_type2_set_verbose();
-  __verbose++;
-}
+static int cidoptflags = 0;
 
 #if 0
 int
@@ -336,16 +335,16 @@ CIDFont_dofont (CIDFont *font)
   if (!font || !font->indirect)
     return;
 
-  if (__verbose)
+  if (dpx_conf.verbose_level > 0)
     MESG(":%s", font->ident);
-  if (__verbose > 1) {
+  if (dpx_conf.verbose_level > 1) {
     if (font->fontname)
       MESG("[%s]", font->fontname);
   }
 
   switch (font->subtype) {
   case CIDFONT_TYPE0:
-    if(__verbose)
+    if(dpx_conf.verbose_level > 0)
       MESG("[CIDFontType0]");
     if (CIDFont_get_flag(font, CIDFONT_FLAG_TYPE1))
       CIDFont_type0_t1dofont(font);
@@ -355,7 +354,7 @@ CIDFont_dofont (CIDFont *font)
       CIDFont_type0_dofont(font);
     break;
   case CIDFONT_TYPE2:
-    if(__verbose)
+    if(dpx_conf.verbose_level > 0)
       MESG("[CIDFontType2]");
     CIDFont_type2_dofont(font);
     break;
@@ -563,7 +562,6 @@ CIDFont_cache_find (const char *map_name,
   opt->name  = NULL;
   opt->csi   = get_cidsysinfo(map_name, fmap_opt);
   opt->stemv = fmap_opt->stemv;
-  opt->cff_charsets = NULL;
 
   if (!opt->csi && cmap_csi) {
     /*
@@ -644,8 +642,6 @@ CIDFont_cache_find (const char *map_name,
       font->options = opt;
       __cache->fonts[font_id] = font;
       (__cache->num)++;
-
-      fmap_opt->cff_charsets = opt->cff_charsets;
     }
   } else if (opt) {
     release_opt(opt);
@@ -666,7 +662,7 @@ CIDFont_cache_close (void)
 
       font = __cache->fonts[font_id];
 
-      if (__verbose)
+      if (dpx_conf.verbose_level > 0)
         MESG("(CID");
 
       CIDFont_dofont (font);
@@ -675,7 +671,7 @@ CIDFont_cache_close (void)
 
       RELEASE(font);
 
-      if (__verbose)
+      if (dpx_conf.verbose_level > 0)
         MESG(")");
     }
     RELEASE(__cache->fonts);
@@ -701,8 +697,6 @@ release_opt (cid_opt *opt)
     if (opt->csi->ordering)
       RELEASE(opt->csi->ordering);
     RELEASE(opt->csi);
-    if (opt->cff_charsets)
-      cff_release_charsets((cff_charsets *) opt->cff_charsets);
   }
   RELEASE(opt);
 }
@@ -711,10 +705,10 @@ static CIDSysInfo *
 get_cidsysinfo (const char *map_name, fontmap_opt *fmap_opt)
 {
   CIDSysInfo *csi = NULL;
-  int pdf_ver;
+  int sup_idx;
   int i, csi_idx = -1, n, m;
 
-  pdf_ver = pdf_get_version();
+  sup_idx = pdf_get_version() - 10;
 
   if (!fmap_opt || !fmap_opt->charcoll)
     return NULL;
@@ -733,7 +727,7 @@ get_cidsysinfo (const char *map_name, fontmap_opt *fmap_opt)
       if (strlen(fmap_opt->charcoll) > n) {
         csi->supplement = (int) strtoul(&(fmap_opt->charcoll[n]), NULL, 10);
       } else { /* Use heighest supported value for current output PDF version. */
-        csi->supplement = CIDFont_stdcc_def[csi_idx].supplement[pdf_ver];
+        csi->supplement = CIDFont_stdcc_def[csi_idx].supplement[sup_idx];
       }
       break;
     }
@@ -785,11 +779,12 @@ get_cidsysinfo (const char *map_name, fontmap_opt *fmap_opt)
   }
 
   if (csi && csi_idx >= 0) {
-    if (csi->supplement > CIDFont_stdcc_def[csi_idx].supplement[pdf_ver]
+    if (csi->supplement > CIDFont_stdcc_def[csi_idx].supplement[sup_idx]
         && (fmap_opt->flags & FONTMAP_OPT_NOEMBED)) {
-      WARN("%s: Heighest supplement number supported in PDF-1.%d for %s-%s is %d.",
-           CIDFONT_DEBUG_STR, pdf_ver, csi->registry, csi->ordering,
-           CIDFont_stdcc_def[csi_idx].supplement[pdf_ver]);
+      WARN("%s: Heighest supplement number supported in PDF-%d.%d for %s-%s is %d.",
+           CIDFONT_DEBUG_STR, pdf_get_version_major(), pdf_get_version_minor(),
+           csi->registry, csi->ordering,
+           CIDFont_stdcc_def[csi_idx].supplement[sup_idx]);
       WARN("%s: Some character may not shown without embedded font (--> %s).",
            CIDFONT_DEBUG_STR, map_name);
     }

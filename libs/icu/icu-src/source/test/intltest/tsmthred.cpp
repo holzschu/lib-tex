@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************
  * COPYRIGHT:
@@ -13,6 +13,7 @@
 #include "umutex.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "indiancal.h"
 #include "uparse.h"
 #include "unicode/localpointer.h"
 #include "unicode/resbund.h"
@@ -45,6 +46,7 @@ MultithreadTest::~MultithreadTest()
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>    // tolower, toupper
+#include <memory>
 
 #include "unicode/putil.h"
 
@@ -62,82 +64,29 @@ void MultithreadTest::runIndexedTest( int32_t index, UBool exec,
                 const char* &name, char* /*par*/ ) {
     if (exec)
         logln("TestSuite MultithreadTest: ");
-    switch (index) {
-    case 0:
-        name = "TestThreads";
-        if (exec)
-            TestThreads();
-        break;
 
-    case 1:
-        name = "TestMutex";
-        if (exec)
-            TestMutex();
-        break;
-
-    case 2:
-        name = "TestThreadedIntl";
+    TESTCASE_AUTO_BEGIN;
+    TESTCASE_AUTO(TestThreads);
+    TESTCASE_AUTO(TestMutex);
 #if !UCONFIG_NO_FORMATTING
-        if (exec) {
-            TestThreadedIntl();
-        }
+    TESTCASE_AUTO(TestThreadedIntl);
 #endif
-        break;
-
-    case 3:
-      name = "TestCollators";
 #if !UCONFIG_NO_COLLATION
-      if (exec) {
-            TestCollators();
-      }
+    TESTCASE_AUTO(TestCollators);
 #endif /* #if !UCONFIG_NO_COLLATION */
-      break;
-
-    case 4:
-        name = "TestString";
-        if (exec) {
-            TestString();
-        }
-        break;
-
-    case 5:
-        name = "TestArabicShapingThreads";
-        if (exec) {
-            TestArabicShapingThreads();
-        }
-        break;
-
-    case 6:
-        name = "TestAnyTranslit";
-        if (exec) {
-            TestAnyTranslit();
-        }
-        break;
-
-    case 7:
-        name = "TestConditionVariables";
-        if (exec) {
-            TestConditionVariables();
-        }
-        break;
-    case 8:
-        name = "TestUnifiedCache";
-        if (exec) {
-            TestUnifiedCache();
-        }
-        break;
+    TESTCASE_AUTO(TestString);
+    TESTCASE_AUTO(TestArabicShapingThreads);
+    TESTCASE_AUTO(TestAnyTranslit);
+    TESTCASE_AUTO(TestConditionVariables);
+    TESTCASE_AUTO(TestUnifiedCache);
 #if !UCONFIG_NO_TRANSLITERATION
-    case 9:
-        name = "TestBreakTranslit";
-        if (exec) {
-            TestBreakTranslit();
-        }
-        break;
-#endif
-    default:
-        name = "";
-        break; //needed to end loop
-    }
+    TESTCASE_AUTO(TestBreakTranslit);
+    TESTCASE_AUTO(TestIncDec);
+#if !UCONFIG_NO_FORMATTING
+    TESTCASE_AUTO(Test20104);
+#endif /* #if !UCONFIG_NO_FORMATTING */
+#endif /* #if !UCONFIG_NO_TRANSLITERATION */
+    TESTCASE_AUTO_END
 }
 
 
@@ -448,7 +397,8 @@ struct FormatThreadTestData
 // "Someone from {2} is receiving a #{0} error - {1}. Their telephone call is costing {3 number,currency}."
 
 static void formatErrorMessage(UErrorCode &realStatus, const UnicodeString& pattern, const Locale& theLocale,
-                     UErrorCode inStatus0, /* statusString 1 */ const Locale &inCountry2, double currency3, // these numbers are the message arguments.
+                     UErrorCode inStatus0,                       // statusString 1
+                     const Locale &inCountry2, double currency3, // these numbers are the message arguments.
                      UnicodeString &result)
 {
     if(U_FAILURE(realStatus))
@@ -666,13 +616,13 @@ public:
         // Keep this data here to avoid static initialization.
         FormatThreadTestData kNumberFormatTestData[] =
         {
-            FormatThreadTestData((double)5.0, UnicodeString("5", "")),
-                FormatThreadTestData( 6.0, UnicodeString("6", "")),
-                FormatThreadTestData( 20.0, UnicodeString("20", "")),
-                FormatThreadTestData( 8.0, UnicodeString("8", "")),
-                FormatThreadTestData( 8.3, UnicodeString("8.3", "")),
-                FormatThreadTestData( 12345, UnicodeString("12,345", "")),
-                FormatThreadTestData( 81890.23, UnicodeString("81,890.23", "")),
+            FormatThreadTestData((double)5.0, UnicodeString(u"5")),
+                FormatThreadTestData( 6.0, UnicodeString(u"6")),
+                FormatThreadTestData( 20.0, UnicodeString(u"20")),
+                FormatThreadTestData( 8.0, UnicodeString(u"8")),
+                FormatThreadTestData( 8.3, UnicodeString(u"8.3")),
+                FormatThreadTestData( 12345, UnicodeString(u"12,345")),
+                FormatThreadTestData( 81890.23, UnicodeString(u"81,890.23")),
         };
         int32_t kNumberFormatTestDataLength = UPRV_LENGTHOF(kNumberFormatTestData);
 
@@ -683,9 +633,9 @@ public:
                 FormatThreadTestData( 1.0, CharsToUnicodeString("100\\u00a0%")),
                 FormatThreadTestData( 0.26, CharsToUnicodeString("26\\u00a0%")),
                 FormatThreadTestData(
-                   16384.99, CharsToUnicodeString("1\\u00a0638\\u00a0499\\u00a0%")), // U+00a0 = NBSP
+                   16384.99, CharsToUnicodeString("1\\u202F638\\u202F499\\u00a0%")), // U+202F = NNBSP
                 FormatThreadTestData(
-                    81890.23, CharsToUnicodeString("8\\u00a0189\\u00a0023\\u00a0%")),
+                    81890.23, CharsToUnicodeString("8\\u202F189\\u202F023\\u00a0%")),
         };
         int32_t kPercentFormatTestDataLength = UPRV_LENGTHOF(kPercentFormatTestData);
         int32_t iteration;
@@ -1388,7 +1338,7 @@ const UCTMultiThreadItem *LocaleCacheKey<UCTMultiThreadItem>::createObject(
     } else {
         result->addRef();
     }
-    
+ 
     // Log that we created an object. The first object was already counted,
     //    don't do it again.
     umtx_lock(&gCTMutex);
@@ -1451,7 +1401,7 @@ void UnifiedCacheThread::exerciseByLocale(const Locale &locale) {
 
 void UnifiedCacheThread::run() {
     // Run the exercise with 2 different locales so that we can exercise
-    // eviction more. If each thread exerices just one locale, then
+    // eviction more. If each thread exercises just one locale, then
     // eviction can't start until the threads end.
     exerciseByLocale(fLoc);
     exerciseByLocale(fLoc2);
@@ -1570,5 +1520,68 @@ void MultithreadTest::TestBreakTranslit() {
     gTranslitInput = NULL;
     gTranslitExpected = NULL;
 }
+
+
+class TestIncDecThread : public SimpleThread {
+public:
+    TestIncDecThread() { };
+    virtual void run();
+};
+
+static u_atomic_int32_t gIncDecCounter;
+
+void TestIncDecThread::run() {
+    umtx_atomic_inc(&gIncDecCounter);
+    for (int32_t i=0; i<5000000; ++i) {
+        umtx_atomic_inc(&gIncDecCounter);
+        umtx_atomic_dec(&gIncDecCounter);
+    }
+}
+
+void MultithreadTest::TestIncDec()
+{
+    static constexpr int NUM_THREADS = 4;
+    gIncDecCounter = 0;
+    TestIncDecThread threads[NUM_THREADS];
+    for (auto &thread:threads) {
+        thread.start();
+    }
+    for (auto &thread:threads) {
+        thread.join();
+    }
+    assertEquals("TestIncDec", NUM_THREADS, gIncDecCounter);
+}
+
+#if !UCONFIG_NO_FORMATTING
+static Calendar  *gSharedCalendar = {};
+
+class Test20104Thread : public SimpleThread {
+public:
+    Test20104Thread() { };
+    virtual void run();
+};
+
+void Test20104Thread::run() {
+    gSharedCalendar->defaultCenturyStartYear();
+}
+
+void MultithreadTest::Test20104() {
+    UErrorCode status = U_ZERO_ERROR;
+    Locale loc("hi_IN");
+    gSharedCalendar = new IndianCalendar(loc, status);
+    assertSuccess("Test20104", status);
+
+    static constexpr int NUM_THREADS = 4;
+    Test20104Thread threads[NUM_THREADS];
+    for (auto &thread:threads) {
+        thread.start();
+    }
+    for (auto &thread:threads) {
+        thread.join();
+    }
+    delete gSharedCalendar;
+    // Note: failure is reported by Thread Sanitizer. Test itself succeeds.
+}
+#endif /* !UCONFIG_NO_FORMATTING */
 
 #endif /* !UCONFIG_NO_TRANSLITERATION */

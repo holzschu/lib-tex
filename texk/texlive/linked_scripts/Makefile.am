@@ -46,6 +46,7 @@ installdirs-local:
 ##
 ## WIN_WRAPPER is w32_wrapper for 32-bit or w64_wrapper for 64-bit.
 ## 
+## The "shell" list aren't just shell scripts, in either direction.
 ## Some /bin/sh scripts are listed as `other' or `context'
 ## scripts because they are correctly handled by the wrapper binaries.
 ## Conversely, some non-sh scripts are listed as `shell' because they
@@ -56,6 +57,7 @@ texmf_shell_scripts = \
 	adhocfilelist/adhocfilelist.sh \
 	bibexport/bibexport.sh \
 	checklistings/checklistings.sh \
+	ctanbib/ctanbib \
 	dtxgen/dtxgen \
 	installfont/installfont-tl \
 	latexfileversion/latexfileversion \
@@ -76,13 +78,15 @@ texmf_shell_scripts = \
 	pdfjam/pdfjoin \
 	pdfjam/pdfnup \
 	pdfjam/pdfpun \
+	pdftex-quiet/pdftex-quiet \
 	pdfxup/pdfxup \
 	pst-pdf/ps4pdf \
 	simpdftex/simpdftex \
 	texosquery/texosquery.sh \
 	texosquery/texosquery-jre5.sh \
 	texosquery/texosquery-jre8.sh \
-	typeoutfileinfo/typeoutfileinfo.sh
+	typeoutfileinfo/typeoutfileinfo.sh \
+	wordcount/wordcount.sh
 texmf_other_scripts = \
 	a2ping/a2ping.pl \
 	accfonts/mkt1font \
@@ -90,18 +94,23 @@ texmf_other_scripts = \
 	accfonts/vpl2vpl \
 	arara/arara.sh \
 	authorindex/authorindex \
+	bib2gls/bib2gls.sh \
+	bib2gls/convertgls2bib.sh \
 	bundledoc/arlatex \
 	bundledoc/bundledoc \
 	cachepic/cachepic.tlu \
 	checkcites/checkcites.lua \
 	cjk-gs-integrate/cjk-gs-integrate.pl \
+	cluttex/cluttex.lua \
 	context/perl/mptopdf.pl \
 	convbkmk/convbkmk.rb \
 	crossrefware/bbl2bib.pl \
 	crossrefware/bibdoiadd.pl \
 	crossrefware/bibmradd.pl \
+	crossrefware/biburl2doi.pl \
 	crossrefware/bibzbladd.pl \
 	crossrefware/ltx2crossrefxml.pl \
+	ctan-o-mat/ctan-o-mat.pl \
 	ctanify/ctanify \
 	ctanupload/ctanupload.pl \
 	de-macro/de-macro \
@@ -127,6 +136,7 @@ texmf_other_scripts = \
 	kotex-utils/jamo-normalize.pl \
 	kotex-utils/komkindex.pl \
 	kotex-utils/ttf2kotexfont.pl \
+	l3build/l3build.lua \
 	latex-git-log/latex-git-log \
 	latex-papersize/latex-papersize.py \
 	latex2man/latex2man \
@@ -200,9 +210,13 @@ texmf_other_scripts = \
 	texliveonfly/texliveonfly.py \
 	texloganalyser/texloganalyser \
 	thumbpdf/thumbpdf.pl \
+	tlcockpit/tlcockpit.sh \
+	tlshell/tlshell.tcl \
 	ulqda/ulqda.pl \
 	urlbst/urlbst \
 	vpe/vpe.pl \
+	webquiz/webquiz.py \
+	xindex/xindex.lua \
 	yplan/yplan
 texmf_context_scripts = \
 	context/stubs/unix/context \
@@ -222,10 +236,13 @@ nobase_dist_texmf_scripts_SCRIPTS = \
 	$(texmf_other_scripts) \
 	$(texmf_context_scripts)
 
-## Symlinks within $(bindir): FILE:LINK indicates LINK->FILE
+## Symlinks within $(bindir): FILE:LINK here means "ln -s FILE LINK" is done.
 bin_links = \
+	cluttex:clxelatex \
+	cluttex:cllualatex \
 	epstopdf:repstopdf \
-	pdfcrop:rpdfcrop
+	pdfcrop:rpdfcrop \
+	texdef:latexdef
 
 # The idea is to install the scripts themselves in texmf*/scripts, and
 # have bin/arch/foo be a symlink to, say,

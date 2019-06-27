@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-#   latexindent.pl, version 3.2.2, 2017-06-28
+#   latexindent.pl, version 3.5.3, 2018-10-13
 #
 #	This program is free software: you can redistribute it and/or modify
 #	it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ GetOptions (
     "trace|t"=>\$switches{trace},
     "ttrace|tt"=>\$switches{ttrace},
     "local|l:s"=>\$switches{readLocalSettings},
+    "yaml|y=s"=>\$switches{yaml},
     "onlydefault|d"=>\$switches{onlyDefault},
     "overwrite|w"=>\$switches{overwrite},
     "outputfile|o=s"=>\$switches{outputToFile},
@@ -42,6 +43,7 @@ GetOptions (
     "logfile|g=s"=>\$switches{logFileName},
     "help|h"=>\$switches{showhelp},
     "cruft|c=s"=>\$switches{cruftDirectory},
+    "screenlog|sl"=>\$switches{screenlog},
 );
 
 # check local settings doesn't interfer with reading the file;
@@ -68,6 +70,9 @@ if(defined($switches{readLocalSettings}) and ($switches{readLocalSettings} eq ''
     $switches{readLocalSettings} = 'localSettings.yaml';
 }
 
-my $document = LatexIndent::Document->new(name=>"masterDocument",fileName=>$ARGV[0],switches=>\%switches);
+# allow STDIN as input, if a filename is not present
+unshift( @ARGV, '-' ) unless @ARGV;
+
+my $document = bless ({name=>"masterDocument",modifyLineBreaksYamlName=>"masterDocument",fileName=>$ARGV[0],switches=>\%switches},"LatexIndent::Document");
 $document->latexindent;
 exit(0);

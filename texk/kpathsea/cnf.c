@@ -1,6 +1,7 @@
 /* cnf.c: read config files.
 
-   Copyright 1994, 1995, 1996, 1997, 2008, 2009, 2011, 2012, 2016 Karl Berry.
+   Copyright 1994, 1995, 1996, 1997, 2008, 2009, 2011, 2012, 2016,
+   2017, 2018 Karl Berry.
    Copyright 1997-2005 Olaf Weber.
 
    This library is free software; you can redistribute it and/or
@@ -105,7 +106,7 @@ do_line (kpathsea kpse, string line)
     while (ISSPACE (*line))
       line++;
     start = line;
-    while (!ISSPACE (*line) && *line != '=')
+    while (*line && !ISSPACE (*line) && *line != '=')
       line++;
 
     /* It's annoying to repeat all this, but making a tokenizing
@@ -139,14 +140,14 @@ do_line (kpathsea kpse, string line)
   value[len] = 0;
 
   /* Suppose we want to write a single texmf.cnf that can be used under
-     both NT and Unix.  This is feasible except for the path separators
-     : on Unix, ; on NT.  We can't switch NT to allowing :'s, since :
-     is the drive separator.  So we switch Unix to allowing ;'s.  On the
-     other hand, we don't want to change IS_ENV_SEP and all the rest.
+     both Windows and Unix. This is feasible except for the path
+     separators: : on Unix, ; on Windows. We can't switch Windows to
+     allowing :, since : is the drive separator. So we switch Unix to
+     allowing ;. On the other hand, we don't want to change IS_ENV_SEP
+     and all the rest.
 
-     So, simply translate all ;'s in the path
-     values to :'s if we are a Unix binary.  (Fortunately we don't use ;
-     in other kinds of texmf.cnf values.)  */
+     So, translate all ;'s in the path values to :'s if we'd normally
+     use :. (Fortunately we don't use ; as a normal character in values.)  */
 
   if (IS_ENV_SEP(':')) {
       string loc;

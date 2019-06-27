@@ -1,5 +1,5 @@
-/*
-Copyright 1996-2017 Han The Thanh, <thanh@pdftex.org>
+/* writefont.c: font descriptors and writing Type 1 fonts.
+Copyright 1996-2018 Han The Thanh, <thanh@pdftex.org>
 
 This file is part of pdfTeX.
 
@@ -484,16 +484,32 @@ static void write_fontdescriptor(fd_entry * fd)
     pdf_printf("/Flags %i\n", fd_flags);
     write_fontmetrics(fd);
     if (fd->ff_found) {
-        if (is_subsetted(fd->fm) && is_type1(fd->fm)) {
-            /* /CharSet is optional; names may appear in any order */
+        if (getpdfomitcharset() == 0 && is_subsetted(fd->fm) && is_type1(fd->fm)) {
+            /* We don't get CharSet right. For some PDF standards,
+               CharSet is optional, but if it appears, it must be
+               correct. Unfortunately, there seems to be no practical
+               way we can guarantee correctness with precomposed accent
+               characters in our usual fonts (EC, TX, etc.):
+              https://mailman.ntg.nl/pipermail/ntg-pdftex/2018-June/004251.html
+              
+               But for PDF/A-1, apparently it is required, regardless:
+              https://mailman.ntg.nl/pipermail/ntg-pdftex/2019-January/004264.html
+               
+               Whereas for PDF/A-2 and PDF/A-3, it can be omitted:
+              https://github.com/veraPDF/veraPDF-validation-profiles/wiki/PDFA-Parts-2-and-3-rules#rule-62114-3
+
+               Therefore, whether it is output can be controlled by the
+               user at runtime via \pdfincludecharset. */
             assert(fd->gl_tree != NULL);
             avl_t_init(&t, fd->gl_tree);
+            /* Names may appear in any order. */
             pdf_puts("/CharSet (");
             for (glyph = (char *) avl_t_first(&t, fd->gl_tree); glyph != NULL;
                  glyph = (char *) avl_t_next(&t))
                 pdf_printf("/%s", glyph);
             pdf_puts(")\n");
         }
+
         if (is_type1(fd->fm))
             pdf_printf("/FontFile %i 0 R\n", (int) fd->ff_objnum);
         else if (is_truetype(fd->fm))
@@ -585,82 +601,6 @@ static void write_fontdictionaries(void)
 }
 
 /**********************************************************************/
-/* cleaning up... */
-
-static void destroy_tx_entry(void *pa, void *pb) 
-{
-  int *p; 
-  p = (int *) pa;
-  xfree(p);
-}
-
-static void destroy_gl_entry(void *pa, void *pb) 
-{
-  char *p; 
-  p = (char *) pa;
-  xfree(p);
-}
-
-static void destroy_fd_entry(void *pa, void *pb)
-{
-    fd_entry *p;
-    int i;
-    p = (fd_entry *) pa;
-
-    xfree(p->fontname);
-    xfree(p->subset_tag);
-    // xfree(fd->fe); // already freed
-    p->fe = NULL;
-    if (p->builtin_glyph_names != NULL)
-        for (i = 0; i < 256; i++)
-            if (p->builtin_glyph_names[i] != notdef)
-                xfree(p->builtin_glyph_names[i]);
-    xfree(p->builtin_glyph_names);
-    p->fm = NULL; // xfree(p->fm); fprintf(stderr, "Destroyed p->fm\n"); fflush(stderr); 
-    if (p->tx_tree != NULL) {
-    	avl_destroy(p->tx_tree, destroy_tx_entry); 
-    	p->tx_tree = NULL;
-	}
-    if (p->gl_tree != NULL) {
-    	avl_destroy(p->gl_tree, destroy_gl_entry); 
-    	p->gl_tree = NULL;
-	}
-
-	xfree(p);
-}
-
-void font_free(void)
-{
-    if (fd_tree != NULL)
-        avl_destroy(fd_tree, destroy_fd_entry);
-    fd_tree = NULL;
-}
-
-static void destroy_fo_entry(void *pa, void *pb)
-{
-    fo_entry *p;
-    int i;
-    p = (fo_entry *) pa;
-
-	p->fm = NULL; // xfree(p->fm); // fprintf(stderr, "Destroyed fm\n"); fflush(stderr); 
-	p->fd = NULL; // Already destroyed
-	p->fe = NULL; // Already destroyed
-    if (p->cw != NULL) {
-    	xfree(p->cw->width); 
-	}
-    xfree(p->cw); 
-
-    xfree(p);
-}
-
-void dictionary_free(void)
-{
-    if (fo_tree != NULL)
-        avl_destroy(fo_tree, destroy_fo_entry);
-    fo_tree = NULL;
-}
-
-/**********************************************************************/
 /*
  * Final flush of all font related stuff by call from
  * @<Output fonts definition@>= in pdftex.web.
@@ -736,17 +676,45 @@ static void create_fontdictionary(fm_entry * fm, integer font_objnum,
         write_fontdictionary(fo);
 }
 
-/**********************************************************************/
 
-void dopdffont(integer font_objnum, internalfontnumber f)
+
+/* This is called font_has_subset in luatex, but it returns 1 if any
+   characters from the font are used, and 0 if not (using fontbc and
+   fontec as the endpoints to check), i.e., whether any characters are
+   actually used from the font. */
+
+static int
+font_is_used(internalfontnumber f)
+{
+    int i, s;
+    /* search for |first_char| and |last_char| */
+    for (i = fontbc[f]; i <= fontec[f]; i++)
+        if (pdfcharmarked(f, i))
+            break;
+    s = i;
+    for (i = fontec[f]; i >= fontbc[f]; i--)
+        if (pdfcharmarked(f, i))
+            break;
+    if (s > i)
+        return 0;
+    else
+        return 1;
+}
+
+void
+dopdffont(integer font_objnum, internalfontnumber f)
 {
     fm_entry *fm;
+    if (!font_is_used(f))
+        return; /* avoid failed assertion in create_fontdictionary,
+                mailman.ntg.nl/pipermail/ntg-pdftex/2018-January/004209.html */
+       
+
     fm = hasfmentry(f) ? (fm_entry *) pdffontmap[f] : NULL;
-    if (fm == NULL || (fm->ps_name == NULL && fm->ff_name == NULL))
-        writet3(font_objnum, f);
+    if (fm == NULL || is_pk(fm))
+        writet3(fm, font_objnum, f);
     else
         create_fontdictionary(fm, font_objnum, f);
 }
 
-/**********************************************************************/
 // vim: ts=4

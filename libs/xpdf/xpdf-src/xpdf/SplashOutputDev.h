@@ -51,6 +51,7 @@ public:
 		  GBool bitmapTopDownA = gTrue,
 		  GBool allowAntialiasA = gTrue);
 
+
   // Destructor.
   virtual ~SplashOutputDev();
 
@@ -68,9 +69,15 @@ public:
   // operations.
   virtual GBool useTilingPatternFill() { return gTrue; }
 
+  // Does this device use functionShadedFill(), axialShadedFill(), and
+  // radialShadedFill()?  If this returns false, these shaded fills
+  // will be reduced to a series of other drawing operations.
+  virtual GBool useShadedFills() { return gTrue; }
+
   // Does this device use beginType3Char/endType3Char?  Otherwise,
   // text in Type 3 fonts will be drawn with drawChar/drawString.
   virtual GBool interpretType3Chars() { return gTrue; }
+
 
 
   //----- initialization and control
@@ -101,6 +108,7 @@ public:
   virtual void updateBlendMode(GfxState *state);
   virtual void updateFillOpacity(GfxState *state);
   virtual void updateStrokeOpacity(GfxState *state);
+  virtual void updateRenderingIntent(GfxState *state);
   virtual void updateTransfer(GfxState *state);
 
   //----- update text state
@@ -111,10 +119,12 @@ public:
   virtual void fill(GfxState *state);
   virtual void eoFill(GfxState *state);
   virtual void tilingPatternFill(GfxState *state, Gfx *gfx, Object *strRef,
-				 int paintType, Dict *resDict,
+				 int paintType, int tilingType, Dict *resDict,
 				 double *mat, double *bbox,
 				 int x0, int y0, int x1, int y1,
 				 double xStep, double yStep);
+  virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading);
+  virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading);
 
   //----- path clipping
   virtual void clip(GfxState *state);
@@ -154,7 +164,7 @@ public:
 				   Stream *maskStr,
 				   int maskWidth, int maskHeight,
 				   GfxImageColorMap *maskColorMap,
-				   GBool interpolate);
+				   double *matte, GBool interpolate);
 
   //----- Type 3 font operators
   virtual void type3D0(GfxState *state, double wx, double wy);
@@ -176,6 +186,9 @@ public:
 
   // Called to indicate that a new PDF document has been loaded.
   void startDoc(XRef *xrefA);
+
+  void setStartPageCallback(void (*cbk)(void *data), void *data)
+    { startPageCbk = cbk; startPageCbkData = data; }
  
   void setPaperColor(SplashColorPtr paperColorA);
 
@@ -224,6 +237,9 @@ public:
   int getNestCount() { return nestCount; }
 
 
+  // Get the screen parameters.
+  SplashScreenParams *getScreenParams() { return &screenParams; }
+
 #if 1 //~tmp: turn off anti-aliasing temporarily
   virtual void setInShading(GBool sh);
 #endif
@@ -236,26 +252,40 @@ private:
 #if SPLASH_CMYK
   SplashPattern *getColor(GfxCMYK *cmyk);
 #endif
-  void setOverprintMask(GfxColorSpace *colorSpace, GBool overprintFlag,
-			int overprintMode, GfxColor *singleColor);
+  void getColor(GfxGray gray, SplashColorPtr color);
+  void getColor(GfxRGB *rgb, SplashColorPtr color);
+#if SPLASH_CMYK
+  void getColor(GfxCMYK *cmyk, SplashColorPtr color);
+#endif
+  void setOverprintMask(GfxState *state, GfxColorSpace *colorSpace,
+			GBool overprintFlag, int overprintMode,
+			GfxColor *singleColor);
+  void computeShadingColor(GfxState *state,
+			   SplashColorMode mode,
+			   GfxColor *color,
+			   SplashColorPtr sColor);
   SplashPath *convertPath(GfxState *state, GfxPath *path,
 			  GBool dropEmptySubpaths);
   void doUpdateFont(GfxState *state);
   void drawType3Glyph(GfxState *state, T3FontCache *t3Font,
 		      T3FontCacheTag *tag, Guchar *data);
-  static GBool imageMaskSrc(void *data, SplashColorPtr line);
+  static GBool imageMaskSrc(void *data, Guchar *line);
   static GBool imageSrc(void *data, SplashColorPtr colorLine,
 			Guchar *alphaLine);
   static GBool alphaImageSrc(void *data, SplashColorPtr line,
 			     Guchar *alphaLine);
   static GBool maskedImageSrc(void *data, SplashColorPtr line,
 			      Guchar *alphaLine);
+  static GBool softMaskMatteImageSrc(void *data,
+				     SplashColorPtr colorLine,
+				     Guchar *alphaLine);
   void reduceImageResolution(Stream *str, double *mat,
 			     int *width, int *height);
   void clearMaskRegion(GfxState *state,
 		       Splash *maskSplash,
 		       double xMin, double yMin,
 		       double xMax, double yMax);
+  void copyState(Splash *oldSplash, GBool copyColors);
 
   SplashColorMode colorMode;
   int bitmapRowPad;
@@ -289,6 +319,9 @@ private:
     transpGroupStack;
 
   int nestCount;
+
+  void (*startPageCbk)(void *data);
+  void *startPageCbkData;
 };
 
 #endif

@@ -15,9 +15,10 @@
 #  include <fenv.h>
 #  include <fpu_control.h>
 #endif
+#include "gmem.h"
+#include "gmempp.h"
 #include "parseargs.h"
 #include "GString.h"
-#include "gmem.h"
 #include "GlobalParams.h"
 #include "Object.h"
 #include "Stream.h"
@@ -37,15 +38,18 @@
 static int firstPage = 1;
 static int lastPage = 0;
 static GBool physLayout = gFalse;
+static GBool simpleLayout = gFalse;
 static GBool tableLayout = gFalse;
 static GBool linePrinter = gFalse;
 static GBool rawOrder = gFalse;
 static double fixedPitch = 0;
 static double fixedLineSpacing = 0;
 static GBool clipText = gFalse;
+static GBool discardDiag = gFalse;
 static char textEncName[128] = "";
 static char textEOL[16] = "";
 static GBool noPageBreaks = gFalse;
+static GBool insertBOM = gFalse;
 static char ownerPassword[33] = "\001";
 static char userPassword[33] = "\001";
 static GBool quiet = gFalse;
@@ -60,6 +64,8 @@ static ArgDesc argDesc[] = {
    "last page to convert"},
   {"-layout",  argFlag,     &physLayout,    0,
    "maintain original physical layout"},
+  {"-simple",  argFlag,     &simpleLayout,  0,
+   "simple one-column page layout"},
   {"-table",   argFlag,     &tableLayout,   0,
    "similar to -layout, but optimized for tables"},
   {"-lineprinter", argFlag, &linePrinter,   0,
@@ -72,12 +78,16 @@ static ArgDesc argDesc[] = {
    "fixed line spacing for LinePrinter mode"},
   {"-clip",    argFlag,     &clipText,      0,
    "separate clipped text"},
+  {"-nodiag",  argFlag,     &discardDiag,   0,
+   "discard diagonal text"},
   {"-enc",     argString,   textEncName,    sizeof(textEncName),
    "output text encoding name"},
   {"-eol",     argString,   textEOL,        sizeof(textEOL),
    "output end-of-line convention (unix, dos, or mac)"},
   {"-nopgbrk", argFlag,     &noPageBreaks,  0,
    "don't insert page breaks between pages"},
+  {"-bom",     argFlag,     &insertBOM,     0,
+   "insert a Unicode BOM at the start of the text file"},
   {"-opw",     argString,   ownerPassword,  sizeof(ownerPassword),
    "owner password (for encrypted files)"},
   {"-upw",     argString,   userPassword,   sizeof(userPassword),
@@ -101,13 +111,12 @@ static ArgDesc argDesc[] = {
 
 int main(int argc, char *argv[]) {
   PDFDoc *doc;
-  GString *fileName;
+  char *fileName;
   GString *textFileName;
   GString *ownerPW, *userPW;
   TextOutputControl textOutControl;
   TextOutputDev *textOut;
   UnicodeMap *uMap;
-  Object info;
   GBool ok;
   char *p;
   int exitCode;
@@ -121,18 +130,16 @@ int main(int argc, char *argv[]) {
   // emulation (yes, this is a kludge; but it's pretty much
   // unavoidable given the x87 instruction set; see gcc bug 323 for
   // more info)
-  fpu_control_t cw; 
+  fpu_control_t cw;
   _FPU_GETCW(cw);
-  cw = (cw & ~_FPU_EXTENDED) | _FPU_DOUBLE;
+  cw = (fpu_control_t)((cw & ~_FPU_EXTENDED) | _FPU_DOUBLE);
   _FPU_SETCW(cw);
 #endif
 
   exitCode = 99;
 
-#ifdef _MSC_VER
-  (void)kpse_set_program_name(argv[0], NULL);
-#endif
   // parse args
+  fixCommandLine(&argc, &argv);
   ok = parseArgs(argDesc, &argc, argv);
   if (!ok || argc < 2 || argc > 3 || printVersion || printHelp) {
     fprintf(stderr, "pdftotext version %s\n", xpdfVersion);
@@ -142,7 +149,7 @@ int main(int argc, char *argv[]) {
     }
     goto err0;
   }
-  fileName = new GString(argv[1]);
+  fileName = argv[1];
 
   // read config file
   globalParams = new GlobalParams(cfgFileName);
@@ -164,7 +171,6 @@ int main(int argc, char *argv[]) {
   // get mapping to output encoding
   if (!(uMap = globalParams->getTextEncoding())) {
     error(errConfig, -1, "Couldn't get text encoding");
-    delete fileName;
     goto err1;
   }
 
@@ -203,12 +209,11 @@ int main(int argc, char *argv[]) {
   if (argc == 3) {
     textFileName = new GString(argv[2]);
   } else {
-    p = fileName->getCString() + fileName->getLength() - 4;
-    if (!strcmp(p, ".pdf") || !strcmp(p, ".PDF")) {
-      textFileName = new GString(fileName->getCString(),
-				 fileName->getLength() - 4);
+    p = fileName + strlen(fileName) - 4;
+    if (strlen(fileName) > 4 && (!strcmp(p, ".pdf") || !strcmp(p, ".PDF"))) {
+      textFileName = new GString(fileName, (int)strlen(fileName) - 4);
     } else {
-      textFileName = fileName->copy();
+      textFileName = new GString(fileName);
     }
     textFileName->append(".txt");
   }
@@ -228,6 +233,8 @@ int main(int argc, char *argv[]) {
   } else if (physLayout) {
     textOutControl.mode = textOutPhysLayout;
     textOutControl.fixedPitch = fixedPitch;
+  } else if (simpleLayout) {
+    textOutControl.mode = textOutSimpleLayout;
   } else if (linePrinter) {
     textOutControl.mode = textOutLinePrinter;
     textOutControl.fixedPitch = fixedPitch;
@@ -238,6 +245,8 @@ int main(int argc, char *argv[]) {
     textOutControl.mode = textOutReadingOrder;
   }
   textOutControl.clipText = clipText;
+  textOutControl.discardDiagonalText = discardDiag;
+  textOutControl.insertBOM = insertBOM;
   textOut = new TextOutputDev(textFileName->getCString(), &textOutControl,
 			      gFalse);
   if (textOut->isOk()) {

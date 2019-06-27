@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (C) 2016 and later: Unicode, Inc. and others.
+ *   © 2016 and later: Unicode, Inc. and others.
  *   License & terms of use: http://www.unicode.org/copyright.html#License
  *************************************************************************
  *************************************************************************
@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "util.h"
+
+using namespace icu;
 
 /**
  * If the ID supplied to TimeZone is not a valid system ID,

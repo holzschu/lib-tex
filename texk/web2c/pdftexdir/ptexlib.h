@@ -1,5 +1,5 @@
-/*
-Copyright 1996-2017 Han The Thanh, <thanh@pdftex.org>
+/* ptexlib.h: macros for pdfTeX library code.
+Copyright 1996-2018 Han The Thanh, <thanh@pdftex.org>
 
 This file is part of pdfTeX.
 
@@ -19,6 +19,17 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef PDFTEXLIB
 #  define PDFTEXLIB
+
+#ifdef _WIN32
+#undef fopen
+#undef xfopen
+#undef fputs
+#undef putc
+#define fopen fsyscp_fopen
+#define xfopen fsyscp_xfopen
+#define fputs win32_fputs
+#define putc win32_putc
+#endif
 
 /* WEB2C macros and prototypes */
 #  if !defined(PDFTEXCOERCE) && !defined(PDFETEXCOERCE)
@@ -168,6 +179,7 @@ extern const char *ptexbanner;
 
 /* mapfile.c */
 extern boolean hasfmentry(internalfontnumber);
+extern boolean isscalable(internalfontnumber);
 extern void fm_free(void);
 extern void fm_read_info(void);
 extern ff_entry *check_ff_exist(char *, boolean);
@@ -269,9 +281,6 @@ extern fd_entry *lookup_fd_entry(char *, integer, integer);
 extern fd_entry *new_fd_entry(void);
 extern void writefontstuff(void);
 extern void register_fd_entry(fd_entry *);
-// cleanup:
-extern void font_free(void);
-extern void dictionary_free(void); 
 
 /* writeimg.c */
 extern boolean checkimageb(integer);
@@ -310,7 +319,7 @@ extern void writet1(fd_entry *);
 extern void t1_free(void);
 
 /* writet3.c */
-extern void writet3(int, internalfontnumber);
+extern void writet3(fm_entry *, int, internalfontnumber);
 extern scaled getpkcharwidth(internalfontnumber, scaled);
 
 /* writettf.c */

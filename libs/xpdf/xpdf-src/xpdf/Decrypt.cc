@@ -14,6 +14,7 @@
 
 #include <string.h>
 #include "gmem.h"
+#include "gmempp.h"
 #include "Decrypt.h"
 
 static void aes256KeyExpansion(DecryptAES256State *s,
@@ -164,7 +165,7 @@ GBool Decrypt::makeFileKey(int encVersion, int encRevision, int keyLength,
 	memcpy(test2, ownerKey->getCString(), 32);
 	for (i = 19; i >= 0; --i) {
 	  for (j = 0; j < keyLength; ++j) {
-	    tmpKey[j] = test[j] ^ i;
+	    tmpKey[j] = (Guchar)(test[j] ^ i);
 	  }
 	  rc4InitKey(tmpKey, keyLength, fState);
 	  fx = fy = 0;
@@ -273,10 +274,10 @@ GBool Decrypt::makeFileKey2(int encVersion, int encRevision, int keyLength,
     memcpy(buf, passwordPad, 32);
   }
   memcpy(buf + 32, ownerKey->getCString(), 32);
-  buf[64] = permissions & 0xff;
-  buf[65] = (permissions >> 8) & 0xff;
-  buf[66] = (permissions >> 16) & 0xff;
-  buf[67] = (permissions >> 24) & 0xff;
+  buf[64] = (Guchar)(permissions & 0xff);
+  buf[65] = (Guchar)((permissions >> 8) & 0xff);
+  buf[66] = (Guchar)((permissions >> 16) & 0xff);
+  buf[67] = (Guchar)((permissions >> 24) & 0xff);
   memcpy(buf + 68, fileID->getCString(), fileID->getLength());
   len = 68 + fileID->getLength();
   if (!encryptMetadata) {
@@ -304,7 +305,7 @@ GBool Decrypt::makeFileKey2(int encVersion, int encRevision, int keyLength,
     memcpy(test, userKey->getCString(), 32);
     for (i = 19; i >= 0; --i) {
       for (j = 0; j < keyLength; ++j) {
-	tmpKey[j] = fileKey[j] ^ i;
+	tmpKey[j] = (Guchar)(fileKey[j] ^ i);
       }
       rc4InitKey(tmpKey, keyLength, fState);
       fx = fy = 0;
@@ -328,14 +329,18 @@ GBool Decrypt::makeFileKey2(int encVersion, int encRevision, int keyLength,
 // DecryptStream
 //------------------------------------------------------------------------
 
-DecryptStream::DecryptStream(Stream *strA, Guchar *fileKey,
-			     CryptAlgorithm algoA, int keyLength,
-			     int objNum, int objGen):
+DecryptStream::DecryptStream(Stream *strA, Guchar *fileKeyA,
+			     CryptAlgorithm algoA, int keyLengthA,
+			     int objNumA, int objGenA):
   FilterStream(strA)
 {
   int i;
 
+  memcpy(fileKey, fileKeyA, keyLengthA);
   algo = algoA;
+  keyLength = keyLengthA;
+  objNum = objNumA;
+  objGen = objGenA;
 
   // construct object key
   for (i = 0; i < keyLength; ++i) {
@@ -343,22 +348,22 @@ DecryptStream::DecryptStream(Stream *strA, Guchar *fileKey,
   }
   switch (algo) {
   case cryptRC4:
-    objKey[keyLength] = objNum & 0xff;
-    objKey[keyLength + 1] = (objNum >> 8) & 0xff;
-    objKey[keyLength + 2] = (objNum >> 16) & 0xff;
-    objKey[keyLength + 3] = objGen & 0xff;
-    objKey[keyLength + 4] = (objGen >> 8) & 0xff;
+    objKey[keyLength] = (Guchar)(objNum & 0xff);
+    objKey[keyLength + 1] = (Guchar)((objNum >> 8) & 0xff);
+    objKey[keyLength + 2] = (Guchar)((objNum >> 16) & 0xff);
+    objKey[keyLength + 3] = (Guchar)(objGen & 0xff);
+    objKey[keyLength + 4] = (Guchar)((objGen >> 8) & 0xff);
     md5(objKey, keyLength + 5, objKey);
     if ((objKeyLength = keyLength + 5) > 16) {
       objKeyLength = 16;
     }
     break;
   case cryptAES:
-    objKey[keyLength] = objNum & 0xff;
-    objKey[keyLength + 1] = (objNum >> 8) & 0xff;
-    objKey[keyLength + 2] = (objNum >> 16) & 0xff;
-    objKey[keyLength + 3] = objGen & 0xff;
-    objKey[keyLength + 4] = (objGen >> 8) & 0xff;
+    objKey[keyLength] = (Guchar)(objNum & 0xff);
+    objKey[keyLength + 1] = (Guchar)((objNum >> 8) & 0xff);
+    objKey[keyLength + 2] = (Guchar)((objNum >> 16) & 0xff);
+    objKey[keyLength + 3] = (Guchar)(objGen & 0xff);
+    objKey[keyLength + 4] = (Guchar)((objGen >> 8) & 0xff);
     objKey[keyLength + 5] = 0x73; // 's'
     objKey[keyLength + 6] = 0x41; // 'A'
     objKey[keyLength + 7] = 0x6c; // 'l'
@@ -376,6 +381,11 @@ DecryptStream::DecryptStream(Stream *strA, Guchar *fileKey,
 
 DecryptStream::~DecryptStream() {
   delete str;
+}
+
+Stream *DecryptStream::copy() {
+  return new DecryptStream(str->copy(), fileKey, algo, keyLength,
+			   objNum, objGen);
 }
 
 void DecryptStream::reset() {
@@ -506,22 +516,22 @@ void rc4InitKey(Guchar *key, int keyLen, Guchar *state) {
   int i;
 
   for (i = 0; i < 256; ++i)
-    state[i] = i;
+    state[i] = (Guchar)i;
   index1 = index2 = 0;
   for (i = 0; i < 256; ++i) {
-    index2 = (key[index1] + state[i] + index2) % 256;
+    index2 = (Guchar)(key[index1] + state[i] + index2);
     t = state[i];
     state[i] = state[index2];
     state[index2] = t;
-    index1 = (index1 + 1) % keyLen;
+    index1 = (Guchar)((index1 + 1) % keyLen);
   }
 }
 
 Guchar rc4DecryptByte(Guchar *state, Guchar *x, Guchar *y, Guchar c) {
   Guchar x1, y1, tx, ty;
 
-  x1 = *x = (*x + 1) % 256;
-  y1 = *y = (state[*x] + *y) % 256;
+  x1 = *x = (Guchar)(*x + 1);
+  y1 = *y = (Guchar)(state[*x] + *y);
   tx = state[x1];
   ty = state[y1];
   state[x1] = ty;
@@ -662,7 +672,7 @@ static inline void invShiftRows(Guchar *state) {
 static inline Guchar mul02(Guchar s) {
   Guchar s2;
 
-  s2 = (s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1);
+  s2 = (Guchar)((s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1));
   return s2;
 }
 
@@ -670,7 +680,7 @@ static inline Guchar mul02(Guchar s) {
 static inline Guchar mul03(Guchar s) {
   Guchar s2;
 
-  s2 = (s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1);
+  s2 = (Guchar)((s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1));
   return s ^ s2;
 }
 
@@ -678,9 +688,9 @@ static inline Guchar mul03(Guchar s) {
 static inline Guchar mul09(Guchar s) {
   Guchar s2, s4, s8;
 
-  s2 = (s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1);
-  s4 = (s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1);
-  s8 = (s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1);
+  s2 = (Guchar)((s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1));
+  s4 = (Guchar)((s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1));
+  s8 = (Guchar)((s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1));
   return s ^ s8;
 }
 
@@ -688,9 +698,9 @@ static inline Guchar mul09(Guchar s) {
 static inline Guchar mul0b(Guchar s) {
   Guchar s2, s4, s8;
 
-  s2 = (s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1);
-  s4 = (s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1);
-  s8 = (s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1);
+  s2 = (Guchar)((s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1));
+  s4 = (Guchar)((s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1));
+  s8 = (Guchar)((s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1));
   return s ^ s2 ^ s8;
 }
 
@@ -698,9 +708,9 @@ static inline Guchar mul0b(Guchar s) {
 static inline Guchar mul0d(Guchar s) {
   Guchar s2, s4, s8;
 
-  s2 = (s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1);
-  s4 = (s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1);
-  s8 = (s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1);
+  s2 = (Guchar)((s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1));
+  s4 = (Guchar)((s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1));
+  s8 = (Guchar)((s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1));
   return s ^ s4 ^ s8;
 }
 
@@ -708,9 +718,9 @@ static inline Guchar mul0d(Guchar s) {
 static inline Guchar mul0e(Guchar s) {
   Guchar s2, s4, s8;
 
-  s2 = (s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1);
-  s4 = (s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1);
-  s8 = (s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1);
+  s2 = (Guchar)((s & 0x80) ? ((s << 1) ^ 0x1b) : (s << 1));
+  s4 = (Guchar)((s2 & 0x80) ? ((s2 << 1) ^ 0x1b) : (s2 << 1));
+  s8 = (Guchar)((s4 & 0x80) ? ((s4 << 1) ^ 0x1b) : (s4 << 1));
   return s2 ^ s4 ^ s8;
 }
 
@@ -751,10 +761,10 @@ static inline void invMixColumnsW(Guint *w) {
   Guchar s0, s1, s2, s3;
 
   for (c = 0; c < 4; ++c) {
-    s0 = w[c] >> 24;
-    s1 = w[c] >> 16;
-    s2 = w[c] >> 8;
-    s3 = w[c];
+    s0 = (Guchar)(w[c] >> 24);
+    s1 = (Guchar)(w[c] >> 16);
+    s2 = (Guchar)(w[c] >> 8);
+    s3 = (Guchar)w[c];
     w[c] = ((mul0e(s0) ^ mul0b(s1) ^ mul0d(s2) ^ mul09(s3)) << 24)
            | ((mul09(s0) ^ mul0e(s1) ^ mul0b(s2) ^ mul0d(s3)) << 16)
            | ((mul0d(s0) ^ mul09(s1) ^ mul0e(s2) ^ mul0b(s3)) << 8)
@@ -766,10 +776,10 @@ static inline void addRoundKey(Guchar *state, Guint *w) {
   int c;
 
   for (c = 0; c < 4; ++c) {
-    state[c] ^= w[c] >> 24;
-    state[4+c] ^= w[c] >> 16;
-    state[8+c] ^= w[c] >> 8;
-    state[12+c] ^= w[c];
+    state[c] ^= (Guchar)(w[c] >> 24);
+    state[4+c] ^= (Guchar)(w[c] >> 16);
+    state[8+c] ^= (Guchar)(w[c] >> 8);
+    state[12+c] ^= (Guchar)w[c];
   }
 }
 
@@ -983,22 +993,22 @@ static inline Gulong rotateLeft(Gulong x, int r) {
 }
 
 static inline Gulong md5Round1(Gulong a, Gulong b, Gulong c, Gulong d,
-			       Gulong Xk,  Gulong s, Gulong Ti) {
+			       Gulong Xk, int s, Gulong Ti) {
   return b + rotateLeft((a + ((b & c) | (~b & d)) + Xk + Ti), s);
 }
 
 static inline Gulong md5Round2(Gulong a, Gulong b, Gulong c, Gulong d,
-			       Gulong Xk,  Gulong s, Gulong Ti) {
+			       Gulong Xk, int s, Gulong Ti) {
   return b + rotateLeft((a + ((b & d) | (c & ~d)) + Xk + Ti), s);
 }
 
 static inline Gulong md5Round3(Gulong a, Gulong b, Gulong c, Gulong d,
-			       Gulong Xk,  Gulong s, Gulong Ti) {
+			       Gulong Xk, int s, Gulong Ti) {
   return b + rotateLeft((a + (b ^ c ^ d) + Xk + Ti), s);
 }
 
 static inline Gulong md5Round4(Gulong a, Gulong b, Gulong c, Gulong d,
-			       Gulong Xk,  Gulong s, Gulong Ti) {
+			       Gulong Xk, int s, Gulong Ti) {
   return b + rotateLeft((a + (c ^ (b | ~d)) + Xk + Ti), s);
 }
 
@@ -1349,46 +1359,46 @@ static void sha256(Guchar *msg, int msgLen, Guchar *hash) {
 typedef unsigned long long SHA512Uint64;
 
 static SHA512Uint64 sha512K[80] = {
-  0x428a2f98d728ae22LL, 0x7137449123ef65cdLL,
-  0xb5c0fbcfec4d3b2fLL, 0xe9b5dba58189dbbcLL,
-  0x3956c25bf348b538LL, 0x59f111f1b605d019LL,
-  0x923f82a4af194f9bLL, 0xab1c5ed5da6d8118LL,
-  0xd807aa98a3030242LL, 0x12835b0145706fbeLL,
-  0x243185be4ee4b28cLL, 0x550c7dc3d5ffb4e2LL,
-  0x72be5d74f27b896fLL, 0x80deb1fe3b1696b1LL,
-  0x9bdc06a725c71235LL, 0xc19bf174cf692694LL,
-  0xe49b69c19ef14ad2LL, 0xefbe4786384f25e3LL,
-  0x0fc19dc68b8cd5b5LL, 0x240ca1cc77ac9c65LL,
-  0x2de92c6f592b0275LL, 0x4a7484aa6ea6e483LL,
-  0x5cb0a9dcbd41fbd4LL, 0x76f988da831153b5LL,
-  0x983e5152ee66dfabLL, 0xa831c66d2db43210LL,
-  0xb00327c898fb213fLL, 0xbf597fc7beef0ee4LL,
-  0xc6e00bf33da88fc2LL, 0xd5a79147930aa725LL,
-  0x06ca6351e003826fLL, 0x142929670a0e6e70LL,
-  0x27b70a8546d22ffcLL, 0x2e1b21385c26c926LL,
-  0x4d2c6dfc5ac42aedLL, 0x53380d139d95b3dfLL,
-  0x650a73548baf63deLL, 0x766a0abb3c77b2a8LL,
-  0x81c2c92e47edaee6LL, 0x92722c851482353bLL,
-  0xa2bfe8a14cf10364LL, 0xa81a664bbc423001LL,
-  0xc24b8b70d0f89791LL, 0xc76c51a30654be30LL,
-  0xd192e819d6ef5218LL, 0xd69906245565a910LL,
-  0xf40e35855771202aLL, 0x106aa07032bbd1b8LL,
-  0x19a4c116b8d2d0c8LL, 0x1e376c085141ab53LL,
-  0x2748774cdf8eeb99LL, 0x34b0bcb5e19b48a8LL,
-  0x391c0cb3c5c95a63LL, 0x4ed8aa4ae3418acbLL,
-  0x5b9cca4f7763e373LL, 0x682e6ff3d6b2b8a3LL,
-  0x748f82ee5defb2fcLL, 0x78a5636f43172f60LL,
-  0x84c87814a1f0ab72LL, 0x8cc702081a6439ecLL,
-  0x90befffa23631e28LL, 0xa4506cebde82bde9LL,
-  0xbef9a3f7b2c67915LL, 0xc67178f2e372532bLL,
-  0xca273eceea26619cLL, 0xd186b8c721c0c207LL,
-  0xeada7dd6cde0eb1eLL, 0xf57d4f7fee6ed178LL,
-  0x06f067aa72176fbaLL, 0x0a637dc5a2c898a6LL,
-  0x113f9804bef90daeLL, 0x1b710b35131c471bLL,
-  0x28db77f523047d84LL, 0x32caab7b40c72493LL,
-  0x3c9ebe0a15c9bebcLL, 0x431d67c49c100d4cLL,
-  0x4cc5d4becb3e42b6LL, 0x597f299cfc657e2aLL,
-  0x5fcb6fab3ad6faecLL, 0x6c44198c4a475817LL
+  0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL,
+  0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL,
+  0x3956c25bf348b538ULL, 0x59f111f1b605d019ULL,
+  0x923f82a4af194f9bULL, 0xab1c5ed5da6d8118ULL,
+  0xd807aa98a3030242ULL, 0x12835b0145706fbeULL,
+  0x243185be4ee4b28cULL, 0x550c7dc3d5ffb4e2ULL,
+  0x72be5d74f27b896fULL, 0x80deb1fe3b1696b1ULL,
+  0x9bdc06a725c71235ULL, 0xc19bf174cf692694ULL,
+  0xe49b69c19ef14ad2ULL, 0xefbe4786384f25e3ULL,
+  0x0fc19dc68b8cd5b5ULL, 0x240ca1cc77ac9c65ULL,
+  0x2de92c6f592b0275ULL, 0x4a7484aa6ea6e483ULL,
+  0x5cb0a9dcbd41fbd4ULL, 0x76f988da831153b5ULL,
+  0x983e5152ee66dfabULL, 0xa831c66d2db43210ULL,
+  0xb00327c898fb213fULL, 0xbf597fc7beef0ee4ULL,
+  0xc6e00bf33da88fc2ULL, 0xd5a79147930aa725ULL,
+  0x06ca6351e003826fULL, 0x142929670a0e6e70ULL,
+  0x27b70a8546d22ffcULL, 0x2e1b21385c26c926ULL,
+  0x4d2c6dfc5ac42aedULL, 0x53380d139d95b3dfULL,
+  0x650a73548baf63deULL, 0x766a0abb3c77b2a8ULL,
+  0x81c2c92e47edaee6ULL, 0x92722c851482353bULL,
+  0xa2bfe8a14cf10364ULL, 0xa81a664bbc423001ULL,
+  0xc24b8b70d0f89791ULL, 0xc76c51a30654be30ULL,
+  0xd192e819d6ef5218ULL, 0xd69906245565a910ULL,
+  0xf40e35855771202aULL, 0x106aa07032bbd1b8ULL,
+  0x19a4c116b8d2d0c8ULL, 0x1e376c085141ab53ULL,
+  0x2748774cdf8eeb99ULL, 0x34b0bcb5e19b48a8ULL,
+  0x391c0cb3c5c95a63ULL, 0x4ed8aa4ae3418acbULL,
+  0x5b9cca4f7763e373ULL, 0x682e6ff3d6b2b8a3ULL,
+  0x748f82ee5defb2fcULL, 0x78a5636f43172f60ULL,
+  0x84c87814a1f0ab72ULL, 0x8cc702081a6439ecULL,
+  0x90befffa23631e28ULL, 0xa4506cebde82bde9ULL,
+  0xbef9a3f7b2c67915ULL, 0xc67178f2e372532bULL,
+  0xca273eceea26619cULL, 0xd186b8c721c0c207ULL,
+  0xeada7dd6cde0eb1eULL, 0xf57d4f7fee6ed178ULL,
+  0x06f067aa72176fbaULL, 0x0a637dc5a2c898a6ULL,
+  0x113f9804bef90daeULL, 0x1b710b35131c471bULL,
+  0x28db77f523047d84ULL, 0x32caab7b40c72493ULL,
+  0x3c9ebe0a15c9bebcULL, 0x431d67c49c100d4cULL,
+  0x4cc5d4becb3e42b6ULL, 0x597f299cfc657e2aULL,
+  0x5fcb6fab3ad6faecULL, 0x6c44198c4a475817ULL
 };
 
 static inline SHA512Uint64 rotr64(SHA512Uint64 x, Guint n) {

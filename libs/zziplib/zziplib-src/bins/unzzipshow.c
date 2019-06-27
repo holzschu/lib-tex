@@ -6,18 +6,9 @@
  */
 
 #include <zzip/fseeko.h>
+#include <zzip/__fnmatch.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef ZZIP_HAVE_FNMATCH_H
-#include <fnmatch.h>
-#else
-#define fnmatch(x,y,z) strcmp(x,y)
-#endif
-
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
 
 static const char usage[] = 
 {
@@ -68,7 +59,7 @@ main (int argc, char ** argv)
 	return 0;
     }
 
-    disk = fopen (argv[1], "rb");
+    disk = fopen (argv[1], "r");
     if (! disk) {
 	perror(argv[1]);
 	return -1;
@@ -102,8 +93,8 @@ main (int argc, char ** argv)
 	for (; entry ; entry = zzip_entry_findnext(entry))
 	{
 	    char* name = zzip_entry_strdup_name (entry);
-	    if (! fnmatch (argv[argn], name, 
-			   FNM_NOESCAPE|FNM_PATHNAME|FNM_PERIOD))
+	    if (! _zzip_fnmatch (argv[argn], name, 
+		  _zzip_FNM_NOESCAPE|_zzip_FNM_PATHNAME|_zzip_FNM_PERIOD))
 		zzip_cat_file (disk, name, stdout);
 	    free (name);
 	}

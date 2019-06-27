@@ -1,3 +1,55 @@
+2019-03-22  Akira Kakuto  <kakuto@w32tex.org>
+
+	* pmp.ch: Sync with the change of mp.w.
+
+2019-02-23  Akira Kakuto  <kakuto@w32tex.org>
+
+	* pmp.ch: Bump upmpost version to 2.00-0.04-u1.24.
+	* pmpost.ch: Do not change internal encoding by -kanji option. 
+
+2019-01-29  Akira Kakuto  <kakuto@w32tex.org>
+
+	* pmpost.ch: adapt to the new mpost.w.
+	Forbid too long kanji option.
+
+2018-12-21  Karl Berry  <karl@freefriends.org>
+
+	* am/pmpost.am (bin_links): make r* links at install time;
+	see entry in ../mplibdir/ChangeLog.
+
+2018-09-09  Karl Berry  <karl@tug.org>
+
+	* upmpsamp.test,
+	* pmpsamp.test: LC_ALL=LANGUAGE=C.
+
+2018-08-16  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
+
+	* ptfmin.ch: Support new JFM spec, which allows 3-byte
+	characters in TYPE > 0.
+	* tests/testnewu.{mp,tex,tfm}: Added. (File testnewu.tfm
+	is the same as uptexdir/tests.)
+
+2018-03-26  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* pmpost.ch: Use UTF-8 as a default encoding also on
+	Windows.
+
+2018-02-19  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* pmp.ch: Adapt to the new mp.w.
+
+2018-01-27  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* README.old.ja, Changes.old.ja: Import README.jis and
+	Changes.jis from old upstream jmpost-0.04.tar.gz,
+	renamed and converted to UTF-8.
+	* README: Added.
+	* am/pmpost.am: Adjusted.
+
+2017-07-30  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* ppsout.ch, pmpost.ch: Force a space between " and ".
+
 2017-04-24  Hironori Kitagawa  <h_kitagawa2001@yahoo.co.jp>
 
 	* pmpxout.ch: p\TeX -> \pTeX.

@@ -1,4 +1,4 @@
-## $Id: Makefile.am 44086 2017-04-27 21:38:29Z karl $
+## $Id: Makefile.am 50021 2019-02-14 00:23:33Z karl $
 ## Wrapper Makefile.am to build ICU for TeX Live.
 ##
 ##   Copyright 2017 Karl Berry <tex-live@tug.org>
@@ -40,7 +40,7 @@ icu-build/Makefile: $(ICU_NATIVE)
 	  eval $(SHELL) $$cmd)
 
 icu-native/config/icucross.mk: icu-native/Makefile
-	cd icu-native && $(MAKE) VERBOSE=1 $(AM_MAKEFLAGS) config/icucross.mk
+	cd icu-native && $(MAKE) $(AM_MAKEFLAGS) config/icucross.mk
 
 icu-native/Makefile:
 	$(MKDIR_P) icu-native
@@ -54,10 +54,13 @@ icu-native/Makefile:
 
 icubuild: icu-build/Makefile check-makeflags
 if cross
-	echo "=== cross-compiling -- 1st step"
 	cd icu-native && $(MAKE) $(AM_MAKEFLAGS) all
 endif cross
-	cd icu-build && $(MAKE) VERBOSE=1 $(AM_MAKEFLAGS) all
+	cd icu-build && $(MAKE) $(AM_MAKEFLAGS) all
+# these two cp commands are a kludge for mingw cross compilation.
+	cd icu-build/lib && (test ! -r icudt.a || cp icudt.a libicudata.a)
+	cd icu-build/lib && (test ! -r libicuin.a || cp libicuin.a libicui18n.a)
+#
 	cd include/unicode && $(MAKE) $(AM_MAKEFLAGS) all
 
 check-makeflags:
@@ -85,7 +88,13 @@ nodist_EXTRA_icutest_SOURCES = dummy.cxx
 
 icutest_CPPFLAGS = -Iinclude
 
-LDADD = icu-build/lib/libicuuc.a icu-build/lib/libicudata.a $(ICU_LIBS_EXTRA)
+LDADD = icu-build/lib/libicuuc.a
+if cross
+LDADD += icu-build/lib/libicuuc.a
+else
+LDADD += icu-build/lib/libicudata.a 
+endif
+LDADD += $(ICU_LIBS_EXTRA)
 
 # Rebuild
 rebuild_prereq =

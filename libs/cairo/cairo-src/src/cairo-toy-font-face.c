@@ -39,7 +39,7 @@
  *      Behdad Esfahbod <behdad@behdad.org>
  */
 
-#define _BSD_SOURCE /* for strdup() */
+#define _DEFAULT_SOURCE /* for strdup() */
 #include "cairoint.h"
 #include "cairo-error-private.h"
 
@@ -312,7 +312,7 @@ cairo_toy_font_face_create (const char          *family,
     }
 
     /* Otherwise create it and insert into hash table. */
-    font_face = malloc (sizeof (cairo_toy_font_face_t));
+    font_face = _cairo_malloc (sizeof (cairo_toy_font_face_t));
     if (unlikely (font_face == NULL)) {
 	status = _cairo_error (CAIRO_STATUS_NO_MEMORY);
 	goto UNWIND_HASH_TABLE_LOCK;

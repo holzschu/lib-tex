@@ -387,7 +387,12 @@ static size_t unpack_vararg(lua_State* L, int i, char* to)
         } else if (ct.type == INT64_TYPE) {
             *(int64_t*) to = *(int64_t*) p;
             return sizeof(int64_t);
-        }
+
+        } else if (ct.type == FUNCTION_PTR_TYPE) {
+	  *(cfunction *) to = *(cfunction *)p;
+	  return sizeof(cfunction);
+	}
+
         goto err;
 
     case LUA_TNIL:
@@ -3571,7 +3576,7 @@ int luaopen_ffi(lua_State *L)
 "\n"
 "The ARM processor is currently not supported. There are subtle\n"
 "differences between this module and the one in luajitTeX \n"
-"and we hope to be in sync around TeXLive 2018.\n"
+"and we hope to be in sync around TeXLive 2020.\n"
 "Different OS can have different interfaces,\n"
 "for instance OS_WIN has not 'complex.h'. If you want portable\n"
 "code, stick to the most common concepts.\n"

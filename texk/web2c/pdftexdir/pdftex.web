@@ -1,4 +1,4 @@
-% Copyright 1996-2017 Han Th\^e\llap{\raise 0.5ex\hbox{\'{}}} Th\`anh,
+% Copyright 1996-2019 Han Th\^e\llap{\raise 0.5ex\hbox{\'{}}} Th\`anh,
 % <thanh@@pdftex.org>
 
 % This file is part of pdfTeX.
@@ -184,7 +184,7 @@
 % and should use:
 %    \toks0=\expandafter{\title}
 %    \edef\title{...\the\toks0...}
-\let\maybe=\iffalse % print only changed modules
+\let\maybe=\iftrue % print only changed modules
 \def\topofcontents{\hsize 5.5in
   \vglue 0pt plus 1fil minus 1.5in
   \def\?##1]{\hbox to 1in{\hfil##1.\ }}
@@ -306,8 +306,8 @@ known as `\eTeX'.
   {printed when \eTeX\ starts}
 @#
 @d pdftex_version==140 { \.{\\pdftexversion} }
-@d pdftex_revision=="18" { \.{\\pdftexrevision} }
-@d pdftex_version_string=='-1.40.18' {current \pdfTeX\ version}
+@d pdftex_revision=="20" { \.{\\pdftexrevision} }
+@d pdftex_version_string=='-1.40.20' {current \pdfTeX\ version}
 @#
 @d pdfTeX_banner=='This is pdfTeX, Version 3.14159265',eTeX_version_string,pdftex_version_string
    {printed when \pdfTeX\ starts}
@@ -5176,10 +5176,12 @@ locations for control sequences that are perpetually defined
 @d end_write=frozen_control_sequence+8 {permanent `\.{\\endwrite}'}
 @d frozen_dont_expand=frozen_control_sequence+9
   {permanent `\.{\\notexpanded:}'}
+@d prim_size=2100 {maximum number of primitives }
 @d frozen_null_font=frozen_control_sequence+10
   {permanent `\.{\\nullfont}'}
 @d frozen_primitive=frozen_control_sequence+11
   {permanent `\.{\\pdfprimitive}'}
+@d prim_eqtb_base=frozen_primitive+1
 @d font_id_base=frozen_null_font-font_base
   {begins table of 257 permanent font identifiers}
 @d undefined_control_sequence=frozen_null_font+257 {dummy location}
@@ -5690,7 +5692,8 @@ that will be defined later.
 @d pdf_suppress_warning_page_group_code  = pdftex_first_integer_code + 29 {suppress warning about multiple pdfs with page group}
 @d pdf_info_omit_date_code  = pdftex_first_integer_code + 30 {omit generating CreationDate and ModDate}
 @d pdf_suppress_ptex_info_code = pdftex_first_integer_code + 31 {suppress /PTEX.* entries in PDF dictionaries}
-@d pdf_int_pars=pdftex_first_integer_code + 32 {total number of \pdfTeX's integer parameters}
+@d pdf_omit_charset_code = pdftex_first_integer_code + 32 {suppress /PTEX.* entries in PDF dictionaries}
+@d pdf_int_pars=pdftex_first_integer_code + 33 {total number of \pdfTeX's integer parameters}
 @#
 @d etex_int_base=pdf_int_pars {base for \eTeX's integer parameters}
 @d tracing_assigns_code=etex_int_base {show assignments}
@@ -5801,6 +5804,7 @@ that will be defined later.
 @d pdf_suppress_warning_page_group == int_par(pdf_suppress_warning_page_group_code)
 @d pdf_info_omit_date == int_par(pdf_info_omit_date_code)
 @d pdf_suppress_ptex_info == int_par(pdf_suppress_ptex_info_code)
+@d pdf_omit_charset == int_par(pdf_omit_charset_code)
 @#
 @d tracing_assigns==int_par(tracing_assigns_code)
 @d tracing_groups==int_par(tracing_groups_code)
@@ -5908,6 +5912,7 @@ pdf_suppress_warning_dup_map_code:   print_esc("pdfsuppresswarningdupmap");
 pdf_suppress_warning_page_group_code:print_esc("pdfsuppresswarningpagegroup");
 pdf_info_omit_date_code:print_esc("pdfinfoomitdate");
 pdf_suppress_ptex_info_code: print_esc("pdfsuppressptexinfo");
+pdf_omit_charset_code: print_esc("pdfomitcharset");
 @/@<Cases for |print_param|@>@/
 othercases print("[unknown integer parameter!]")
 endcases;
@@ -6094,10 +6099,15 @@ primitive("pdfsuppresswarningdupmap",assign_int,int_base+pdf_suppress_warning_du
 
 primitive("pdfsuppresswarningpagegroup",assign_int,int_base+pdf_suppress_warning_page_group_code);@/
 @!@:pdf_suppress_warning_page_group_}{\.{\\pdfsuppresswarningpagegroup} primitive@>
+
 primitive("pdfinfoomitdate",assign_int,int_base+pdf_info_omit_date_code);@/
 @!@:pdf_info_omit_date_}{\.{\\pdfinfoomitdate} primitive@>
+
 primitive("pdfsuppressptexinfo",assign_int,int_base+pdf_suppress_ptex_info_code);@/
 @!@:pdf_suppress_ptex_info_}{\.{\\pdfsuppressptexinfo} primitive@>
+
+primitive("pdfomitcharset",assign_int,int_base+pdf_omit_charset_code);@/
+@!@:pdf_omit_charset}{\.{\\pdfomitcharset} primitive@>
 
 @ @<Cases of |print_cmd_chr|...@>=
 assign_int: if chr_code<count_base then print_param(chr_code-int_base)
@@ -6455,33 +6465,28 @@ A global boolean variable called |no_new_control_sequence| is set to
 
 @ Primitive support needs a few extra variables and definitions
 
-@d prim_size=2100 {maximum number of primitives }
 @d prim_prime=1777 {about 85\pct! of |primitive_size|}
 @d prim_base=1
 @d prim_next(#) == prim[#].lh {link for coalesced lists}
-@d prim_text(#) == prim[#].rh {string number for control sequence name}
+@d prim_text(#) == prim[#].rh {string number for control sequence name, plus one}
 @d prim_is_full == (prim_used=prim_base) {test if all positions are occupied}
 @d prim_eq_level_field(#)==#.hh.b1
 @d prim_eq_type_field(#)==#.hh.b0
 @d prim_equiv_field(#)==#.hh.rh
-@d prim_eq_level(#)==prim_eq_level_field(prim_eqtb[#]) {level of definition}
-@d prim_eq_type(#)==prim_eq_type_field(prim_eqtb[#]) {command code for equivalent}
-@d prim_equiv(#)==prim_equiv_field(prim_eqtb[#]) {equivalent value}
+@d prim_eq_level(#)==prim_eq_level_field(eqtb[prim_eqtb_base+#]) {level of definition}
+@d prim_eq_type(#)==prim_eq_type_field(eqtb[prim_eqtb_base+#]) {command code for equivalent}
+@d prim_equiv(#)==prim_equiv_field(eqtb[prim_eqtb_base+#]) {equivalent value}
 @d undefined_primitive=0
+@d biggest_char=255 { 65535 in XeTeX }
 
 @<Glob...@>=
 @!prim: array [0..prim_size] of two_halves;  {the primitives table}
 @!prim_used:pointer; {allocation pointer for |prim|}
-@!prim_eqtb:array[0..prim_size] of memory_word;
 
 @ @<Set init...@>=
 no_new_control_sequence:=true; {new identifiers are usually forbidden}
 prim_next(0):=0; prim_text(0):=0;
 for k:=1 to prim_size do prim[k]:=prim[0];
-prim_eq_level(0) := level_zero;
-prim_eq_type(0) := undefined_cs;
-prim_equiv(0) := null;
-for k:=1 to prim_size do prim_eqtb[k]:=prim_eqtb[0];
 next(hash_base):=0; text(hash_base):=0;
 for k:=hash_base+1 to undefined_control_sequence-1 do hash[k]:=hash[hash_base];
 
@@ -6566,27 +6571,30 @@ var h:integer; {hash code}
 @!k:pointer; {index in string pool}
 @!j,@!l:integer;
 begin
-if s<256 then begin
-  p := s;
-  if (p<0) or (prim_eq_level(p)<>level_one) then
-    p := undefined_primitive;
-end
+if s<=biggest_char then begin
+  if s<0 then begin p:=undefined_primitive; goto found; end
+  else p:=(s mod prim_prime)+prim_base; {we start searching here}
+  end
 else begin
   j:=str_start[s];
   if s = str_ptr then l := cur_length else l := length(s);
   @<Compute the primitive code |h|@>;
-  p:=h+prim_base; {we start searching here; note that |0<=h<hash_prime|}
-  loop@+begin if prim_text(p)>0 then if length(prim_text(p))=l then
-    if str_eq_str(prim_text(p),s) then goto found;
-    if prim_next(p)=0 then
-      begin if no_new_control_sequence then
-        p:=undefined_primitive
-      else @<Insert a new primitive after |p|, then make
-        |p| point to it@>;
-      goto found;
-      end;
-    p:=prim_next(p);
+  p:=h+prim_base; {we start searching here; note that |0<=h<prim_prime|}
+  end;
+loop@+begin
+  if prim_text(p)>1+biggest_char then { |p| points a multi-letter primitive }
+    begin if length(prim_text(p)-1)=l then
+      if str_eq_str(prim_text(p)-1,s) then goto found;
+    end
+  else if prim_text(p)=1+s then goto found; { |p| points a single-letter primitive }
+  if prim_next(p)=0 then
+    begin if no_new_control_sequence then
+      p:=undefined_primitive
+    else @<Insert a new primitive after |p|, then make
+      |p| point to it@>;
+    goto found;
     end;
+  p:=prim_next(p);
   end;
 found: prim_lookup:=p;
 end;
@@ -6599,7 +6607,7 @@ begin if prim_text(p)>0 then
   until prim_text(prim_used)=0; {search for an empty location in |prim|}
   prim_next(p):=prim_used; p:=prim_used;
   end;
-prim_text(p):=s;
+prim_text(p):=s+1;
 end
 
 @ The value of |prim_prime| should be roughly 85\pct! of
@@ -6638,7 +6646,9 @@ begin if p<hash_base then {single character}
 else if p>=undefined_control_sequence then print_esc("IMPOSSIBLE.")
 else if (text(p)<0)or(text(p)>=str_ptr) then print_esc("NONEXISTENT.")
 @.NONEXISTENT@>
-else  begin print_esc(text(p));
+else  begin
+  if (p>=prim_eqtb_base)and(p<frozen_null_font) then
+    print_esc(prim_text(p-prim_eqtb_base)-1) else print_esc(text(p));
   print_char(" ");
   end;
 end;
@@ -6653,6 +6663,8 @@ begin if p<hash_base then
   else  if p<null_cs then print_esc(p-single_base)
     else  begin print_esc("csname"); print_esc("endcsname");
       end
+else if (p>=prim_eqtb_base)and(p<frozen_null_font) then
+    print_esc(prim_text(p-prim_eqtb_base)-1)
 else print_esc(text(p));
 end;
 
@@ -6662,6 +6674,57 @@ and an operand (which will be the |equiv|). The |primitive| procedure
 does this, in a way that no \TeX\ user can. The global value |cur_val|
 contains the new |eqtb| pointer after |primitive| has acted.
 
+Until pdf\TeX\ 1.40.19 (released in 2018), a bug in primitive handling
+caused, e.g., \.{\\pdfprimitive\\ \\q} to swallow the \.{\\q} instead of
+giving an undefined control sequence error. The original report was
+posted by Hironori Kitagawa
+(\.{tug.org/pipermail/tex-k/2017-October/002816.html}). Largely
+quoting from that message:
+
+The cause was |cur_tok| not being set in the ``Cases of |main_control|\dots''
+module, because |back_input| unscans the token, but only looks at
+|cur_tok|, which represents the internalized \.{\\pdfprimitive} at that
+time.  So \.{\\pdfprimitive\\vrule\\q} becomes ``(internalized
+\.{\\pdfprimitive})''\.{\\q}, hence no error (and \.{\\vrule} disappears).
+
+Hironori's explanation of the previous behavior and fix continues (off-list):
+
+\yskip\textindent{*} |back_input| (and similar routine $\langle\,$Insert token
+|p| into \TeX's input$\,\rangle$) only stores |cur_tok| to a token list.
+
+\textindent{*} When \TeX\ gets input from a token list (at module
+$\langle\,$Input from token list, |goto restart| \dots$\,\rangle$),
+\TeX\ looks at the saved |cur_tok| value $t$, and recover the command
+code (|cur_cmd|) and its fmodifier (|cur_chr|) from it:
+
+{\advance\leftskip by 1.5em
+\textindent{--} If |t>=cs_token_flag|, $t$ points to an |eqtb| location
+|t - cs_token_flag|.
+
+\textindent{--} If |t<cs_token_flag|, |cur_cmd| and |cur_chr| are set
+with |cur_cmd:=t div @'400; cur_chr:=t mod @'400|.
+
+\textindent{--} This $t$ is used to display the token (|show_token_list|).
+\par}
+
+\textindent{*} pdf\TeX\ defines |cs_token_flag| as \.{"FFF}.  So simply
+using |cur_tok:=(cur_cmd*@'400)+cur_chr| by \.{\\pdfprimitive} does not
+work correctly with primitives whose command codes |cur_cmd| $\ge16$.
+
+Increasing |cs_token_flag| to \.{"FFFF} or somewhat higher
+might suffice for fixing this situation in pdf\TeX.
+However, this approach does not seem good, because
+
+\textindent{1)} an (indirect) mapping from |cur_tok| to control sequence
+name is needed anyway, for displaying the token, and
+
+\textindent{2)} this does not work in Japanese e-(u)p\TeX.
+
+Thus, we now put |prim_eqtb| entries into the end of region 2 of
+|eqtb| (which contains some frozen primitives, such as ``frozen \.{\\fi}''
+and ``frozen \.{\\cr}''), thus treating |prim_eqtb| entries as a permanent
+location for primitives.
+
 @p @!init procedure primitive(@!s:str_number;@!c:quarterword;@!o:halfword);
 var k:pool_pointer; {index into |str_pool|}
 @!j:0..buf_size; {index into |buffer|}
@@ -6669,7 +6732,7 @@ var k:pool_pointer; {index into |str_pool|}
 @!prim_val:integer; {needed to fill |prim_eqtb|}
 begin if s<256 then begin
   cur_val:=s+single_base;
-  prim_val:=s;
+  prim_val:=prim_lookup(s);
 end
 else  begin k:=str_start[s]; l:=str_start[s+1]-k;
     {we will move |s| into the (possibly non-empty) |buffer|}
@@ -8918,7 +8981,7 @@ temporary file.
 begin save_scanner_status := scanner_status; scanner_status:=normal;
 get_token; scanner_status:=save_scanner_status;
 if cur_cs < hash_base then
-  cur_cs := prim_lookup(cur_cs-257)
+  cur_cs := prim_lookup(cur_cs-single_base)
 else
   cur_cs := prim_lookup(text(cur_cs));
 if cur_cs<>undefined_primitive then begin
@@ -8935,12 +8998,6 @@ if cur_cs<>undefined_primitive then begin
     p:=get_avail; info(p):=cs_token_flag+frozen_primitive;
     link(p):=loc; loc:=p; start:=p;
     end;
-  end
-else begin
-  print_err("Missing primitive name");
-  help2("The control sequence marked <to be read again> does not")@/
-    ("represent any known primitive.");
-  back_error;
   end;
 end
 
@@ -8954,11 +9011,15 @@ expansion creating new errors.
 @<Reset |cur_tok| for unexpandable primitives, goto restart @>=
 begin
 get_token;
-cur_cs := prim_lookup(text(cur_cs));
+if cur_cs < hash_base then
+  cur_cs := prim_lookup(cur_cs-single_base)
+else
+  cur_cs  := prim_lookup(text(cur_cs));
 if cur_cs<>undefined_primitive then begin
   cur_cmd := prim_eq_type(cur_cs);
   cur_chr := prim_equiv(cur_cs);
-  cur_tok := (cur_cmd*@'400)+cur_chr;
+  cur_cs  := prim_eqtb_base+cur_cs;
+  cur_tok := cs_token_flag+cur_cs;
   end
 else begin
   cur_cmd := relax;
@@ -10695,7 +10756,8 @@ such that |job_name_code| remains last.
 @d etex_convert_base=5 {base for \eTeX's command codes}
 @d eTeX_revision_code=etex_convert_base {command code for \.{\\eTeXrevision}}
 @d etex_convert_codes=etex_convert_base+1 {end of \eTeX's command codes}
-@d pdftex_first_expand_code = etex_convert_codes {base for \pdfTeX's command codes}
+@d expanded_code = etex_convert_codes {command code for \.{\\expanded}}
+@d pdftex_first_expand_code = expanded_code + 1 {base for \pdfTeX's command codes}
 @d pdftex_revision_code     = pdftex_first_expand_code + 0 {command code for \.{\\pdftexrevision}}
 @d pdftex_banner_code       = pdftex_first_expand_code + 1 {command code for \.{\\pdftexbanner}}
 @d pdf_font_name_code       = pdftex_first_expand_code + 2 {command code for \.{\\pdffontname}}
@@ -10736,6 +10798,9 @@ primitive("meaning",convert,meaning_code);@/
 @!@:meaning_}{\.{\\meaning} primitive@>
 primitive("fontname",convert,font_name_code);@/
 @!@:font_name_}{\.{\\fontname} primitive@>
+@#
+primitive("expanded",convert,expanded_code);@/
+@!@:expanded_}{\.{\\expanded} primitive@>
 @#
 primitive("pdftexrevision",convert,pdftex_revision_code);@/
 @!@:pdftex_revision_}{\.{\\pdftexrevision} primitive@>
@@ -10801,6 +10866,7 @@ convert: case chr_code of
   meaning_code: print_esc("meaning");
   font_name_code: print_esc("fontname");
   eTeX_revision_code: print_esc("eTeXrevision");
+  expanded_code: print_esc("expanded");
   pdftex_revision_code: print_esc("pdftexrevision");
   pdftex_banner_code:   print_esc("pdftexbanner");
   pdf_font_name_code:   print_esc("pdffontname");
@@ -10873,6 +10939,20 @@ string_code, meaning_code: begin save_scanner_status:=scanner_status;
   end;
 font_name_code: scan_font_ident;
 eTeX_revision_code: do_nothing;
+expanded_code:
+  begin
+    save_scanner_status := scanner_status;
+    save_warning_index := warning_index;
+    save_def_ref := def_ref;
+    save_cur_string;
+    scan_pdf_ext_toks;
+    warning_index := save_warning_index;
+    scanner_status := save_scanner_status;
+    ins_list(link(def_ref));
+    def_ref := save_def_ref;
+    restore_cur_string;
+    return;
+  end;
 pdftex_revision_code: do_nothing;
 pdftex_banner_code: do_nothing;
 pdf_font_name_code, pdf_font_objnum_code, pdf_font_size_code: begin
@@ -11802,7 +11882,7 @@ if_pdfprimitive_code: begin
   get_next;
   scanner_status:=save_scanner_status;
   if cur_cs < hash_base then
-    m := prim_lookup(cur_cs-257)
+    m := prim_lookup(cur_cs-single_base)
   else
     m := prim_lookup(text(cur_cs));
   b :=((cur_cmd<>undefined_cs) and
@@ -15032,6 +15112,11 @@ begin
     get_pdf_suppress_ptex_info := pdf_suppress_ptex_info;
 end;
 
+function get_pdf_omit_charset: integer;
+begin
+    get_pdf_omit_charset := pdf_omit_charset;
+end;
+
 function get_nullfont: internal_font_number;
 begin
     get_nullfont := null_font;
@@ -15191,7 +15276,7 @@ begin
             pdf_mem_size := pdf_mem_size + a
         else
             pdf_mem_size := sup_pdf_mem_size;
-        pdf_mem := xrealloc_array(pdf_mem, integer, pdf_mem_size); 
+        pdf_mem := xrealloc_array(pdf_mem, integer, pdf_mem_size);
     end;
     pdf_get_mem := pdf_mem_ptr;
     pdf_mem_ptr := pdf_mem_ptr + s;
@@ -15731,7 +15816,7 @@ var w, s_out: scaled;
     s: integer;
 begin
     w := char_width(f)(char_info(f)(c));
-    if hasfmentry(f) then begin
+    if isscalable(f) then begin
         if pdf_cur_Tm_a = 0 then begin
             call_func(divide_scaled(w, pdf_font_size[f], 4));
             pdf_delta_h := pdf_delta_h + scaled_out;
@@ -15942,7 +16027,7 @@ begin
     {if |f| is auto expanded then ensure the base font is initialized}
     if pdf_font_auto_expand[f] and (pdf_font_blink[f] <> null_font) then begin
         b := pdf_font_blink[f];
-        if not hasfmentry(b) then
+        if not isscalable(b) then
             pdf_error("font expansion", "auto expansion is only possible with scalable fonts");
         if not font_used[b] then
             pdf_init_font(b);
@@ -15953,11 +16038,11 @@ begin
     here: 1) |f| and |k| have the same tfm name (so they have been loaded at
     different sizes, eg 'cmr10' and 'cmr10 at 11pt'); 2) |f| has been auto
     expanded from |k|}
-    if hasfmentry(f) then begin
+    if isscalable(f) then begin
         i := head_tab[obj_type_font];
         while i <> 0 do begin
             k := obj_info(i);
-            if hasfmentry(k) and
+            if isscalable(k) and
                (pdf_font_map[k] = pdf_font_map[f]) and
                (str_eq_str(font_name[k], font_name[f]) or
                 (pdf_font_auto_expand[f] and
@@ -16089,12 +16174,12 @@ begin
     must_insert_space := false;
     must_end_string := false;
 
-{     print_nl("s_out = "); print_scaled(s_out); }
-{     print_nl("space(f) = "); print_scaled(space(f)); }
-{     print_nl("space_shrink(f) = "); print_scaled(space_shrink(f)); }
-{     print_nl("x_height(f) = "); print_scaled(x_height(f)); }
-{     print_nl("v = "); print_scaled(v); }
-{     print_nl("v_out = "); print_scaled(v_out); }
+@{    print_nl("s_out = "); print_scaled(s_out); @}
+@{    print_nl("space(f) = "); print_scaled(space(f)); @}
+@{    print_nl("space_shrink(f) = "); print_scaled(space_shrink(f)); @}
+@{    print_nl("x_height(f) = "); print_scaled(x_height(f)); @}
+@{    print_nl("v = "); print_scaled(v); @}
+@{    print_nl("v_out = "); print_scaled(v_out); @}
 
     if gen_faked_interword_space and
         ((abs(v_out) > 2*x_height(f)) or
@@ -16196,6 +16281,19 @@ begin
     pdf_print_ln("]");
 end;
 
+{Prints first |len| characters of string |s| (if it's that long).
+ There must be a better way to print a substring?}
+procedure slow_print_substr(@!s,@!max_len:integer);
+var j:pool_pointer; {current character code position}
+begin if (s>=str_ptr) or (s<256) then print(s)
+else begin j:=str_start[s];
+  while (j<str_start[s+1]) and (j<=str_start[s]+max_len) do
+    begin print(so(str_pool[j])); incr(j);
+    end;
+  end;
+  if j<str_start[s+1] then print("..."); {indicate truncation}
+end;
+
 procedure literal(s: str_number; literal_mode: integer; warn: boolean);
 var j: pool_pointer; {current character code position}
 begin
@@ -16204,8 +16302,13 @@ begin
         if not (str_in_str(s, "PDF:", 0) or str_in_str(s, "pdf:", 0)) then begin
             if warn and not (str_in_str(s, "SRC:", 0)
                 or str_in_str(s, "src:", 0)
-                or (length(s) = 0)) then
+                or (length(s) = 0)) then begin
                     print_nl("Non-PDF special ignored!");
+                    print_nl("<special> ");
+                    slow_print_substr(s, 64);
+                    {length of printed line should be <=78; good enough.}
+                    print_ln;
+            end;
             return;
         end;
         j := j + length("PDF:");
@@ -19239,6 +19342,9 @@ if pdf_obj_list <> null then begin
     end;
 end
 
+@ @<Glob...@>=
+@!saved_pdf_cur_form: integer;
+
 @ When flushing pending forms we need to save and restore resource lists
   (|pdf_font_list|, |pdf_obj_list|, |pdf_xform_list| and |pdf_ximage_list|),
   which are also used by page shipping.
@@ -19248,10 +19354,12 @@ if pdf_xform_list <> null then begin
     k := pdf_xform_list;
     while k <> null do begin
         if not is_obj_written(info(k)) then begin
+            saved_pdf_cur_form := pdf_cur_form;
             pdf_cur_form := info(k);
             @<Save resource lists@>;
             @<Reset resource lists@>;
             pdf_ship_out(obj_xform_box(pdf_cur_form), false);
+            pdf_cur_form := saved_pdf_cur_form;
             @<Restore resource lists@>;
         end;
         k := link(k);
@@ -28797,12 +28905,13 @@ any_mode(ignore_spaces): begin
     get_next;
     scanner_status:=t;
     if cur_cs < hash_base then
-      cur_cs := prim_lookup(cur_cs-257)
+      cur_cs := prim_lookup(cur_cs-single_base)
     else
       cur_cs  := prim_lookup(text(cur_cs));
     if cur_cs<>undefined_primitive then begin
       cur_cmd := prim_eq_type(cur_cs);
       cur_chr := prim_equiv(cur_cs);
+      cur_tok := cs_token_flag+prim_eqtb_base+cur_cs;
       goto reswitch;
       end;
     end;
@@ -32702,7 +32811,6 @@ for |p>=hash_used|, so the remaining entries are output in a~block.
 
 @<Dump the hash table@>=
 for p:=0 to prim_size do dump_hh(prim[p]);
-for p:=0 to prim_size do dump_wd(prim_eqtb[p]);
 dump_int(hash_used); cs_count:=frozen_control_sequence-1-hash_used;
 for p:=hash_base to hash_used do if text(p)<>0 then
   begin dump_int(p); dump_hh(hash[p]); incr(cs_count);
@@ -32713,7 +32821,6 @@ print_ln; print_int(cs_count); print(" multiletter control sequences")
 
 @ @<Undump the hash table@>=
 for p:=0 to prim_size do undump_hh(prim[p]);
-for p:=0 to prim_size do undump_wd(prim_eqtb[p]);
 undump(hash_base)(frozen_control_sequence)(hash_used); p:=hash_base-1;
 repeat undump(p+1)(hash_used)(p); undump_hh(hash[p]);
 until p=hash_used;
@@ -33755,11 +33862,12 @@ procedure compare_strings; {to implement \.{\\pdfstrcmp}}
 label done;
 var s1, s2: str_number;
     i1, i2, j1, j2: pool_pointer;
+    save_cur_cs: pointer;
 begin
-    call_func(scan_toks(false, true));
+    save_cur_cs:=cur_cs; call_func(scan_toks(false, true));
     s1 := tokens_to_string(def_ref);
     delete_token_ref(def_ref);
-    call_func(scan_toks(false, true));
+    cur_cs:=save_cur_cs; call_func(scan_toks(false, true));
     s2 := tokens_to_string(def_ref);
     delete_token_ref(def_ref);
     i1 := str_start[s1];
@@ -39552,10 +39660,10 @@ if arith_error then
   if active_short(r)>0 then g:=max_dimen@+else g:=-max_dimen;
 if g>0 then
   @<Set the value of |b| to the badness of the last line for stretching,
-    compute the corresponding |fit_class|, and |goto found||@>
+    compute the corresponding |fit_class|, and |goto found|@>
 else if g<0 then
   @<Set the value of |b| to the badness of the last line for shrinking,
-    compute the corresponding |fit_class|, and |goto found||@>;
+    compute the corresponding |fit_class|, and |goto found|@>;
 not_found:end
 
 @ These badness computations are rather similar to those of the standard

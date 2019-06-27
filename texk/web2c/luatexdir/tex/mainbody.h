@@ -23,7 +23,6 @@
 
 extern int luatex_version;
 extern int luatex_revision;
-extern int luatex_date_info;
 extern const char *luatex_version_string;
 extern const char *engine_name;
 
@@ -140,6 +139,9 @@ extern int filelineerrorstylep;
 extern int haltonerrorp;
 extern boolean quoted_filename;
 
+extern int total_pages;
+extern int dead_cycles;
+
 /*
 In order to make efficient use of storage space, \TeX\ bases its major data
 structures on a |memory_word|, which contains either a (signed) integer,
@@ -218,7 +220,6 @@ is conditionally compiled in the C code.
 
 extern int get_luatexversion(void);
 extern str_number get_luatexrevision(void);
-extern int get_luatex_date_info(void);
 
 extern int ready_already;
 

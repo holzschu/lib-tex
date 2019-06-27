@@ -1,5 +1,6 @@
 /* Sound.h - an object that holds the sound structure
  * Copyright (C) 2006-2007, Pino Toscano <pino@kde.org>
+ * Copyright (C) 2017, 2018, Albert Astals Cid <aacid@kde.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,23 +47,26 @@ public:
   // Destructor
   ~Sound();
 
-  Object *getObject() { return streamObj; }
+  Sound(const Sound &) = delete;
+  Sound& operator=(const Sound &) = delete;
+
+  const Object *getObject() const { return &streamObj; }
   Stream *getStream();
 
-  SoundKind getSoundKind() { return kind; }
-  GooString *getFileName() { return fileName; }
-  double getSamplingRate() { return samplingRate; }
-  int getChannels() { return channels; }
-  int getBitsPerSample() { return bitsPerSample; }
-  SoundEncoding getEncoding() { return encoding; }
+  SoundKind getSoundKind() const { return kind; }
+  const GooString *getFileName() const { return fileName; }
+  double getSamplingRate() const { return samplingRate; }
+  int getChannels() const { return channels; }
+  int getBitsPerSample() const { return bitsPerSample; }
+  SoundEncoding getEncoding() const { return encoding; }
 
-  Sound *copy();
+  Sound *copy() const;
 
 private:
   // Create a sound. The Object obj is ensured to be a Stream with a Dict
-  Sound(Object *obj, bool readAttrs = true);
+  Sound(const Object *obj, bool readAttrs = true);
 
-  Object *streamObj;
+  Object streamObj;
   SoundKind kind;
   GooString *fileName;
   double samplingRate;

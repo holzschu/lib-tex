@@ -28,22 +28,27 @@ printversionandexit (const_string banner,
 {
   string prog_name;
   unsigned len;
+  const_string prog_name_start;
   const_string prog_name_end = strchr (banner, ',');
   const_string prog_version = strrchr (banner, ' ');
   assert (prog_name_end && prog_version);
   prog_version++;
   
-  len = prog_name_end - banner - sizeof ("This is");
+  len = prog_name_end - banner;
   prog_name = xmalloc (len + 1);
-  strncpy (prog_name, banner + sizeof ("This is"), len);
+  strncpy (prog_name, banner, len);
   prog_name[len] = 0;
+
+  prog_name_start = strrchr (prog_name, ' ');
+  assert (prog_name_start);
+  prog_name_start++;
 
   /* The Web2c version string starts with a space.  */
 #ifdef PTEX
-  fprintf (stdout, "%s %s (%s)%s\n", prog_name, prog_version, get_enc_string(),
+  printf ("%s %s (%s)%s\n", prog_name_start, prog_version, get_enc_string(),
           versionstring);
 #else
-  fprintf (stdout, "%s %s%s\n", prog_name, prog_version, versionstring);
+  printf ("%s %s%s\n", prog_name_start, prog_version, versionstring);
 #endif
   puts (kpathsea_version_string);
 #ifdef PTEX
@@ -51,21 +56,23 @@ printversionandexit (const_string banner,
 #endif
 
   if (copyright_holder) {
-    fprintf (stdout, "Copyright 2017 %s.\n", copyright_holder);
+    printf ("Copyright 2019 %s.\n", copyright_holder);
     if (!author)
       author = copyright_holder;
   }
 
   puts ("There is NO warranty.  Redistribution of this software is");
   fputs ("covered by the terms of ", stdout);
-  fprintf (stdout, "both the %s copyright and\n", prog_name);
+  printf ("both the %s copyright and\n", prog_name_start);
   puts ("the Lesser GNU General Public License.");
   puts ("For more information about these matters, see the file");
-  fprintf (stdout, "named COPYING and the %s source.\n", prog_name);
-  fprintf (stdout, "Primary author of %s: %s.\n", prog_name, author);
+  printf ("named COPYING and the %s source.\n", prog_name_start);
+  printf ("Primary author of %s: %s.\n", prog_name_start, author);
 
   if (extra_info)
     fputs (extra_info, stdout);
+
+  free (prog_name);
 
   uexit (0);
 }

@@ -2,7 +2,7 @@
 ** Ghostscript.hpp                                                      **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -38,18 +38,18 @@
 #endif
 
 #if defined(DISABLE_GS)
-struct Ghostscript
-{
-	typedef int (GSDLLCALLPTR Stdin) (void *caller, char *buf, int len);
-	typedef int (GSDLLCALLPTR Stdout) (void *caller, const char *str, int len);
-	typedef int (GSDLLCALLPTR Stderr) (void *caller, const char *str, int len);
+struct Ghostscript {
+	using Stdin  = int (GSDLLCALLPTR)(void *caller, char *buf, int len);
+	using Stdout = int (GSDLLCALLPTR)(void *caller, const char *str, int len);
+	using Stderr = int (GSDLLCALLPTR)(void *caller, const char *str, int len);
 
 	Ghostscript () {}
 	Ghostscript (int argc, const char **argv, void *caller=0) {}
 	bool init (int argc, const char **argv, void *caller=0) {return false;}
 	bool available () {return false;}
 	bool revision (gsapi_revision_t *r) {return false;}
-	std::string revision (bool revonly=false) {return "";}
+	int revision () {return 0;}
+	std::string revisionstr () {return "";}
 	int set_stdio (Stdin in, Stdout out, Stderr err) {return 0;}
 	int run_string_begin (int user_errors, int *pexit_code) {return 0;}
 	int run_string_continue (const char *str, unsigned int length, int user_errors, int *pexit_code) {return 0;}
@@ -67,9 +67,9 @@ class Ghostscript
 #endif
 {
 	public:
-		typedef int (GSDLLCALLPTR Stdin) (void *caller, char *buf, int len);
-		typedef int (GSDLLCALLPTR Stdout) (void *caller, const char *str, int len);
-		typedef int (GSDLLCALLPTR Stderr) (void *caller, const char *str, int len);
+		using Stdin  = int (GSDLLCALLPTR)(void *caller, char *buf, int len);
+		using Stdout = int (GSDLLCALLPTR)(void *caller, const char *str, int len);
+		using Stderr = int (GSDLLCALLPTR)(void *caller, const char *str, int len);
 
 	public:
 		Ghostscript ();
@@ -79,7 +79,8 @@ class Ghostscript
 		bool init (int argc, const char **argv, void *caller=0);
 		bool available ();
 		bool revision (gsapi_revision_t *r);
-		std::string revision (bool revonly=false);
+		int revision ();
+		std::string revisionstr ();
 		int set_stdio (Stdin in, Stdout out, Stderr err);
 		int run_string_begin (int user_errors, int *pexit_code);
 		int run_string_continue (const char *str, unsigned int length, int user_errors, int *pexit_code);

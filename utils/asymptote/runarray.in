@@ -908,12 +908,13 @@ array* :arrayFunction(callable *f, array *a)
   return b;
 }
 
-array* :arraySort(array *a, callable *less)
+array* :arraySort(array *a, callable *less, bool stable=true)
 {
   array *c=copyArray(a);
   compareFunc=less;
   FuncStack=Stack;
-  stable_sort(c->begin(),c->end(),compareFunction);
+  if(stable) stable_sort(c->begin(),c->end(),compareFunction);
+  else sort(c->begin(),c->end(),compareFunction);
   return c;
 }
 
@@ -1102,7 +1103,7 @@ array* :array3Transpose(array *a, array *perm)
   return c;
 }
 
-// In a boolean array, find the index of the nth true value or -1 if not found
+// Find the index of the nth true value in a boolean array or -1 if not found.
 // If n is negative, search backwards.
 Int find(boolarray *a, Int n=1)
 {
@@ -1119,6 +1120,19 @@ Int find(boolarray *a, Int n=1)
         n++; if(n == 0) {j=(Int) i; break;}
       }
   return j;
+}
+
+// Find all indices of true values in a boolean array. 
+Intarray *findall(boolarray *a)
+{
+  size_t size=checkArray(a);
+  array *b=new array(0);
+  for(size_t i=0; i < size; i++) {
+    if(read<bool>(a,i)) {
+      b->push((Int) i);
+    }
+  }
+  return b;
 }
 
 // construct vector obtained by replacing those elements of b for which the
@@ -1901,9 +1915,9 @@ triple minbezier(triplearray2 *P, triple b)
   size_t N;
   real *A=copyTripleArray2Components(P,N);
   bound_double *B=bounddouble(N);
-  b=triple(B(A,::min,b.getx(),sqrtFuzz*norm(A,N),maxdepth),
-           B(A+N,::min,b.gety(),sqrtFuzz*norm(A+N,N),maxdepth),
-           B(A+2*N,::min,b.getz(),sqrtFuzz*norm(A+2*N,N),maxdepth));
+  b=triple(B(A,::min,b.getx(),Fuzz*norm(A,N),maxdepth),
+           B(A+N,::min,b.gety(),Fuzz*norm(A+N,N),maxdepth),
+           B(A+2*N,::min,b.getz(),Fuzz*norm(A+2*N,N),maxdepth));
   delete[] A;
   return b;
 }
@@ -1913,9 +1927,9 @@ triple maxbezier(triplearray2 *P, triple b)
   size_t N;
   real *A=copyTripleArray2Components(P,N);
   bound_double *B=bounddouble(N);
-  b=triple(B(A,::max,b.getx(),sqrtFuzz*norm(A,N),maxdepth),
-           B(A+N,::max,b.gety(),sqrtFuzz*norm(A+N,N),maxdepth),
-           B(A+2*N,::max,b.getz(),sqrtFuzz*norm(A+2*N,N),maxdepth));
+  b=triple(B(A,::max,b.getx(),Fuzz*norm(A,N),maxdepth),
+           B(A+N,::max,b.gety(),Fuzz*norm(A+N,N),maxdepth),
+           B(A+2*N,::max,b.getz(),Fuzz*norm(A+2*N,N),maxdepth));
   delete[] A;
   return b;
 }
@@ -1924,7 +1938,7 @@ pair minratio(triplearray2 *P, pair b)
 {
   size_t N;
   triple *A=copyTripleArray2C(P,N);
-  real fuzz=sqrtFuzz*norm(A,N);
+  real fuzz=Fuzz*norm(A,N);
   bound_triple *B=boundtriple(N);
   b=pair(B(A,::min,xratio,b.getx(),fuzz,maxdepth),
          B(A,::min,yratio,b.gety(),fuzz,maxdepth));
@@ -1937,7 +1951,7 @@ pair maxratio(triplearray2 *P, pair b)
   size_t N;
   triple *A=copyTripleArray2C(P,N);
   bound_triple *B=boundtriple(N);
-  real fuzz=sqrtFuzz*norm(A,N);
+  real fuzz=Fuzz*norm(A,N);
   b=pair(B(A,::max,xratio,b.getx(),fuzz,maxdepth),
          B(A,::max,yratio,b.gety(),fuzz,maxdepth));
   delete[] A;

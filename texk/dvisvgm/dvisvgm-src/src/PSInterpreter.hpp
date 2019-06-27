@@ -2,7 +2,7 @@
 ** PSInterpreter.hpp                                                    **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -25,21 +25,20 @@
 #include <istream>
 #include <string>
 #include <vector>
+#include "BoundingBox.hpp"
 #include "Ghostscript.hpp"
 #include "InputReader.hpp"
 #include "MessageException.hpp"
 
 
-struct PSException : public MessageException
-{
+struct PSException : public MessageException {
 	PSException (const std::string &msg) : MessageException(msg) {}
 };
 
 
 /** This interface provides the template methods called by PSInterpreter when executing a PS snippet.
  *  Each method corresponds to a PostScript operator of the same name. */
-struct PSActions
-{
+struct PSActions {
 	virtual ~PSActions () =default;
 	virtual void applyscalevals (std::vector<double> &p) =0;
 	virtual void clip (std::vector<double> &p) =0;
@@ -62,6 +61,7 @@ struct PSActions
 	virtual void rotate (std::vector<double> &p) =0;
 	virtual void save (std::vector<double> &p) =0;
 	virtual void scale (std::vector<double> &p) =0;
+	virtual void setblendmode (std::vector<double> &p) =0;
 	virtual void setcmykcolor (std::vector<double> &cmyk) =0;
 	virtual void setdash (std::vector<double> &p) =0;
 	virtual void setgray (std::vector<double> &p) =0;
@@ -72,9 +72,11 @@ struct PSActions
 	virtual void setmatrix (std::vector<double> &p) =0;
 	virtual void setmiterlimit (std::vector<double> &p) =0;
 	virtual void setopacityalpha (std::vector<double> &p) =0;
+	virtual void setshapealpha (std::vector<double> &p) =0;
+	virtual void setpagedevice (std::vector<double> &p) =0;
 	virtual void setpattern (std::vector<double> &p) =0;
 	virtual void setrgbcolor (std::vector<double> &rgb) =0;
-	virtual void shfill (std::vector<double> &rgb) =0;
+	virtual void shfill (std::vector<double> &p) =0;
 	virtual void stroke (std::vector<double> &p) =0;
 	virtual void translate (std::vector<double> &p) =0;
 	virtual void executed () {}  // triggered if one of the above PS operators has been executed
@@ -84,8 +86,7 @@ class PSFilter;
 
 /** This class provides methods to execute chunks of PostScript code and calls
  *  several template methods on invocation of selected PS operators (see PSActions). */
-class PSInterpreter
-{
+class PSInterpreter {
 	enum Mode {PS_NONE, PS_RUNNING, PS_QUIT};
 
 	public:
@@ -100,6 +101,8 @@ class PSInterpreter
 		void limit (size_t max_bytes)          {_bytesToRead = max_bytes;}
 		void setFilter (PSFilter *filter)      {_filter = filter;}
 		PSActions* setActions (PSActions *actions);
+		int pdfPageCount (const std::string &fname);
+		BoundingBox pdfPageBox (const std::string &fname, int pageno);
 		const std::vector<std::string>& rawData () const {return _rawData;}
 
 	protected:
@@ -115,15 +118,14 @@ class PSInterpreter
 	private:
 		Ghostscript _gs;
 		Mode _mode;                        ///< current execution mode
-		PSActions *_actions;               ///< actions to be performed
-		PSFilter *_filter;                 ///< active filter used to process PS code
-		size_t _bytesToRead;               ///< if > 0, maximal number of bytes to be processed by following calls of execute()
+		PSActions *_actions=nullptr;       ///< actions to be performed
+		PSFilter *_filter=nullptr;         ///< active filter used to process PS code
+		size_t _bytesToRead=0;             ///< if > 0, maximal number of bytes to be processed by following calls of execute()
 		std::vector<char> _linebuf;
 		std::string _errorMessage;         ///< text of error message
-		bool _inError;                     ///< true if scanning error message
-		bool _initialized;                 ///< true if PSInterpreter has been completely initialized
+		bool _inError=false;               ///< true if scanning error message
+		bool _initialized=false;           ///< true if PSInterpreter has been completely initialized
 		std::vector<std::string> _rawData; ///< raw data received
-		static const char *GSARGS[];       ///< parameters passed to Ghostscript
 		static const char *PSDEFS;         ///< initial PostScript definitions
 };
 

@@ -1,8 +1,8 @@
 /*************************************************************************
-** ShadingPatch.cpp                                                     **
+** ShadingPatchTest.cpp                                                 **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -27,19 +27,14 @@ using namespace std;
 
 
 TEST(ShadingPatchTest, create) {
-	ShadingPatch *patch=0;
-	patch = ShadingPatch::create(4, Color::ColorSpace::RGB);
-	EXPECT_TRUE(dynamic_cast<TriangularPatch*>(patch));
-	delete patch;
+	auto patch = ShadingPatch::create(4, Color::ColorSpace::RGB);
+	EXPECT_TRUE(dynamic_cast<TriangularPatch*>(patch.get()));
 	patch = ShadingPatch::create(5, Color::ColorSpace::RGB);
-	EXPECT_TRUE(dynamic_cast<LatticeTriangularPatch*>(patch));
-	delete patch;
+	EXPECT_TRUE(dynamic_cast<LatticeTriangularPatch*>(patch.get()));
 	patch = ShadingPatch::create(6, Color::ColorSpace::RGB);
-	EXPECT_TRUE(dynamic_cast<CoonsPatch*>(patch));
-	delete patch;
+	EXPECT_TRUE(dynamic_cast<CoonsPatch*>(patch.get()));
 	patch = ShadingPatch::create(7, Color::ColorSpace::RGB);
-	EXPECT_TRUE(dynamic_cast<TensorProductPatch*>(patch));
-	delete patch;
+	EXPECT_TRUE(dynamic_cast<TensorProductPatch*>(patch.get()));
 }
 
 
@@ -57,17 +52,17 @@ TEST(ShadingPatchTest, colorQueryFuncs) {
 	colors[1].setRGB(0.0, 1.0, 0.0);
 	colors[2].setRGB(0.0, 0.0, 1.0);
 	TriangularPatch tp1(points, colors, Color::ColorSpace::RGB, 0, 0);
-	EXPECT_EQ(tp1.colorAt(0, 0).rgbString(), "#ff0000");
-	EXPECT_EQ(tp1.colorAt(1, 0).rgbString(), "#00ff00");
-	EXPECT_EQ(tp1.colorAt(0, 1).rgbString(), "#0000ff");
+	EXPECT_EQ(tp1.colorAt(0, 0).rgbString(), "#f00");
+	EXPECT_EQ(tp1.colorAt(1, 0).rgbString(), "#0f0");
+	EXPECT_EQ(tp1.colorAt(0, 1).rgbString(), "#00f");
 
 	colors[0].setGray(0.2);
 	colors[1].setGray(0.4);
 	colors[2].setGray(0.6);
 	TriangularPatch tp2(points, colors, Color::ColorSpace::GRAY, 0, 0);
-	EXPECT_EQ(tp2.colorAt(0, 0).rgbString(), "#333333");
-	EXPECT_EQ(tp2.colorAt(1, 0).rgbString(), "#666666");
-	EXPECT_EQ(tp2.colorAt(0, 1).rgbString(), "#999999");
+	EXPECT_EQ(tp2.colorAt(0, 0).rgbString(), "#333");
+	EXPECT_EQ(tp2.colorAt(1, 0).rgbString(), "#666");
+	EXPECT_EQ(tp2.colorAt(0, 1).rgbString(), "#999");
 
 	colors[0].setCMYK(1.0, 0.0, 0.0, 0.2);
 	colors[1].setCMYK(0.0, 1.0, 0.0, 0.4);

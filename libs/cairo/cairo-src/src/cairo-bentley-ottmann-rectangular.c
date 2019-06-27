@@ -603,7 +603,7 @@ _cairo_bentley_ottmann_tessellate_rectangular (rectangle_t	**rectangles,
     sweep_line_t sweep_line;
     rectangle_t *rectangle;
     cairo_status_t status;
-    cairo_bool_t update = FALSE;
+    cairo_bool_t update;
 
     sweep_line_init (&sweep_line,
 		     rectangles, num_rectangles,
@@ -611,6 +611,8 @@ _cairo_bentley_ottmann_tessellate_rectangular (rectangle_t	**rectangles,
 		     do_traps, container);
     if ((status = setjmp (sweep_line.unwind)))
 	return status;
+
+    update = FALSE;
 
     rectangle = rectangle_pop_start (&sweep_line);
     do {
@@ -672,10 +674,19 @@ _cairo_bentley_ottmann_tessellate_rectangular_traps (cairo_traps_t *traps,
     cairo_status_t status;
     int i;
 
-    if (unlikely (traps->num_traps <= 1))
-	return CAIRO_STATUS_SUCCESS;
+   assert (traps->is_rectangular);
 
-    assert (traps->is_rectangular);
+    if (unlikely (traps->num_traps <= 1)) {
+        if (traps->num_traps == 1) {
+            cairo_trapezoid_t *trap = traps->traps;
+            if (trap->left.p1.x > trap->right.p1.x) {
+                cairo_line_t tmp = trap->left;
+                trap->left = trap->right;
+                trap->right = tmp;
+            }
+        }
+	return CAIRO_STATUS_SUCCESS;
+    }
 
     dump_traps (traps, "bo-rects-traps-in.txt");
 

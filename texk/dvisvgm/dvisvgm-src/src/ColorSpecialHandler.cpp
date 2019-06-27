@@ -2,7 +2,7 @@
 ** ColorSpecialHandler.cpp                                              **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -18,7 +18,6 @@
 ** along with this program; if not, see <http://www.gnu.org/licenses/>. **
 *************************************************************************/
 
-#include <config.h>
 #include <cstring>
 #include <sstream>
 #include <vector>
@@ -92,7 +91,7 @@ Color ColorSpecialHandler::readColor (istream &is) {
 }
 
 
-bool ColorSpecialHandler::process (const char *, istream &is, SpecialActions &actions) {
+bool ColorSpecialHandler::process (const string&, istream &is, SpecialActions &actions) {
 	string cmd;
 	is >> cmd;
 	if (cmd == "push")               // color push <model> <params>
@@ -114,8 +113,8 @@ bool ColorSpecialHandler::process (const char *, istream &is, SpecialActions &ac
 }
 
 
-const char** ColorSpecialHandler::prefixes () const {
-	static const char *pfx[] = {"color", 0};
+vector<const char*> ColorSpecialHandler::prefixes() const {
+	vector<const char*> pfx {"color"};
 	return pfx;
 }
 

@@ -32,6 +32,11 @@
 # include <ieeefp.h>		/* Solaris defines isnan in ieeefp rather than math.h */
 #endif
 
+#ifdef __IPHONE__
+// finite() is deprecated on iOS, replaced with isfinite()
+#define finite isfinite
+#endif
+
 /* The slight errors introduced by the optimizer turn out to have nasty */
 /*  side effects. An error on the order of 7e-8 in splines[1].b caused */
 /*  the rasterizer to have kaniptions */
@@ -75,7 +80,7 @@ void SplineRefigure3(Spline *spline) {
 	if ( ysp->a==0 && xsp->a==0 && ysp->b==0 && xsp->b==0 )
 	    spline->islinear = true;	/* This seems extremely unlikely... */
     }
-    if ( !isfinite(ysp->a) || !isfinite(xsp->a) || !isfinite(ysp->c) || !isfinite(xsp->c) || !isfinite(ysp->d) || !isfinite(xsp->d))
+    if ( !finite(ysp->a) || !finite(xsp->a) || !finite(ysp->c) || !finite(xsp->c) || !finite(ysp->d) || !finite(xsp->d))
 	IError("NaN value in spline creation");
     LinearApproxFree(spline->approx);
     spline->approx = NULL;

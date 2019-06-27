@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2007-2016 by Jin-Hwan Cho and Shunsaku Hirata,
+    Copyright (C) 2007-2018 by Jin-Hwan Cho and Shunsaku Hirata,
     the dvipdfmx project team.
     
     Copyright (C) 1998, 1999 by Mark A. Wicks <mwicks@kettering.edu>
@@ -28,7 +28,9 @@
 #include "error.h"
 #include "mem.h"
 
+#include "dpxconf.h"
 #include "dpxfile.h"
+#include "dpxutil.h"
 
 #include "pdfobj.h"
 
@@ -94,16 +96,12 @@ struct pdf_ximage_
 /* verbose, verbose, verbose... */
 struct opt_
 {
-  int    verbose;
   char  *cmdtmpl;
 };
 
 static struct opt_ _opts = {
-  0, NULL
+  NULL
 };
-
-void pdf_ximage_set_verbose (void) { _opts.verbose++; }
-
 
 struct ic_
 {
@@ -192,7 +190,8 @@ pdf_close_images (void)
          * We also use this to convert a PS file only once if multiple
          * pages are imported from that file.
          */
-        if (_opts.verbose > 1 && keep_cache != 1)
+        if (dpx_conf.verbose_level > 1 &&
+            dpx_conf.file.keep_cache != 1)
           MESG("pdf_image>> deleting temporary file \"%s\"\n", I->filename);
         dpx_delete_temp_file(I->filename, false); /* temporary filename freed here */
         I->filename = NULL;
@@ -281,14 +280,14 @@ load_image (const char *ident, const char *fullname, int format, FILE  *fp,
 
   switch (format) {
   case  IMAGE_TYPE_JPEG:
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG("[JPEG]");
     if (jpeg_include_image(I, fp) < 0)
       goto error;
     I->subtype  = PDF_XOBJECT_TYPE_IMAGE;
     break;
   case  IMAGE_TYPE_JP2:
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG("[JP2]");
     if (jp2_include_image(I, fp) < 0)
       goto error;
@@ -296,7 +295,7 @@ load_image (const char *ident, const char *fullname, int format, FILE  *fp,
     break;
 #ifdef HAVE_LIBPNG
   case  IMAGE_TYPE_PNG:
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG("[PNG]");
     if (png_include_image(I, fp) < 0)
       goto error;
@@ -304,14 +303,14 @@ load_image (const char *ident, const char *fullname, int format, FILE  *fp,
     break;
 #endif
   case  IMAGE_TYPE_BMP:
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG("[BMP]");
     if (bmp_include_image(I, fp) < 0)
       goto error;
     I->subtype  = PDF_XOBJECT_TYPE_IMAGE;
     break;
   case  IMAGE_TYPE_PDF:
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG("[PDF]");
     {
       int result = pdf_include_page(I, fp, fullname, options);
@@ -321,7 +320,7 @@ load_image (const char *ident, const char *fullname, int format, FILE  *fp,
       if (result < 0)
         goto error;
     }
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG(",Page:%ld", I->attr.page_no);
     I->subtype  = PDF_XOBJECT_TYPE_FORM;
     break;
@@ -329,11 +328,11 @@ load_image (const char *ident, const char *fullname, int format, FILE  *fp,
   case  IMAGE_TYPE_EPS:
 */
   default:
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG(format == IMAGE_TYPE_EPS ? "[PS]" : "[UNKNOWN]");
     if (ps_include_page(I, fullname, options) < 0)
       goto error;
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG(",Page:%ld", I->attr.page_no);
     I->subtype  = PDF_XOBJECT_TYPE_FORM;
   }
@@ -408,16 +407,16 @@ pdf_ximage_findresource (const char *ident, load_options options)
     RELEASE(fullname);
     return  -1;
   }
-  if (_opts.verbose) {
+  if (dpx_conf.verbose_level > 0) {
     MESG("(Image:%s", ident);
-    if (_opts.verbose > 1)
+    if (dpx_conf.verbose_level > 1)
       MESG("[%s]", fullname);
   }
 
   format = source_image_type(fp);
   switch (format) {
   case IMAGE_TYPE_MPS:
-    if (_opts.verbose)
+    if (dpx_conf.verbose_level > 0)
       MESG("[MPS]");
     id = mps_include_page(ident, fp);
     if (id < 0) {
@@ -434,7 +433,7 @@ pdf_ximage_findresource (const char *ident, load_options options)
 
   RELEASE(fullname);
 
-  if (_opts.verbose)
+  if (dpx_conf.verbose_level > 0)
     MESG(")");
 
   if (id < 0)
@@ -552,13 +551,26 @@ void
 pdf_ximage_set_form (pdf_ximage *I, void *form_info, pdf_obj *resource)
 {
   xform_info *info = form_info;
+  pdf_coord   p1, p2, p3, p4;
 
   I->subtype   = PDF_XOBJECT_TYPE_FORM;
 
-  I->attr.bbox.llx = info->bbox.llx;
-  I->attr.bbox.lly = info->bbox.lly;
-  I->attr.bbox.urx = info->bbox.urx;
-  I->attr.bbox.ury = info->bbox.ury;
+  /* Image's attribute "bbox" here is affected by /Rotate entry of included
+   * PDF page.
+   */
+  p1.x = info->bbox.llx; p1.y = info->bbox.lly;
+  pdf_dev_transform(&p1, &info->matrix);
+  p2.x = info->bbox.urx; p1.y = info->bbox.lly;
+  pdf_dev_transform(&p2, &info->matrix);
+  p3.x = info->bbox.urx; p3.y = info->bbox.ury;
+  pdf_dev_transform(&p3, &info->matrix);
+  p4.x = info->bbox.llx; p4.y = info->bbox.ury;
+  pdf_dev_transform(&p4, &info->matrix);
+
+  I->attr.bbox.llx = min4(p1.x, p2.x, p3.x, p4.x);
+  I->attr.bbox.lly = min4(p1.y, p2.y, p3.y, p4.y);
+  I->attr.bbox.urx = max4(p1.x, p2.x, p3.x, p4.x);
+  I->attr.bbox.ury = max4(p1.y, p2.y, p3.y, p4.y);
 
   I->reference = pdf_ref_obj(resource);
 
@@ -933,21 +945,22 @@ ps_include_page (pdf_ximage *ximage, const char *filename, load_options options)
   }
 #endif
 
-  if (keep_cache != -1 && stat(temp, &stat_t)==0 && stat(filename, &stat_o)==0
-      && stat_t.st_mtime > stat_o.st_mtime) {
+  if (dpx_conf.file.keep_cache != -1 &&
+      stat(temp, &stat_t)==0 && stat(filename, &stat_o)==0 && 
+      stat_t.st_mtime > stat_o.st_mtime) {
     /* cache exist */
     /*printf("\nLast file modification: %s", ctime(&stat_o.st_mtime));
       printf("Last file modification: %s", ctime(&stat_t.st_mtime));*/
       ;
   } else {
-    if (_opts.verbose > 1) {
+    if (dpx_conf.verbose_level > 1) {
       MESG("\n");
       MESG("pdf_image>> Converting file \"%s\" --> \"%s\" via:\n", filename, temp);
       MESG("pdf_image>>   %s\n", distiller_template);
       MESG("pdf_image>> ...");
     }
     error = dpx_file_apply_filter(distiller_template, filename, temp,
-                               (unsigned char) pdf_get_version());
+      pdf_get_version());
     if (error) {
       WARN("Image format conversion for \"%s\" failed...", filename);
       dpx_delete_temp_file(temp, true);

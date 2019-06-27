@@ -8,7 +8,7 @@
 // Copyright (C) 2009 Shen Liang <shenzhuxi@gmail.com>
 // Copyright (C) 2009, 2011 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2009 Stefan Thomas <thomas@eload24.com>
-// Copyright (C) 2010, 2011, 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2010, 2011, 2013, 2017 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2011 Thomas Klausner <wiz@danbala.tuwien.ac.at>
 // Copyright (C) 2012 Pino Toscano <pino@kde.org>
 //
@@ -41,9 +41,9 @@ PNGWriter::PNGWriter(Format formatA)
 {
   priv = new PNGWriterPrivate;
   priv->format = formatA;
-  priv->icc_data = NULL;
+  priv->icc_data = nullptr;
   priv->icc_data_size = 0;
-  priv->icc_name = NULL;
+  priv->icc_name = nullptr;
   priv->sRGB_profile = false;
 }
 
@@ -82,7 +82,7 @@ bool PNGWriter::init(FILE *f, int width, int height, int hDPI, int vDPI)
 #endif
 
   /* initialize stuff */
-  priv->png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  priv->png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
   if (!priv->png_ptr) {
     error(errInternal, -1, "png_create_write_struct failed");
     return false;
@@ -115,6 +115,10 @@ bool PNGWriter::init(FILE *f, int width, int height, int hDPI, int vDPI)
   switch (priv->format) {
     case RGB:
       bit_depth = 8;
+      color_type = PNG_COLOR_TYPE_RGB;
+      break;
+    case RGB48:
+      bit_depth = 16;
       color_type = PNG_COLOR_TYPE_RGB;
       break;
     case RGBA:

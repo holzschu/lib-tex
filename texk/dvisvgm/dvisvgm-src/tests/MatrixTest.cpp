@@ -2,7 +2,7 @@
 ** MatrixTest.cpp                                                       **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -27,7 +27,7 @@
 using namespace std;
 
 
-TEST(MatrixTest, construct) {
+TEST(MatrixTest, construct1) {
 	const vector<double> vec{1, 2, 3, 4, 5, 6, 7, 8, 9};
 	Matrix m1(vec);
 	for (int row=0; row < 3; row++)
@@ -43,6 +43,22 @@ TEST(MatrixTest, construct) {
 		}
 	}
 	EXPECT_TRUE(Matrix(1).isIdentity());
+}
+
+
+TEST(MatrixTest, construct2) {
+	Matrix m1 = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+	for (int row=0; row < 3; row++)
+		for (int col=0; col < 3; col++)
+			ASSERT_EQ(m1.get(row, col), 3*row+col+1) << "row=" << row << ", col=" << col;
+
+	Matrix m2 = {1, 2, 3, 4, 5, 6};
+	for (int row=0; row < 2; row++)
+		for (int col=0; col < 3; col++)
+			ASSERT_EQ(m2.get(row, col), 3*row+col+1) << "row=" << row << ", col=" << col;
+	ASSERT_EQ(m2.get(2, 0), 0);
+	ASSERT_EQ(m2.get(2, 1), 0);
+	ASSERT_EQ(m2.get(2, 2), 1);
 }
 
 
@@ -118,7 +134,7 @@ TEST(MatrixTest, isTranslation) {
 TEST(MatrixTest, lmultiply) {
 	const Matrix m1({1, 2, 3, 4, 5, 6, 7, 8, 9});
 	const Matrix m2({9, 8, 7, 6, 5, 4, 3, 2, 1});
-	EXPECT_TRUE(m1 != m2);
+	EXPECT_NE(m1, m2);
 	Matrix m3;
 	EXPECT_EQ((m3=m1).lmultiply(m2), Matrix({30, 24, 18, 84, 69, 54, 138, 114, 90}));
 	EXPECT_EQ((m3=m2).lmultiply(m1), Matrix({90, 114, 138, 54, 69, 84, 18, 24, 30}));
@@ -129,7 +145,7 @@ TEST(MatrixTest, lmultiply) {
 TEST(MatrixTest, rmultiply) {
 	const Matrix m1({1, 2, 3, 4, 5, 6, 7, 8, 9});
 	const Matrix m2({9, 8, 7, 6, 5, 4, 3, 2, 1});
-	EXPECT_TRUE(m1 != m2);
+	EXPECT_NE(m1, m2);
 	Matrix m3;
 	EXPECT_EQ((m3=m1).rmultiply(m2), Matrix({90, 114, 138, 54, 69, 84, 18, 24, 30}));
 	EXPECT_EQ((m3=m2).rmultiply(m1), Matrix({30, 24, 18, 84, 69, 54, 138, 114, 90}));

@@ -1,5 +1,5 @@
 % fam256.ch
-% (C) 2009, 2011 by Hironori Kitagawa.
+% (C) 2009--2017 by Hironori Kitagawa.
 %
 % This patch is derived from om16bit.ch and omfi.ch (both in Omega).
 % (Omega is copyright by John Plaice and Yannis Haralambous.)
@@ -181,6 +181,28 @@ primitive("oradical",radical,1);@/
 @z
 %-----------------------------------------------
 @x
+delim_num: print_esc("delimiter");
+@y
+delim_num: if chr_code=0 then print_esc("delimiter")
+  else print_esc("odelimiter");
+@z
+@x
+math_accent: print_esc("mathaccent");
+math_char_num: print_esc("mathchar");
+@y
+math_accent: if chr_code=0 then print_esc("mathaccent")
+  else print_esc("omathaccent");
+math_char_num: if chr_code=0 then print_esc("mathchar")
+  else print_esc("omathchar");
+@z
+@x
+radical: print_esc("radical");
+@y
+radical: if chr_code=0 then print_esc("radical")
+  else print_esc("oradical");
+@z
+%-----------------------------------------------
+@x
 @p procedure eq_word_define(@!p:pointer;@!w:integer);
 label exit;
 begin if eTeX_ex and(eqtb[p].int=w) then
@@ -306,7 +328,10 @@ else if m=del_code_base then begin
       ("I changed this one to zero."); error;
     scanned_result(0)(int_val);
     end
-  else scanned_result(cur_val1*@"1000+cur_val)(int_val);
+  else if cur_val1<0 then
+    scanned_result(cur_val)(int_val)
+  else
+    scanned_result(cur_val1*@"1000+cur_val)(int_val);
   end
 else if m=(del_code_base+128) then begin
   { Aleph seems \.{\\odelcode} always returns $-1$.}
@@ -1258,10 +1283,13 @@ def_code: begin
       define(p-128,data,hi(cur_val));
       end
     else if cur_val1=del_code_base then begin
-      cur_val1:=cur_val div @"1000;
-      cur_val1:=(cur_val1 div @"1000)*@"10000 + cur_val1 mod @"1000;
-      cur_val:=cur_val mod @"1000;
-      del_word_define(p,cur_val1,cur_val);
+      if cur_val>=0 then begin
+        cur_val1:=cur_val div @"1000;
+        cur_val1:=(cur_val1 div @"1000)*@"10000 + cur_val1 mod @"1000;
+        cur_val:=cur_val mod @"1000;
+        del_word_define(p,cur_val1,cur_val); end
+      else
+        del_word_define(p, -1, cur_val);
       end
     else define(p,data,cur_val);
     end;

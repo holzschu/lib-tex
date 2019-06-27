@@ -2,7 +2,7 @@
 ** PdfSpecialHandler.hpp                                                **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -23,17 +23,32 @@
 
 #include "SpecialHandler.hpp"
 
-class PdfSpecialHandler : public SpecialHandler
-{
+class StreamInputReader;
+
+class PdfSpecialHandler : public SpecialHandler {
 	public:
-		PdfSpecialHandler ();
-		const char* info () const override {return "pdfTeX font map specials";}
+		const char* info () const override {return "PDF hyperlink, font map, and pagesize specials";}
 		const char* name () const override {return "pdf";}
-		const char** prefixes () const override;
-		bool process (const char *prefix, std::istream &is, SpecialActions &actions) override;
+		std::vector<const char*> prefixes() const override;
+		void preprocess (const std::string &prefix, std::istream &is, SpecialActions &actions) override;
+		bool process (const std::string &prefix, std::istream &is, SpecialActions &actions) override;
+
+	protected:
+		// handlers for corresponding PDF specials
+		void preprocessBeginAnn (StreamInputReader &ir, SpecialActions &actions);
+		void preprocessDest (StreamInputReader &ir, SpecialActions &actions);
+		void preprocessPagesize (StreamInputReader &ir, SpecialActions &actions);
+		void processBeginAnn (StreamInputReader &ir, SpecialActions &actions);
+		void processEndAnn (StreamInputReader &ir, SpecialActions &actions);
+		void processDest (StreamInputReader &ir, SpecialActions &actions);
+		void processMapfile (StreamInputReader &ir, SpecialActions &actions);
+		void processMapline (StreamInputReader &ir, SpecialActions &actions);
+
+		void dviMovedTo (double x, double y, SpecialActions &actions) override;
+		void dviEndPage (unsigned pageno, SpecialActions &actions) override;
 
 	private:
-		bool _maplineProcessed;  ///< true if a mapline or mapfile special has already been processed
+		bool _active=false;
 };
 
 #endif

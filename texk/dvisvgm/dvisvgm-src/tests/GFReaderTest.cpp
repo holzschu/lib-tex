@@ -2,7 +2,7 @@
 ** GFReaderTest.cpp                                                     **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -32,18 +32,17 @@
 using namespace std;
 
 
-struct PixelActions : public Bitmap::Callback
-{
+struct PixelActions : public Bitmap::Callback {
 	void pixel (int x, int y, bool set, const Bitmap &bm) {
 		if (charmap.size() == 0) {
 			charmap.resize(bm.height());
 			for (int i=0; i < bm.height(); i++)
 				charmap[i] = string(bm.width(), ' ');
 		}
-		ASSERT_GE(x, 0);
-		ASSERT_LT(x, bm.width());
-		ASSERT_GE(y, 0);
-		ASSERT_LT(y, bm.height());
+		EXPECT_GE(x, 0);
+		EXPECT_LT(x, bm.width());
+		EXPECT_GE(y, 0);
+		EXPECT_LT(y, bm.height());
 		charmap[y][x] = (set ? '*' : '-');
 	}
 
@@ -234,7 +233,7 @@ class LoggingGFReader : public GFReader {
 
 TEST(GFReaderTest, preamble) {
 	string gf = string(SRCDIR)+"/data/cmr10.600gf";
-	ifstream ifs(gf.c_str(), ios::binary);
+	ifstream ifs(gf, ios::binary);
 	ASSERT_TRUE(bool(ifs));
 	LoggingGFReader gfReader(ifs);
 	gfReader.executePreamble();
@@ -244,7 +243,7 @@ TEST(GFReaderTest, preamble) {
 
 TEST(GFReaderTest, postamble) {
 	string gf = string(SRCDIR)+"/data/cmr10.600gf";
-	ifstream ifs(gf.c_str(), ios::binary);
+	ifstream ifs(gf, ios::binary);
 	ASSERT_TRUE(bool(ifs));
 	GFReader gfReader(ifs);
 	gfReader.executePostamble();
@@ -257,36 +256,37 @@ TEST(GFReaderTest, postamble) {
 
 TEST(GFReaderTest, executeChar) {
 	string gf = string(SRCDIR)+"/data/cmr10.600gf";
-	ifstream ifs(gf.c_str(), ios::binary);
+	ifstream ifs(gf, ios::binary);
 	ASSERT_TRUE(bool(ifs));
 	GFReader gfReader(ifs);
 	PixelActions actions;
-
-	gfReader.executeChar('a');
-	ASSERT_EQ(gfReader.getBitmap().width(), 39);
-	ASSERT_EQ(gfReader.getBitmap().height(), 39);
-	gfReader.getBitmap().forAllPixels(actions);
-	check_letter(letter_a, actions.charmap);
-
-	actions.charmap.clear();
-	gfReader.executeChar('g');
-	ASSERT_EQ(gfReader.getBitmap().width(), 39);
-	ASSERT_EQ(gfReader.getBitmap().height(), 56);
-	gfReader.getBitmap().forAllPixels(actions);
-	check_letter(letter_g, actions.charmap);
-
-	actions.charmap.clear();
-	gfReader.executeChar('M');
-	ASSERT_EQ(gfReader.getBitmap().width(), 70);
-	ASSERT_EQ(gfReader.getBitmap().height(), 57);
-	gfReader.getBitmap().forAllPixels(actions);
-	check_letter(letter_M, actions.charmap);
+	{  gfReader.executeChar('a');
+		ASSERT_EQ(gfReader.getBitmap().width(), 39);
+		ASSERT_EQ(gfReader.getBitmap().height(), 39);
+		SCOPED_TRACE("A");
+		gfReader.getBitmap().forAllPixels(actions);
+		check_letter(letter_a, actions.charmap);
+	}{	actions.charmap.clear();
+		gfReader.executeChar('g');
+		ASSERT_EQ(gfReader.getBitmap().width(), 39);
+		ASSERT_EQ(gfReader.getBitmap().height(), 56);
+		SCOPED_TRACE("B");
+		gfReader.getBitmap().forAllPixels(actions);
+		check_letter(letter_g, actions.charmap);
+	}{	actions.charmap.clear();
+		gfReader.executeChar('M');
+		ASSERT_EQ(gfReader.getBitmap().width(), 70);
+		ASSERT_EQ(gfReader.getBitmap().height(), 57);
+		SCOPED_TRACE("C");
+		gfReader.getBitmap().forAllPixels(actions);
+		check_letter(letter_M, actions.charmap);
+	}
 }
 
 
 TEST(GFReaderTest, executeAllChars) {
 	string gf = string(SRCDIR)+"/data/cmr10.600gf";
-	ifstream ifs(gf.c_str(), ios::binary);
+	ifstream ifs(gf, ios::binary);
 	ASSERT_TRUE(bool(ifs));
 	GFReader gfReader(ifs);
 	gfReader.executeAllChars();

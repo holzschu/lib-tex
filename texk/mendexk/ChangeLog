@@ -1,3 +1,52 @@
+2019-03-16  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* mendex.ja.txt: Rename from mendex.doc
+
+2019-02-17  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* main.c, configure.ac, configure:
+	Version 3.1 [17-Feb-2019].
+	* main.c, COPYRIGHT: Update copyright year.
+	* fread.c: Fix typo. It seems a bug.
+	* {convert,fread,fwrite,kp,main}.c:
+	Avoid compiler warnings.
+	Thanks to @ngothan for a report by covscan.
+	https://github.com/TeX-Live/texlive-source/issues/11
+
+2019-01-23  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* mendex.1, mendex.1.ja: Add fallback TeX and LaTeX logos.
+
+2018-07-22  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* README.md: Added.
+	* mendex.1, mendex.1.ja: Sync with upstream.
+
+2018-06-27  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* mendex.1, mendex.doc, mendex.1.ja, README_asciimw:
+	Sync with upstream.
+
+2018-06-14  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* main.c: remove sjisterminal (w32 only).
+
+2018-05-15  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* README, main.c, configure.ac, configure:
+	Version 3.0 [15-May-2018].
+	* main.c, mendex.1, mendex.doc, mendex.1.ja:
+	Set default encoding of internal buffer UTF-8.
+	* indexsty, kana.h, ktable.h:
+	Convert encoding from EUC-JP to UTF-8.
+	* README_asciimw: Rename from README and
+	convert encoding from EUC-JP to UTF-8.
+
+2018-01-17  Karl Berry  <karl@tug.org>
+
+	* mendex.1 (.TH): use 1 instead of L, per Debian (and all our
+	other man pages).
+
 2017-04-05  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
 
 	* main.c: Avoid access violation.

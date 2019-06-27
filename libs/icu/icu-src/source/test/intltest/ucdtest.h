@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************
  * Copyright (c) 1997-2016, International Business Machines Corporation and
@@ -41,6 +41,13 @@ public:
     void TestScriptMetadata();
     void TestBidiPairedBracketType();
     void TestEmojiProperties();
+    void TestIndicPositionalCategory();
+    void TestIndicSyllabicCategory();
+    void TestVerticalOrientation();
+    void TestDefaultScriptExtensions();
+    void TestInvalidCodePointFolding();
+    void TestBinaryCharacterProperties();
+    void TestIntCharacterProperties();
 
 private:
 

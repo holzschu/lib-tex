@@ -161,7 +161,7 @@ static void destroy_fe_entry(void *pa, void *pb)
     fe_entry *p;
     int i;
     p = (fe_entry *) pa;
-    // xfree(p->name); // was freed as part of fm_free
+    xfree(p->name);
     if (p->glyph_names != NULL)
         for (i = 0; i < 256; i++)
             if (p->glyph_names[i] != notdef)

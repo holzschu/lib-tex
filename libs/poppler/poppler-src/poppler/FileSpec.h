@@ -6,6 +6,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2008 Carlos Garcia Campos <carlosgc@gnome.org>
+// Copyright (C) 2017, 2018 Albert Astals Cid <aacid@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -23,16 +24,20 @@
 
 class EmbFile {
 public:
-  EmbFile(Object *efStream);
+  EmbFile(const Object *efStream);
   ~EmbFile();
 
-  int size() { return m_size; }
-  GooString *modDate() { return m_modDate; }
-  GooString *createDate() { return m_createDate; }
-  GooString *checksum() { return m_checksum; }
-  GooString *mimeType() { return m_mimetype; }
+  EmbFile(const EmbFile &) = delete;
+  EmbFile& operator=(const EmbFile &) = delete;
+
+  int size() const { return m_size; }
+  const GooString *modDate() const { return m_modDate; }
+  const GooString *createDate() const { return m_createDate; }
+  const GooString *checksum() const { return m_checksum; }
+  const GooString *mimeType() const { return m_mimetype; }
+  Object *streamObject() { return &m_objStr; }
   Stream *stream() { return isOk() ? m_objStr.getStream() : NULL; }
-  GBool isOk() { return m_objStr.isStream(); }
+  GBool isOk() const { return m_objStr.isStream(); }
   GBool save(const char *path);
 
 private:
@@ -48,14 +53,17 @@ private:
 
 class FileSpec {
 public:
-  FileSpec(Object *fileSpec);
+  FileSpec(const Object *fileSpec);
   ~FileSpec();
 
-  GBool isOk() { return ok; }
+  FileSpec(const FileSpec &) = delete;
+  FileSpec& operator=(const FileSpec &) = delete;
 
-  GooString *getFileName() const { return fileName; }
+  GBool isOk() const { return ok; }
+
+  const GooString *getFileName() const { return fileName; }
   GooString *getFileNameForPlatform();
-  GooString *getDescription() const { return desc; }
+  const GooString *getDescription() const { return desc; }
   EmbFile *getEmbeddedFile();
 
 private:
@@ -70,7 +78,7 @@ private:
   GooString *desc;             // Desc
 };
 
-GBool getFileSpecName (Object *fileSpec, Object *fileName);
-GBool getFileSpecNameForPlatform (Object *fileSpec, Object *fileName);
+Object getFileSpecName (const Object *fileSpec);
+Object getFileSpecNameForPlatform (const Object *fileSpec);
 
 #endif /* FILE_SPEC_H */

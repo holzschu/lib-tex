@@ -2,7 +2,7 @@
 ** FontCacheTest.cpp                                                    **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -24,16 +24,39 @@
 #include "FileSystem.hpp"
 #include "FontCache.hpp"
 
-#ifndef SRCDIR
-#define SRCDIR "."
+#ifndef BUILDDIR
+#define BUILDDIR "."
 #endif
 
 using namespace std;
 
-class FontCacheTest : public testing::Test
-{
+class LocalCache {
+	public:
+		LocalCache (const string &cachedir)
+			: _cachedir(cachedir),
+			  _created(!FileSystem::exists(cachedir) && FileSystem::mkdir(cachedir))
+		{
+		}
+
+		~LocalCache () {
+			if (_created)
+				FileSystem::rmdir(_cachedir);
+		}
+
+		string cachedir () const {return _cachedir;}
+
+	private:
+		string _cachedir;
+		bool _created;
+};
+
+
+static LocalCache localCache(BUILDDIR"/data");
+
+
+class FontCacheTest : public testing::Test {
 	protected:
-		FontCacheTest () : testing::Test(), cachedir("data") {
+		FontCacheTest () : testing::Test(), cachedir(localCache.cachedir()) {
 			glyph1.moveto(0, 0);
 			glyph1.lineto(10, 0);
 			glyph1.lineto(10, 10);
@@ -61,11 +84,6 @@ static string toSVG (const Glyph &glyph) {
 	ostringstream oss;
 	glyph.writeSVG(oss, false);
 	return oss.str();
-}
-
-
-static bool operator == (const Glyph &glyph1, const Glyph &glyph2) {
-	return toSVG(glyph1) == toSVG(glyph2);
 }
 
 

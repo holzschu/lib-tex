@@ -14,7 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005 Marco Pesenti Gritti <mpg@redhat.com>
-// Copyright (C) 2016 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2016, 2018 Albert Astals Cid <aacid@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -41,10 +41,13 @@ class LinkAction;
 class Outline {
 public:
 
-  Outline(Object *outlineObj, XRef *xref);
+  Outline(const Object *outlineObj, XRef *xref);
   ~Outline();
 
-  GooList *getItems() { return items; }
+  Outline(const Outline &) = delete;
+  Outline& operator=(const Outline &) = delete;
+
+  const GooList *getItems() const { return items; }
 
 private:
 
@@ -57,23 +60,28 @@ private:
 class OutlineItem {
 public:
 
-  OutlineItem(Dict *dict, XRef *xrefA);
+  OutlineItem(const Dict *dict, int refNumA, OutlineItem *parentA, XRef *xrefA);
   ~OutlineItem();
 
-  static GooList *readItemList(Object *firstItemRef, XRef *xrefA);
+  OutlineItem(const OutlineItem &) = delete;
+  OutlineItem& operator=(const OutlineItem &) = delete;
+
+  static GooList *readItemList(OutlineItem *parent, const Object *firstItemRef, XRef *xrefA);
 
   void open();
   void close();
 
-  Unicode *getTitle() { return title; }
-  int getTitleLength() { return titleLen; }
-  LinkAction *getAction() { return action; }
-  GBool isOpen() { return startsOpen; }
-  GBool hasKids() { return firstRef.isRef(); }
-  GooList *getKids() { return kids; }
+  const Unicode *getTitle() const { return title; }
+  int getTitleLength() const { return titleLen; }
+  const LinkAction *getAction() const { return action; }
+  GBool isOpen() const { return startsOpen; }
+  GBool hasKids() const { return firstRef.isRef(); }
+  const GooList *getKids() const { return kids; }
 
 private:
 
+  int refNum;
+  OutlineItem *parent;
   XRef *xref;
   Unicode *title;
   int titleLen;

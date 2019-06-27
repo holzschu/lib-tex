@@ -1,4 +1,4 @@
-// Copyright (C) 2016 and later: Unicode, Inc. and others.
+// © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************
  * COPYRIGHT: 
@@ -52,7 +52,8 @@ public:
     void TestConditionVariables();
     void TestUnifiedCache();
     void TestBreakTranslit();
-
+    void TestIncDec();
+    void Test20104();
 };
 
 #endif

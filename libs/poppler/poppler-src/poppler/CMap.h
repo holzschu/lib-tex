@@ -14,8 +14,8 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2008 Koji Otani <sho@bbr.jp>
-// Copyright (C) 2009 Albert Astals Cid <aacid@kde.org>
-// Copyright (C) 2012 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2009, 2018 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2012, 2017 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -33,7 +33,7 @@
 #include "goo/gtypes.h"
 #include "CharTypes.h"
 
-#if MULTITHREADED
+#ifdef MULTITHREADED
 #include "goo/GooMutex.h"
 #endif
 
@@ -71,6 +71,9 @@ public:
 
   ~CMap();
 
+  CMap(const CMap &) = delete;
+  CMap& operator=(const CMap &) = delete;
+
   void incRefCnt();
   void decRefCnt();
 
@@ -86,7 +89,7 @@ public:
   // Return the CID corresponding to the character code starting at
   // <s>, which contains <len> bytes.  Sets *<c> to the char code, and
   // *<nUsed> to the number of bytes used by the char code.
-  CID getCID(char *s, int len, CharCode *c, int *nUsed);
+  CID getCID(const char *s, int len, CharCode *c, int *nUsed);
 
   // Return the writing mode (0=horizontal, 1=vertical).
   int getWMode() { return wMode; }
@@ -114,7 +117,7 @@ private:
   CMapVectorEntry *vector;	// vector for first byte (NULL for
 				//   identity CMap)
   int refCnt;
-#if MULTITHREADED
+#ifdef MULTITHREADED
   GooMutex mutex;
 #endif
 };
@@ -128,6 +131,9 @@ public:
 
   CMapCache();
   ~CMapCache();
+
+  CMapCache(const CMapCache &) = delete;
+  CMapCache& operator=(const CMapCache &) = delete;
 
   // Get the <cMapName> CMap for the specified character collection.
   // Increments its reference count; there will be one reference for

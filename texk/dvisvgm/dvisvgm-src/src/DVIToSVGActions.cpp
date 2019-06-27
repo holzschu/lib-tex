@@ -2,7 +2,7 @@
 ** DVIToSVGActions.cpp                                                  **
 **                                                                      **
 ** This file is part of dvisvgm -- a fast DVI to SVG converter          **
-** Copyright (C) 2005-2017 Martin Gieseking <martin.gieseking@uos.de>   **
+** Copyright (C) 2005-2019 Martin Gieseking <martin.gieseking@uos.de>   **
 **                                                                      **
 ** This program is free software; you can redistribute it and/or        **
 ** modify it under the terms of the GNU General Public License as       **
@@ -49,15 +49,23 @@ void DVIToSVGActions::reset() {
 }
 
 
-void DVIToSVGActions::moveToX (double x) {
+/** Change current horizontal position.
+ *  @param[in] x new horizontal position
+ *  @param[in] forceSVGMove if true, creates an explicit position change in the SVG tree */
+void DVIToSVGActions::moveToX (double x, bool forceSVGMove) {
 	SpecialManager::instance().notifyPositionChange(getX(), getY(), *this);
-	_svg.setX(x);
+	if (forceSVGMove)
+		_svg.setX(x);
 }
 
 
-void DVIToSVGActions::moveToY (double y) {
+/** Change current vertical position.
+ *  @param[in] y new vertical position
+ *  @param[in] forceSVGMove if true, creates an explicit position change in the SVG tree */
+void DVIToSVGActions::moveToY (double y, bool forceSVGMove) {
 	SpecialManager::instance().notifyPositionChange(getX(), getY(), *this);
-	_svg.setY(y);
+	if (forceSVGMove)
+		_svg.setY(y);
 }
 
 
@@ -158,7 +166,7 @@ void DVIToSVGActions::setChar (double x, double y, unsigned c, bool vertical, co
  *  @param[in] width length of the horizontal edges */
 void DVIToSVGActions::setRule (double x, double y, double height, double width) {
 	// (x,y) is the lower left corner of the rectangle
-	XMLElementNode *rect = new XMLElementNode("rect");
+	auto rect = util::make_unique<XMLElementNode>("rect");
 	rect->addAttribute("x", x);
 	rect->addAttribute("y", y-height);
 	rect->addAttribute("height", height);
@@ -167,7 +175,7 @@ void DVIToSVGActions::setRule (double x, double y, double height, double width) 
 		rect->addAttribute("transform", getMatrix().getSVG());
 	if (getColor() != Color::BLACK)
 		rect->addAttribute("fill", _svg.getColor().svgColorString());
-	_svg.appendToPage(rect);
+	_svg.appendToPage(std::move(rect));
 
 	// update bounding box
 	BoundingBox bb(x, y-height, x+width, y);
@@ -220,18 +228,17 @@ void DVIToSVGActions::beginPage (unsigned pageno, const vector<int32_t>&) {
 /** This method is called when an "end of page (eop)" command was found in the DVI file. */
 void DVIToSVGActions::endPage (unsigned pageno) {
 	SpecialManager::instance().notifyEndPage(pageno, *this);
-	Matrix matrix;
-	_dvireader->getPageTransformation(matrix);
+	Matrix matrix = _dvireader->getPageTransformation();
 	_svg.transformPage(matrix);
 	if (_bgcolor != Color::TRANSPARENT) {
 		// create a rectangle filled with the background color
-		XMLElementNode *r = new XMLElementNode("rect");
-		r->addAttribute("x", _bbox.minX());
-		r->addAttribute("y", _bbox.minY());
-		r->addAttribute("width", _bbox.width());
-		r->addAttribute("height", _bbox.height());
-		r->addAttribute("fill", _bgcolor.svgColorString());
-		_svg.prependToPage(r);
+		auto rect = util::make_unique<XMLElementNode>("rect");
+		rect->addAttribute("x", _bbox.minX());
+		rect->addAttribute("y", _bbox.minY());
+		rect->addAttribute("width", _bbox.width());
+		rect->addAttribute("height", _bbox.height());
+		rect->addAttribute("fill", _bgcolor.svgColorString());
+		_svg.prependToPage(std::move(rect));
 	}
 }
 
@@ -272,7 +279,7 @@ BoundingBox& DVIToSVGActions::bbox(const string& name, bool reset) {
  *  a rotating dash. */
 void DVIToSVGActions::progress (const char *id) {
 	if (PROGRESSBAR_DELAY < 1000) {
-		static double time=0;
+		static double time=System::time();
 		// slow down updating the progress indicator to prevent flickering
 		if (System::time() - time > 0.1) {
 			progress(0, 0, id);

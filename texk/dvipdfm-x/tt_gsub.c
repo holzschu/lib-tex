@@ -1,6 +1,6 @@
 /* This is dvipdfmx, an eXtended version of dvipdfm by Mark A. Wicks.
 
-    Copyright (C) 2002-2017 by Jin-Hwan Cho and Shunsaku Hirata,
+    Copyright (C) 2002-2018 by Jin-Hwan Cho and Shunsaku Hirata,
     the dvipdfmx project team.
     
     This program is free software; you can redistribute it and/or modify
@@ -31,19 +31,14 @@
 #include "error.h"
 #include "mem.h"
 #include "mfileio.h"
+#include "dpxconf.h"
 
 #include "sfnt.h"
 
 #include "otl_opt.h"
 #include "tt_gsub.h"
 
-#define VERBOSE_LEVEL_MIN 0
-static int verbose = 0;
-void
-otl_gsub_set_verbose (void)
-{
-  verbose++;
-}
+#define VERBOSE_LEVEL_MIN 2
 
 typedef USHORT Offset;
 typedef USHORT GlyphID;
@@ -888,7 +883,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
           script_tab.DefaultLangSys != 0) { 
         struct clt_langsys_table langsys_tab;
 
-        if(verbose > VERBOSE_LEVEL_MIN) {
+        if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
           MESG("otl_gsub>> OTL script-language enabled: %c%c%c%c.dflt\n",
                script_list.record[script_idx].tag[0],
                script_list.record[script_idx].tag[1],
@@ -918,7 +913,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
         if (otl_match_optrule(language, langsys_rec->tag)) {
           struct clt_langsys_table langsys_tab;
 
-          if(verbose > VERBOSE_LEVEL_MIN) {
+          if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
             MESG("otl_gsub>> OTL script-language enabled: %c%c%c%c.%c%c%c%c\n",
                  script_list.record[script_idx].tag[0],
                  script_list.record[script_idx].tag[1],
@@ -956,7 +951,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
   sfnt_seek_set(sfont, offset);
   clt_read_number_list(&lookup_list, sfont);
 
-  if(verbose > VERBOSE_LEVEL_MIN) {
+  if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
     MESG("otl_gsub>> Reading OTL feature(s):");
   }
 
@@ -968,7 +963,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
       struct clt_feature_table feature_table;
       int    i;
 
-      if(verbose > VERBOSE_LEVEL_MIN) {
+      if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
         MESG(" %c%c%c%c",
              feature_list.record[feat_idx].tag[0],
              feature_list.record[feat_idx].tag[1],
@@ -1004,7 +999,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
             lookup_table.LookupType != OTL_GSUB_TYPE_ALTERNATE &&
             lookup_table.LookupType != OTL_GSUB_TYPE_LIGATURE  &&
             lookup_table.LookupType != OTL_GSUB_TYPE_ESUBST) {
-          if (verbose > VERBOSE_LEVEL_MIN)
+          if (dpx_conf.verbose_level > VERBOSE_LEVEL_MIN)
             WARN("Skipping unsupported GSUB subtable: LookupType=%d", lookup_table.LookupType);
           continue;
         }
@@ -1028,7 +1023,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
             if (r <= 0)
               WARN("Reading GSUB subtable (single) failed...");
             else {
-              if(verbose > VERBOSE_LEVEL_MIN) {
+              if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
                 MESG("(single)");
               }
               n_st++;
@@ -1041,7 +1036,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
             if (r <= 0)
               WARN("Reading GSUB subtable (alternate) failed...");
             else {
-              if(verbose > VERBOSE_LEVEL_MIN) {
+              if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
                 MESG("(alternate)");
               }
               n_st++;
@@ -1054,7 +1049,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
             if (r <= 0)
               WARN("Reading GSUB subtable (ligature) failed...");
             else {
-              if(verbose > VERBOSE_LEVEL_MIN) {
+              if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
                 MESG("(ligature)");
               }
               n_st++;
@@ -1081,7 +1076,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
                 if (r <= 0)
                   WARN("Reading GSUB subtable (ext:single) failed...");
                 else {
-                  if(verbose > VERBOSE_LEVEL_MIN) {
+                  if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
                     MESG("(ext:single)");
                   }
                   n_st++;
@@ -1094,7 +1089,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
                 if (r <= 0)
                   WARN("Reading GSUB subtable (alternate) failed...");
                 else {
-                  if(verbose > VERBOSE_LEVEL_MIN) {
+                  if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
                     MESG("(alternate)");
                   }
                   n_st++;
@@ -1107,7 +1102,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
                 if (r <= 0)
                   WARN("Reading GSUB subtable (ext:ligature) failed...");
                 else {
-                  if(verbose > VERBOSE_LEVEL_MIN) {
+                  if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
                     MESG("(ext:ligature)");
                   }
                   n_st++;
@@ -1129,7 +1124,7 @@ otl_gsub_read_feat (struct otl_gsub_tab *gsub, sfnt *sfont)
     }
   }
 
-  if(verbose > VERBOSE_LEVEL_MIN) {
+  if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
     MESG("\n");
     MESG("otl_gsub>> %ld subtable(s) read.\n", num_subtabs);
   }
@@ -1338,7 +1333,7 @@ otl_gsub_add_feat (otl_gsub *gsub_list,
   gsub->feature  = NEW(strlen(feature) +1, char);
   strcpy(gsub->feature,  feature);
 
-  if(verbose > VERBOSE_LEVEL_MIN) {
+  if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
     MESG("\n");
     MESG("otl_gsub>> Reading \"%s.%s.%s\"...\n", script, language, feature);
   }
@@ -1348,7 +1343,7 @@ otl_gsub_add_feat (otl_gsub *gsub_list,
     gsub_list->select = i;
     gsub_list->num_gsubs++;
   } else {
-    if(verbose > VERBOSE_LEVEL_MIN) {
+    if(dpx_conf.verbose_level > VERBOSE_LEVEL_MIN) {
       MESG("otl_gsub>> Failed\n");
     }
     RELEASE(gsub->script);
@@ -1359,17 +1354,16 @@ otl_gsub_add_feat (otl_gsub *gsub_list,
   return retval;
 }
 
-static const char *
+static int
 scan_otl_tag (const char *otl_tags, const char *endptr,
               char *script, char *language, char *feature)
 {
   const char *p, *period;
 
   ASSERT(script && language && feature);
-  ASSERT(otl_tags < endptr);
 
-  if (!otl_tags)
-    return NULL;
+  if (!otl_tags || otl_tags >= endptr)
+    return -1;
 
   memset(script, ' ', 4);   script[4]   = 0;
   memset(language, ' ', 4); language[4] = 0;
@@ -1384,6 +1378,7 @@ scan_otl_tag (const char *otl_tags, const char *endptr,
       strncpy(script, p, period - p);
     } else {
       WARN("Invalid OTL script tag found: %s", p);
+      return -1;
     }
     p = period + 1;
     period = strchr(p, '.');
@@ -1393,6 +1388,7 @@ scan_otl_tag (const char *otl_tags, const char *endptr,
         strncpy(language, p, period - p);
       } else {
         WARN("Invalid OTL lanuage tag found: %s", p);
+        return -1;
       }
       p = period + 1;
     }
@@ -1400,13 +1396,17 @@ scan_otl_tag (const char *otl_tags, const char *endptr,
     strcpy(script, "*");
     strcpy(language, "*");
   }
+
   /* Finally feature */
-  if (p < endptr) {
+  if (p + 4 <= endptr) {
     strncpy(feature, p, endptr - p);
     p = endptr;
+  } else {
+    WARN("No valid OTL feature tag specified.");
+    return -1;
   }
 
-  return p;
+  return 0;
 }
 
 void
@@ -1553,7 +1553,7 @@ otl_gsub_apply_lig (otl_gsub *gsub_list,
   return retval;
 }
 
-int
+static int
 gsub_find (otl_gsub *gsub_list,
                  const char *script,
                  const char *language,
@@ -1598,21 +1598,23 @@ otl_gsub_set_chain (otl_gsub *gsub_list, const char *otl_tags) {
     nextptr = strchr(p, ':');
     if (!nextptr)
       nextptr = endptr;
-    scan_otl_tag(p, nextptr, script, language, feature);
-    idx = gsub_find(gsub_list, script, language, feature);
-    if (idx >= 0 && idx <= gsub_list->num_gsubs) {
-      struct gsub_entry *entry;
-      entry = NEW(1, struct gsub_entry);
-      if (prev)
-        prev->next = entry;
-      entry->index = idx;
-      prev = entry;
+    if (scan_otl_tag(p, nextptr, script, language, feature) >= 0) {
+      idx = gsub_find(gsub_list, script, language, feature);
+      if (idx >= 0 && idx <= gsub_list->num_gsubs) {
+        struct gsub_entry *entry;
+        entry = NEW(1, struct gsub_entry);
+          if (!gsub_list->first)
+            gsub_list->first = entry;
+        if (prev)
+          prev->next = entry;
+        entry->index = idx;
+        prev = entry;
+      }
     }
     nextptr++;
   }
   if (prev)
     prev->next = NULL;
-  gsub_list->first = prev;
 
   return 0;
 }
@@ -1633,10 +1635,11 @@ otl_gsub_add_feat_list (otl_gsub *gsub_list, const char *otl_tags, sfnt *sfont)
     nextptr = strchr(p, ':');
     if (!nextptr)
       nextptr = endptr;
-    scan_otl_tag(p, nextptr, script, language, feature);
-    idx = gsub_find(gsub_list, script, language, feature);
-    if (idx < 0) {
-      otl_gsub_add_feat(gsub_list, script, language, feature, sfont);
+    if (scan_otl_tag(p, nextptr, script, language, feature) >= 0) {
+      idx = gsub_find(gsub_list, script, language, feature);
+      if (idx < 0) {
+        otl_gsub_add_feat(gsub_list, script, language, feature, sfont);
+      }
     }
     nextptr++;
   }

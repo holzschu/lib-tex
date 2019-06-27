@@ -16,11 +16,12 @@
 // Copyright (C) 2005-2007 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2006 Ed Catmur <ed@catmur.co.uk>
 // Copyright (C) 2007, 2008, 2011, 2013 Carlos Garcia Campos <carlosgc@gnome.org>
-// Copyright (C) 2007 Adrian Johnson <ajohnson@redneon.com>
-// Copyright (C) 2008, 2010, 2015, 2016 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2007, 2017 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2008, 2010, 2015, 2016, 2018 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2010 Brian Ewins <brian.ewins@gmail.com>
 // Copyright (C) 2012, 2013, 2015, 2016 Jason Crain <jason@aquaticape.us>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2018 Klarälvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>. Work sponsored by the LiMux project of the city of Munich
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -79,6 +80,9 @@ public:
   TextFontInfo(GfxState *state);
   ~TextFontInfo();
 
+  TextFontInfo(const TextFontInfo &) = delete;
+  TextFontInfo& operator=(const TextFontInfo &) = delete;
+
   GBool matches(GfxState *state);
   GBool matches(TextFontInfo *fontInfo);
 
@@ -91,7 +95,7 @@ public:
   // Get the writing mode (0 or 1), or 0 if the font is not set
   int getWMode();
 
-#if TEXTOUT_WORD_LIST
+#ifdef TEXTOUT_WORD_LIST
   // Get the font name (which may be NULL).
   GooString *getFontName() { return fontName; }
 
@@ -106,7 +110,7 @@ public:
 private:
 
   GfxFont *gfxFont;
-#if TEXTOUT_WORD_LIST
+#ifdef TEXTOUT_WORD_LIST
   GooString *fontName;
   int flags;
 #endif
@@ -128,6 +132,9 @@ public:
 
   // Destructor.
   ~TextWord();
+
+  TextWord(const TextWord &) = delete;
+  TextWord& operator=(const TextWord &) = delete;
 
   // Add a character to the word.
   void addChar(GfxState *state, TextFontInfo *fontA, double x, double y,
@@ -165,7 +172,7 @@ public:
   // Get the next TextWord on the linked list.
   TextWord *getNext() { return next; }
 
-#if TEXTOUT_WORD_LIST
+#ifdef TEXTOUT_WORD_LIST
   int getLength() { return len; }
   const Unicode *getChar(int idx) { return &text[idx]; }
   GooString *getText();
@@ -215,7 +222,7 @@ private:
   GBool underlined;
   TextWord *next;		// next word in line
 
-#if TEXTOUT_WORD_LIST
+#ifdef TEXTOUT_WORD_LIST
   double colorR,		// word color
          colorG,
          colorB;
@@ -243,6 +250,9 @@ public:
 
   TextPool();
   ~TextPool();
+
+  TextPool(const TextPool &) = delete;
+  TextPool& operator=(const TextPool &) = delete;
 
   TextWord *getPool(int baseIdx) { return pool[baseIdx - minBaseIdx]; }
   void setPool(int baseIdx, TextWord *p) { pool[baseIdx - minBaseIdx] = p; }
@@ -275,6 +285,9 @@ public:
 
   TextLine(TextBlock *blkA, int rotA, double baseA);
   ~TextLine();
+
+  TextLine(const TextLine &) = delete;
+  TextLine& operator=(const TextLine &) = delete;
 
   void addWord(TextWord *word);
 
@@ -352,6 +365,9 @@ public:
 
   TextBlock(TextPage *pageA, int rotA);
   ~TextBlock();
+
+  TextBlock(const TextBlock &) = delete;
+  TextBlock& operator=(const TextBlock &) = delete;
 
   void addWord(TextWord *word);
 
@@ -442,6 +458,9 @@ public:
   TextFlow(TextPage *pageA, TextBlock *blk);
   ~TextFlow();
 
+  TextFlow(const TextFlow &) = delete;
+  TextFlow& operator=(const TextFlow &) = delete;
+
   // Add a block to the end of this flow.
   void addBlock(TextBlock *blk);
 
@@ -471,7 +490,7 @@ private:
   friend class TextPage;
 };
 
-#if TEXTOUT_WORD_LIST
+#ifdef TEXTOUT_WORD_LIST
 
 //------------------------------------------------------------------------
 // TextWordList
@@ -488,6 +507,9 @@ public:
 
   ~TextWordList();
 
+  TextWordList(const TextWordList &) = delete;
+  TextWordList& operator=(const TextWordList &) = delete;
+
   // Return the number of words on the list.
   int getLength();
 
@@ -503,8 +525,8 @@ private:
 
 class TextWordSelection {
 public:
-  TextWordSelection(TextWord *word, int begin, int end)
-    : word(word), begin(begin), end(end)
+  TextWordSelection(TextWord *wordA, int beginA, int endA)
+    : word(wordA), begin(beginA), end(endA)
   {
   }
 
@@ -530,6 +552,9 @@ public:
 
   // Constructor.
   TextPage(GBool rawOrderA);
+
+  TextPage(const TextPage &) = delete;
+  TextPage& operator=(const TextPage &) = delete;
 
   void incRefCnt();
   void decRefCnt();
@@ -628,7 +653,7 @@ public:
   // character are drawn on eachother.
   void setMergeCombining(GBool merge);
 
-#if TEXTOUT_WORD_LIST
+#ifdef TEXTOUT_WORD_LIST
   // Build a flat word list, in content stream order (if
   // this->rawOrder is true), physical layout order (if <physLayout>
   // is true and this->rawOrder is false), or reading order (if both
@@ -702,10 +727,13 @@ public:
   ActualText(TextPage *out);
   ~ActualText();
 
+  ActualText(const ActualText &) = delete;
+  ActualText& operator=(const ActualText &) = delete;
+
   void addChar(GfxState *state, double x, double y,
 	       double dx, double dy,
 	       CharCode c, int nBytes, Unicode *u, int uLen);
-  void begin(GfxState *state, GooString *text);
+  void begin(GfxState *state, const GooString *text);
   void end(GfxState *state);
 
 private:
@@ -745,7 +773,7 @@ public:
 		GBool rawOrderA);
 
   // Destructor.
-  virtual ~TextOutputDev();
+  ~TextOutputDev();
 
   // Check if file was successfully created.
   virtual GBool isOk() { return ok; }
@@ -754,54 +782,54 @@ public:
 
   // Does this device use upside-down coordinates?
   // (Upside-down means (0,0) is the top left corner of the page.)
-  virtual GBool upsideDown() { return gTrue; }
+  GBool upsideDown() override { return gTrue; }
 
   // Does this device use drawChar() or drawString()?
-  virtual GBool useDrawChar() { return gTrue; }
+  GBool useDrawChar() override { return gTrue; }
 
   // Does this device use beginType3Char/endType3Char?  Otherwise,
   // text in Type 3 fonts will be drawn with drawChar/drawString.
-  virtual GBool interpretType3Chars() { return gFalse; }
+  GBool interpretType3Chars() override { return gFalse; }
 
   // Does this device need non-text content?
-  virtual GBool needNonText() { return gFalse; }
+  GBool needNonText() override { return gFalse; }
 
   // Does this device require incCharCount to be called for text on
   // non-shown layers?
-  virtual GBool needCharCount() { return gTrue; }
+  GBool needCharCount() override { return gTrue; }
 
   //----- initialization and control
 
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state, XRef *xref);
+  void startPage(int pageNum, GfxState *state, XRef *xref) override;
 
   // End a page.
-  virtual void endPage();
+  void endPage() override;
 
   //----- save/restore graphics state
-  virtual void restoreState(GfxState *state);
+  void restoreState(GfxState *state) override;
 
   //----- update text state
-  virtual void updateFont(GfxState *state);
+  void updateFont(GfxState *state) override;
 
   //----- text drawing
-  virtual void beginString(GfxState *state, GooString *s);
-  virtual void endString(GfxState *state);
-  virtual void drawChar(GfxState *state, double x, double y,
-			double dx, double dy,
-			double originX, double originY,
-			CharCode c, int nBytes, Unicode *u, int uLen);
-  virtual void incCharCount(int nChars);
-  virtual void beginActualText(GfxState *state, GooString *text);
-  virtual void endActualText(GfxState *state);
+  void beginString(GfxState *state, const GooString *s) override;
+  void endString(GfxState *state) override;
+  void drawChar(GfxState *state, double x, double y,
+		double dx, double dy,
+		double originX, double originY,
+		CharCode c, int nBytes, Unicode *u, int uLen) override;
+  void incCharCount(int nChars) override;
+  void beginActualText(GfxState *state, const GooString *text) override;
+  void endActualText(GfxState *state) override;
 
   //----- path painting
-  virtual void stroke(GfxState *state);
-  virtual void fill(GfxState *state);
-  virtual void eoFill(GfxState *state);
+  void stroke(GfxState *state) override;
+  void fill(GfxState *state) override;
+  void eoFill(GfxState *state) override;
 
   //----- link borders
-  virtual void processLink(AnnotLink *link);
+  void processLink(AnnotLink *link) override;
 
   //----- special access
 
@@ -847,7 +875,7 @@ public:
   // character are drawn on eachother.
   void setMergeCombining(GBool merge);
 
-#if TEXTOUT_WORD_LIST
+#ifdef TEXTOUT_WORD_LIST
   // Build a flat word list, in content stream order (if
   // this->rawOrder is true), physical layout order (if
   // this->physLayout is true and this->rawOrder is false), or reading

@@ -1,6 +1,6 @@
 /* mpfr_set_q -- set a floating-point number from a multiple-precision rational
 
-Copyright 2000-2002, 2004-2016 Free Software Foundation, Inc.
+Copyright 2000-2002, 2004-2019 Free Software Foundation, Inc.
 Contributed by the AriC and Caramba projects, INRIA.
 
 This file is part of the GNU MPFR Library.
@@ -17,12 +17,13 @@ License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with the GNU MPFR Library; see the file COPYING.LESSER.  If not, see
-http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
+https://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA. */
 
 #define MPFR_NEED_LONGLONG_H
 #include "mpfr-impl.h"
 
+#ifndef MPFR_USE_MINI_GMP
 /*
  * Set f to z, choosing the smallest precision for f
  * so that z = f*(2^BPML)*zs*2^(RetVal)
@@ -38,7 +39,7 @@ set_z (mpfr_ptr f, mpz_srcptr z, mp_size_t *zs)
   MPFR_ASSERTD (mpz_sgn (z) != 0);
 
   /* Remove useless ending 0 */
-  for (p = PTR (z), s = *zs = ABS (SIZ (z)) ; *p == 0; p++, s--)
+  for (p = PTR (z), s = *zs = ABSIZ (z) ; *p == 0; p++, s--)
     MPFR_ASSERTD (s >= 0);
 
   /* Get working precision */
@@ -131,5 +132,4 @@ mpfr_set_q (mpfr_ptr f, mpq_srcptr q, mpfr_rnd_t rnd)
   mpfr_clear (n);
   MPFR_RET (inexact);
 }
-
-
+#endif

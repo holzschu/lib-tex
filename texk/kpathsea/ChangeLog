@@ -1,3 +1,397 @@
+2019-04-07  Karl Berry  <karl@freefriends.org>
+
+	* TeX Live 2019.
+
+2019-03-25  Karl Berry  <karl@freefriends.org>
+
+	* texmf.cnf (TEXMFDBS),
+	* doc/kpathsea.texi (ls-R): attempt to describe the lack of
+	disk searching when ls-R is present, regardless of !!, more clearly.
+	Report from Yann Salmon, tex-k thread of 27 Feb 2019 21:00:46.
+	* kpsewhich.c: doc fix.
+
+2019-02-11  Karl Berry  <karl@tug.org>
+
+	* version.ac,
+	* texmf.cnf,
+	* kpsewhich.c,
+	* doc/kpathsea.texi: 6.3.1 for TL'19.
+
+2019-01-19  Karl Berry  <karl@freefriends.org>
+
+	* variable.h (kpathsea_var_expand): returns string "$FOO" if FOO
+	is not defined, not the empty string; whereas ${FOO} does return
+	the empty string. Maybe not the ideal interface, but seems
+	undesirable to change now.
+	* doc/kpathsea.texi (Programming with config files),
+	(Auxiliary tasks): document this.
+	Noted by Andreas Scherer, r49726.
+
+2019-01-19  Karl Berry  <karl@tug.org>
+
+	* texmf.cnf (TEXMFLOCALEDIR): define as $TEXMFMAIN/locale,
+	for cweb translations now, and hopefully more later.
+
+2018-12-30  Karl Berry  <karl@tug.org>
+
+	* texmf.cnf (shell_escape_commands): make that r-mpost.
+
+2018-12-24  Andreas Scherer <https://ascherer.github.io>
+
+	* kpsewhich.c: Add missing format placeholder.
+
+2018-12-21  Karl Berry  <karl@freefriends.org>
+
+	* texmf.cnf (shell_escape_commands): add rmpost.
+
+2018-12-17  Karl Berry  <karl@freefriends.org>
+
+	* kpsewhich.c (--var-brace-value, var_to_brace_value): new option
+	and corresponding option.
+	(main): new case for it. For --var-value, go back to just variable
+	(kpathsea_var_value) expansion.
+	* doc/kpathsea.texi (Auxiliary tasks): document the new option,
+	try to explain the difference.
+	Follow-up report from jbglaw,
+	https://github.com/TeX-Live/texlive-source/issues/3.
+
+2018-12-14  Karl Berry  <karl@tug.org>
+
+	* c-pathch.h (IS_KPSE_SEP): check for both : and ; only on Unix.
+	On Windows, : is the c: drive separator and must not ever be
+	a path separator.
+
+	* texmf.cnf (TEXMFDOTDIR): new variable, used instead of
+	literal "." in all search paths, so that it can be redefined as
+	".//". Suggestion from Linas Stonys, tex-k 4 Dec 2018 10:09:35.
+
+2018-12-13  Karl Berry  <karl@freefriends.org>
+
+	* c-pathch.h (IS_KPSE_SEP): new macro to check for either : or ;
+	regardless of the current system.
+	* path-elt.c (element): use it when extracting the path elements,
+	so that we'll get ~ expansion on Unix in, e.g.,
+	    env FOO='/;~' ./kpsewhich --expand-braces='$FOO'
+	* kpsewhich.c (main): call kpathsea_brace_expand on the result
+	from kpathsea_var_value, so that we'll get ~ expansion in, e.g.,
+	    env FOO='/:~' ./kpsewhich --var-value=FOO
+	Original report from e-kwsm (E Kawashima),
+	https://github.com/TeX-Live/texlive-source/issues/3
+	
+	* NEWS,
+	* doc/kpathsea.texi (Auxiliary tasks): document that -var-value
+	now does brace expansion.
+
+2018-12-12  Karl Berry  <karl@freefriends.org>
+
+	* expand.h,
+	* pathsearch.h,
+	* cnf.c: doc fixes.
+	
+	* kpsewhich.c (main): show path when --show-path can't run.
+
+2018-12-11  Karl Berry  <karl@freefriends.org>
+
+	* kpsewhich.c (main): formatting.
+
+2018-12-04  Karl Berry  <karl@freefriends.org>
+
+	* kpsewhich.c (main) [WIN32]: #define puts kpathsea_win32_puts
+	once, instead of many #ifdefs throughout function.
+
+2018-11-23  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* elt-dirs.c, knj.c, progname.c: Support non-ascii values
+	for variables in the case of
+	command_line_encoding = utf-8 (w32 only).
+
+2018-11-12  Andreas Scherer  <https://ascherer.github.io>
+
+	* tex-make.c (maketex): check return value from dup(2).
+
+2018-07-02  Karl Berry  <karl@freefriends.org>
+
+	* kpsewhich.c (lookup): warn that --all is ignored with bitmap fonts.
+	(USAGE): likewise.
+	* doc/kpathsea.texi (Path searching options) <--all>: likewise.
+	Report from Werner Lember, 07 Apr 2018 12:39:34.
+
+2018-06-10  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* progname.c, types.h, knj.h: Add a variable W32_codepage.
+	* kpsewhich.c: Allow Unicode file name for pdftex in kpsewhich.
+	(Windows only)
+
+2018-05-29  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* kpsewhich.c: Revert. Since "command_line_encoding=utf8" is
+	not so natural for pdfTeX.
+
+2018-05-12  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* kpsewhich.c: Allow Unicode file name for pdftex in kpsewhich.
+	(Windows only)
+
+2018-04-14  Karl Berry  <karl@tug.org>
+
+	* TeX Live 2018 release, kpathsea 6.3.0.
+
+2018-03-16  Karl Berry  <karl@freefriends.org>
+
+	* tex-glyph.h (kpse_glyph_source_fallback_res): new enum value
+	in kpse_glyph_source_type.
+	* tex-glyph.c (kpathsea_find_glyph): use it for `source'.
+	Private report from Doug McKenna, 14 Mar 2018 19:26:12.
+
+2018-03-14  Karl Berry  <karl@tug.org>
+
+	* tex-glyph.c (kpathsea_find_glyph, try_size): disentangle
+	successful searches and filling in return information.
+	Private report from Doug McKenna, 14 Mar 2018 11:51:29.
+
+2018-02-26  Karl Berry  <karl@freefriends.org>
+
+	* texmf.cnf (TEXMFVAR, TEXMFCONFIG, doc): 2018.
+
+2018-02-24  Hironobu Yamashita  <h.y.acetaminophen@gmail.com>
+
+	* tex-make.c (kpathsea_make_tex): Change an error message
+	"Invalid fontname" to "Invalid filename", since
+	  $ tex -fmt=-a x
+	causes
+	  kpathsea:make_tex: Invalid fontname `-a.fmt', starts with '-'
+	but it is a format file.
+
+2018-02-23  Karl Berry  <karl@freefriends.org>
+
+	* lib.h (LIB_START_FATAL): mention that the identifier `kpse'
+	has to be defined for this to work.  (In practice, it's a local
+	variable.) Private report from Douglas McKenna, 2018/02/21.
+
+2018-02-21  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* xgetcwd.c: Replace LIB_FATAL2 by FATAL2.
+	Private report from Douglas McKenna, 2018/02/21.
+
+2018-02-20  Karl Berry  <karl@freefriends.org>
+
+	* progname.c (expand_symlinks): make error message on unresolvable
+	symlinks less verbose.
+	(kpathsea_selfdir): exit(1) if name cannot be resolved,
+	instead of failing an assertion. Report from Enrico Gregorio,
+	http://tug.org/pipermail/tex-live/2018-February/041052.html
+
+2018-02-17  TANAKA Takuji  <ttk@t-lab.opal.ne.jp>
+
+	* texmf.cnf ({TEXINPUTS,BIBINPUTS,max_strings}.upbibtex):
+	add defns for upbibtex.
+
+2018-02-10  Karl Berry  <karl@freefriends.org>
+
+	* doc/kpathsea.texi (Path searching options): clarify that
+	--no-casefold-search doesn't mean the underlying (file)system
+	magically becomes case-sensitive.
+
+2018-02-07  Karl Berry  <karl@freefriends.org>
+
+	* tests/kpsewhich.test: don't run --no-casefold-search with
+	"Plain.TeX", since it succeeds on case-insensitive systems
+	and fails on case-sensitive ones.
+
+2018-02-04  Karl Berry  <karl@freefriends.org>
+
+	* texmf.cnf (texmf_casefold_search): new configuration value
+	for Unix, default 1. Latest thread about this longstanding issue:
+	http://tug.org/pipermail/tex-live/2017-September/040619.html
+
+	* version.ac: move to 6.3.0 since I guess this is a new
+	(compatible [enough]) interface.
+	* NEWS: mention it.
+	* doc/kpathsea.texi: document it.
+	(Casefolding search),
+	(Casefolding rationale),
+	(Casefolding examples): new nodes.
+	(Path searching options): new option [-no]-casefold-search
+	for kpsewhich.
+
+	* pathsearch.c (KPSE_CASEFOLDING_SEARCH): new compile-time macro
+	to support case-insensitive searches on case-sensitive operating
+	systems, that is, not Windows. Most other changes here are
+	conditional on it.
+
+	(print_space_list): helper fn for debugging output.
+	(readable_file_fn_type): new typedef for casefold_readable_file
+	and kpathsea_readable_file.
+	(casefold_readable_file): new fn to check for a file ignoring case.
+	(dir_list_search),
+	(dir_list_search_list): take an additional function pointer argument
+	and call it, instead of only kpathsea_readable_file. Return
+	the matched name instead of the original name. (This would have
+	caused failure before with the ENAMETOOLONG kludge; guess that
+	never actually happens.)
+	(absolute_search),
+	(path_search): also do casefolded search if enabled and requested.
+	Also free passed name in callers.
+	(kpathsea_path_search_list_generic): call absolute_search
+	instead of kpathsea_readable_file; merge returned lists;
+	also do casefolded search if enabled and requested.
+	
+        (print_tab_list) [TEST]: another helper fn to print test results.
+        (test_path_search_list_generic) [TEST]: new test fn for some
+	minimal casefolding tests.
+	(main): call it, and rearrange tests.
+	(standalone-compile-command): current to current (TeX Live) reality.
+
+	* kpsewhich.c (long_options): new options [-no]-casefold-search
+	to override the default for casefolded searches.
+	(read_command_line): handle them with xputenv on texmf_casefold_search.
+	
+	* tests/kpsewhich.test: do a few casefolding tests.
+	
+2018-02-01  Karl Berry  <karl@freefriends.org>
+
+	* lib.h (KPSE_CNF_P): new macro.
+	* tex-file.c (kpathsea_find_file_generic): use it,
+	for try_std_extension_first.
+
+2018-01-27  Karl Berry  <karl@freefriends.org>
+
+	* readable.h: doc fixes.
+	* readable.c (READABLE): take (ignored) kpse arg in macro, so:
+	(kpathsea_readable_file): we can avoid #ifdefs in body.
+
+	* str-list.c (str_list_concat_elements): reformat for consistency.
+
+	* str-list.h (STR_LIST_EMPTY, STR_LIST_FIRST_ELT): new macros.
+	* kpsewhich.c,
+	* pathsearch.c,
+	* str-list.c (str_list_concat_elements): use them.
+
+2018-01-26  Karl Berry  <karl@freefriends.org>
+
+	* tex-file.c (kpathsea_init_format_return_varlist): log a newline
+	before kpse_cnf_format, since this happens mid-search.
+
+2018-01-25  Karl Berry  <karl@freefriends.org>
+
+	* pathsearch.c: more consistent code formatting, doc fixes.
+	No functional code changes.
+
+2018-01-17  Norbert Preining  <norbert@preining.info>
+
+	* mktexlsr (treefile): use mktemp with fallback option for
+	temporary file.
+
+2018-01-16  Karl Berry  <karl@freefriends.org>
+
+	* kpathsea.pc.in (Cflags): remove -I${libdir} per Debian.
+
+2018-01-14  Karl Berry  <karl@tug.org>
+
+	* texmf.cnf: doc fixes.
+
+2018-01-14  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* progname.c: Use a macro instead of a function strlen() to
+	check if a string is empty or not. Report from Douglas McKenna,
+	private mail 14 Jan 2018.
+
+2018-01-05  Karl Berry  <karl@freefriends.org>
+
+	* pathsearch.c (dir_list_search, dir_list_search_list): save the
+	next element to continue the loop, in case the
+	current element floats. Report from Douglas McKenna,
+	tex-k mail 4 Jan 2018 10:16:18.
+
+2017-12-27  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* xbasename.c, xdirname.c: Remove IS_KANJI test for UNC names,
+	and fix a W32 bug in xdirname.c.
+	Report by Douglas McKenna:
+	http://tug.org/pipermail/tex-k/2017-December/002840.html
+
+2017-12-09  Jiang Jiang  <gzjjgod@gmail.com>
+
+	* tex-glyph.c (try_fallback_resolutions):
+	Avoid warning: taking the absolute value of unsigned type
+	'unsigned int' has no effect [-Wabsolute-value]
+	ref. https://github.com/jjgod/texlive/commit/4cbec4c
+
+2017-12-08  Karl Berry  <karl@freefriends.org>
+
+	* tex-file.c (kpathsea_init_format_return_varlist)
+	<kpse_program_text_format>, <kpse_program_binary_format>:
+	use DIR_SEP_STRING instead of hardwired /
+	Report from Douglas McKenna, tex-k 5 Dec 2017 22:27:10.
+
+2017-12-05  Karl Berry  <karl@freefriends.org>
+
+	* c-minmax.h (SCHAR_MAX): decrement to the correct 127.
+	Report from Douglas McKenna, tex-k 4 Dec 2017 18:26:35.
+
+2017-11-28  Karl Berry  <karl@tug.org>
+
+	* doc/unixtex.texi: no longer in ~ftp, etc.
+	
+	* doc/kpathsea.texi (Fontmap): clarify that it's the last %
+	on a line that starts a comment. From Doug McKenna, personal
+	email, 21nov17.
+
+2017-11-18  Karl Berry  <karl@tug.org>
+
+	* db.c (elt_in_db): protect against either argument being NULL or
+	empty.  From Doug McKenna, personal mail, 17nov17.
+
+2017-11-11  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* tex-file.c: Again use a custom kpathsea_getlongpath()
+	instead of a standard API function GetLongPathName(), since
+	the latter sometimes does not work as desired (W32 only).
+
+2017-11-09  Karl Berry  <karl@freefriends.org>
+
+	* db.c (kpathsea_db_search_list): remove redundant test of `found'.
+        From Doug McKenna, personal mail, 7nov17.
+
+2017-11-03  Karl Berry  <karl@freefriends.org>
+
+	* default.h: document that NULL or empty input path returns the
+	default string.
+	* kdefault.c (kpathsea_expand_default): check for empty input path.
+        From Doug McKenna, personal mail, 2nov17.	
+
+	* cnf.c (do_line): do not move past a nul byte on erroneous input
+	(with a . but no program name).
+	* hash.c: doc fix.
+        From Doug McKenna, personal mail, 31oct17.	
+
+2017-10-29  Karl Berry  <karl@freefriends.org>
+
+	* several files: missed copyright 2017 updates.
+
+	* elt-dirs.c (do_subdir): assert must include elt_length>0
+	to guarantee the assert of elt[elt_length-1] is valid.
+        From Doug McKenna, personal mail, 29oct17.
+
+2017-10-25  Karl Berry  <karl@tug.org>
+
+	* expand.c (brace_expand): do not look past the terminating
+	null with bad input like "a{\0whatever".
+	From Doug McKenna, personal mail, 23oct17.
+
+2017-09-22  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* tex-file.c: Use a standard API function GetLongPathName()
+	instead of the custom kpathsea_getlongpath() (W32 only).
+
+2017-09-20  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* tex-file.c: Fix to return actual file names (W32 only).
+
+2017-09-19  Akira Kakuto  <kakuto@fuk.kindai.ac.jp>
+
+	* db.c: Fix for DOSISH systems in which _WIN32 is not defined.
+
 2017-05-03  Karl Berry  <karl@tug.org>
 
 	* texmf.cnf (TEXMFAUXTREES): new variable (default value empty
@@ -1479,7 +1873,7 @@
 	* texmf.cnf (shell_escape_commands): turns out fc-list is not
 	needed after all.
 
-2010-05-30  Manuel Pégourié-Gonnard <mpg@elzevir.fr>
+2010-05-30  Manuel P\'egouri\'e-Gonnard <mpg@elzevir.fr>
 
 	* texmf.cnf: relax LUAINPUTS not to require and extra "lua"
 	subdirectory for modules in texmfscripts.
@@ -1586,7 +1980,7 @@
 	from 'string *' to 'const_string *', drop kpse_fontmap_lookup.
 	* tex-file.c (target_fontmaps), tex-glyph.c (try_fontmap): Adjust.
 
-2010-04-27  Manuel Pégourié-Gonnard <mpg@elzevir.fr>
+2010-04-27  Manuel P\'egouri\'e-Gonnard <mpg@elzevir.fr>
 
 	* texmf.cnf: - s/pdf(lua(la)?tex)/dvi\1/
 	- add luatex before generic (for generic package specific to luatex) and
@@ -2033,11 +2427,11 @@
 
 	* texmf.cnf (shell_escape): doc fixes to discourage shell_escape=p.
 
-2009-10-19  Manuel Pégourié-Gonnard <mpg@elzevir.fr>
+2009-10-19  Manuel P\'egouri\'e-Gonnard <mpg@elzevir.fr>
 
 	* texmf.cnf: set shell_escape back to 'f': 'p' is broken on Unix.
 
-2009-10-15  Manuel Pégourié-Gonnard <mpg@elzevir.fr>
+2009-10-15  Manuel P\'egouri\'e-Gonnard <mpg@elzevir.fr>
 
 	* texmf.cnf (shell_escape_commands): add repstopdf, a version of
 	epstopdf with restrictions intended to make it safer.
@@ -2621,15 +3015,15 @@
 	autoheader templates ...
 	* acconfig.h: ... removed.
 
-2008-02-24  Martin Schröder <martin@pdftex.org>
+2008-02-24  Martin Schr\"oder <martin@pdftex.org>
 
 	* lib.h: systypes.h instead of c-std.h
 
-2008-02-23  Martin Schröder <martin@pdftex.org>
+2008-02-23  Martin Schr\"der <martin@pdftex.org>
 
 	* lib.h: include c-std.h to get off_t from stdio.h
 
-2008-02-21  Martin Schröder <martin@pdftex.org>
+2008-02-21  Martin Schr\"oder <martin@pdftex.org>
 
 	* lib.h, xfseek.c, xftell.c: LFS support: use off_t instead of long
 	and fseeko instead of fseek
@@ -3128,7 +3522,7 @@
 	addition to the compiler name.  From Harald Koenig
 	<koenig@science-computing.de>.
 
-	* mktexpk: Add guesses for dpi 360 and 720.  From Frank Küster
+	* mktexpk: Add guesses for dpi 360 and 720.  From Frank K\"uster
 	<frank@kuesterei.ch> (Debian maintainer).
 
 	* mktexlsr: Write all regular progress messages to stderr, instead
@@ -3918,7 +4312,7 @@
 
 2002-05-28  Olaf Weber  <olaf@infovore.xs4all.nl>
 
-	* mktexdir: Guard $KPSE_DOT with quotes.  From Emmanuel_Thomé
+	* mktexdir: Guard $KPSE_DOT with quotes.  From Emmanuel_Thom\'e
 	<thome@lix.polytechnique.fr>.
 
 2002-04-01  Olaf Weber  <olaf@infovore.xs4all.nl>
@@ -4328,7 +4722,7 @@
 
 	* Makefile.in: TEXMF_CNF -> VARTEXMF
 
-	* mktexmf: Small fix to a case statement from Berthold Höllmann
+	* mktexmf: Small fix to a case statement from Berthold H\"ollmann
 	<bhoel@starship.python.net>.
 
 1999-03-15  Olaf Weber  <olaf@infovore.xs4all.nl>

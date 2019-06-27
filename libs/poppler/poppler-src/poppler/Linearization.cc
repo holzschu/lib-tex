@@ -6,6 +6,7 @@
 //
 // Copyright 2010, 2012 Hib Eris <hib@hiberis.nl>
 // Copyright 2015 Jason Crain <jason@aquaticape.us>
+// Copyright 2017 Albert Astals Cid <aacid@kde.org>
 //
 //========================================================================
 
@@ -20,36 +21,26 @@
 Linearization::Linearization (BaseStream *str)
 {
   Parser *parser;
-  Object obj1, obj2, obj3, obj5;
-
-  linDict.initNull();
 
   str->reset();
-  obj1.initNull();
-  parser = new Parser(NULL,
-      new Lexer(NULL, str->makeSubStream(str->getStart(), gFalse, 0, &obj1)),
+  parser = new Parser(nullptr,
+      new Lexer(nullptr, str->makeSubStream(str->getStart(), gFalse, 0, Object(objNull))),
       gFalse);
-  parser->getObj(&obj1);
-  parser->getObj(&obj2);
-  parser->getObj(&obj3);
-  parser->getObj(&linDict);
+  Object obj1 = parser->getObj();
+  Object obj2 = parser->getObj();
+  Object obj3 = parser->getObj();
+  linDict = parser->getObj();
   if (obj1.isInt() && obj2.isInt() && obj3.isCmd("obj") && linDict.isDict()) {
-    linDict.dictLookup("Linearized", &obj5);
+    Object obj5 = linDict.dictLookup("Linearized");
     if (!(obj5.isNum() && obj5.getNum() > 0)) {
-       linDict.free();
-       linDict.initNull();
+       linDict.setToNull();
     }
-    obj5.free();
   }
-  obj3.free();
-  obj2.free();
-  obj1.free();
   delete parser;
 }
 
 Linearization:: ~Linearization()
 {
-  linDict.free();
 }
 
 Guint Linearization::getLength()
@@ -57,7 +48,7 @@ Guint Linearization::getLength()
   if (!linDict.isDict()) return 0;
 
   int length;
-  if (linDict.getDict()->lookupInt("L", NULL, &length) &&
+  if (linDict.getDict()->lookupInt("L", nullptr, &length) &&
       length > 0) {
     return length;
   } else {
@@ -72,17 +63,15 @@ Guint Linearization::getHintsOffset()
 
   Object obj1, obj2;
   if (linDict.isDict() &&
-      linDict.dictLookup("H", &obj1)->isArray() &&
+      (obj1 = linDict.dictLookup("H"), obj1.isArray()) &&
       obj1.arrayGetLength()>=2 &&
-      obj1.arrayGet(0, &obj2)->isInt() &&
+      (obj2 = obj1.arrayGet(0), obj2.isInt()) &&
       obj2.getInt() > 0) {
     hintsOffset = obj2.getInt();
   } else {
     error(errSyntaxWarning, -1, "Hints table offset in linearization table is invalid");
     hintsOffset = 0;
   }
-  obj2.free();
-  obj1.free();
 
   return hintsOffset;
 }
@@ -93,17 +82,15 @@ Guint Linearization::getHintsLength()
 
   Object obj1, obj2;
   if (linDict.isDict() &&
-      linDict.dictLookup("H", &obj1)->isArray() &&
+      (obj1 = linDict.dictLookup("H"), obj1.isArray()) &&
       obj1.arrayGetLength()>=2 &&
-      obj1.arrayGet(1, &obj2)->isInt() &&
+      (obj2 = obj1.arrayGet(1), obj2.isInt()) &&
       obj2.getInt() > 0) {
     hintsLength = obj2.getInt();
   } else {
     error(errSyntaxWarning, -1, "Hints table length in linearization table is invalid");
     hintsLength = 0;
   }
-  obj2.free();
-  obj1.free();
 
   return hintsLength;
 }
@@ -112,20 +99,18 @@ Guint Linearization::getHintsOffset2()
 {
   int hintsOffset2 = 0; // default to 0
 
-  Object obj1, obj2;
+  Object obj1;
   if (linDict.isDict() &&
-      linDict.dictLookup("H", &obj1)->isArray() &&
+      (obj1 = linDict.dictLookup("H"), obj1.isArray()) &&
       obj1.arrayGetLength()>=4) {
-    if (obj1.arrayGet(2, &obj2)->isInt() &&
-        obj2.getInt() > 0) {
+    Object obj2 = obj1.arrayGet(2);
+    if (obj2.isInt() && obj2.getInt() > 0) {
       hintsOffset2 = obj2.getInt();
     } else {
       error(errSyntaxWarning, -1, "Second hints table offset in linearization table is invalid");
       hintsOffset2 = 0;
     }
   }
-  obj2.free();
-  obj1.free();
 
   return hintsOffset2;
 }
@@ -134,20 +119,18 @@ Guint Linearization::getHintsLength2()
 {
   int hintsLength2 = 0; // default to 0
 
-  Object obj1, obj2;
+  Object obj1;
   if (linDict.isDict() &&
-      linDict.dictLookup("H", &obj1)->isArray() &&
+      (obj1 = linDict.dictLookup("H"), obj1.isArray()) &&
       obj1.arrayGetLength()>=4) {
-    if (obj1.arrayGet(3, &obj2)->isInt() &&
-        obj2.getInt() > 0) {
+    Object obj2 = obj1.arrayGet(3);
+    if (obj2.isInt() && obj2.getInt() > 0) {
       hintsLength2 = obj2.getInt();
     } else {
       error(errSyntaxWarning, -1, "Second hints table length in linearization table is invalid");
       hintsLength2 = 0;
     }
   }
-  obj2.free();
-  obj1.free();
 
   return hintsLength2;
 }
@@ -156,7 +139,7 @@ int Linearization::getObjectNumberFirst()
 {
   int objectNumberFirst = 0;
   if (linDict.isDict() &&
-      linDict.getDict()->lookupInt("O", NULL, &objectNumberFirst) &&
+      linDict.getDict()->lookupInt("O", nullptr, &objectNumberFirst) &&
       objectNumberFirst > 0) {
     return objectNumberFirst;
   } else {
@@ -169,7 +152,7 @@ Guint Linearization::getEndFirst()
 {
   int pageEndFirst = 0;
   if (linDict.isDict() &&
-      linDict.getDict()->lookupInt("E", NULL, &pageEndFirst) &&
+      linDict.getDict()->lookupInt("E", nullptr, &pageEndFirst) &&
       pageEndFirst > 0) {
     return pageEndFirst;
   } else {
@@ -182,7 +165,7 @@ int Linearization::getNumPages()
 {
   int numPages = 0;
   if (linDict.isDict() &&
-      linDict.getDict()->lookupInt("N", NULL, &numPages) &&
+      linDict.getDict()->lookupInt("N", nullptr, &numPages) &&
       numPages > 0) {
     return numPages;
   } else {
@@ -195,7 +178,7 @@ Guint Linearization::getMainXRefEntriesOffset()
 {
   int mainXRefEntriesOffset = 0;
   if (linDict.isDict() &&
-      linDict.getDict()->lookupInt("T", NULL, &mainXRefEntriesOffset) &&
+      linDict.getDict()->lookupInt("T", nullptr, &mainXRefEntriesOffset) &&
       mainXRefEntriesOffset > 0) {
     return mainXRefEntriesOffset;
   } else {
@@ -209,7 +192,7 @@ int Linearization::getPageFirst()
   int pageFirst = 0; // Optional, defaults to 0.
 
   if (linDict.isDict()) {
-    linDict.getDict()->lookupInt("P", NULL, &pageFirst);
+    linDict.getDict()->lookupInt("P", nullptr, &pageFirst);
   }
 
   if ((pageFirst < 0) || (pageFirst >= getNumPages())) {
