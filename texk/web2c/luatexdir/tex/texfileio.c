@@ -1225,7 +1225,11 @@ void do_zdump(char *p, int item_size, int nitems, FILE * out_file)
     if (gzwrite(gz_fmtfile, (void *) p, (unsigned) (item_size * nitems)) !=
         item_size * nitems) {
         fprintf(stderr, "! Could not write %d %d-byte item(s): %s.\n", nitems, item_size, gzerror(gz_fmtfile, &err));
+#ifdef __IPHONE__
+		uexit_lua(1);
+#else
         uexit(1);
+#endif
     }
 #if !defined (WORDS_BIGENDIAN) && !defined (NO_DUMP_SHARE)
     swap_items(p, nitems, item_size);
@@ -1240,7 +1244,11 @@ void do_zundump(char *p, int item_size, int nitems, FILE * in_file)
         return;
     if (gzread(gz_fmtfile, (void *) p, (unsigned) (item_size * nitems)) <= 0) {
         fprintf(stderr, "Could not undump %d %d-byte item(s): %s.\n", nitems, item_size, gzerror(gz_fmtfile, &err));
+#ifdef __IPHONE__
+		uexit_lua(1);
+#else
         uexit(1);
+#endif
     }
 #if !defined (WORDS_BIGENDIAN) && !defined (NO_DUMP_SHARE)
     swap_items(p, nitems, item_size);

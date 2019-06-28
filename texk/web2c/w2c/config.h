@@ -137,6 +137,12 @@ typedef unsigned long uintptr_t;
    themselves can use it, but they don't need cpascal.h.  */
 WEB2C_NORETURN
 extern void uexit (int status);
+#ifdef __IPHONE__
+WEB2C_NORETURN
+extern void uexitandclear (int status);
+WEB2C_NORETURN
+extern void uexit_lua (int status);
+#endif
 
 /* usage.c */
 extern void usage (const_string progname);

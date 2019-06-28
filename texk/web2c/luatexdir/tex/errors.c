@@ -255,10 +255,21 @@ void do_final_end(void)
     update_terminal();
     ready_already = 0;
     lua_close(Luas);
+#ifdef __IPHONE__
+	Luas = NULL;  // Need to make sure we don't close Luas a second time.
+#endif
     if ((history != spotless) && (history != warning_issued))
+#ifdef __IPHONE__
+		uexit_lua(1);
+#else
         uexit(1);
+#endif
     else
+#ifdef __IPHONE__
+        uexit_lua(defaultexitcode);
+#else
         uexit(defaultexitcode);
+#endif
 }
 
 __attribute__ ((noreturn))

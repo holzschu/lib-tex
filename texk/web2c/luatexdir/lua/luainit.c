@@ -463,7 +463,11 @@ static void parse_options(int ac, char **av)
                  "named COPYING and the LuaTeX source.\n\n"
                  "LuaTeX is Copyright 2019 Taco Hoekwater and the LuaTeX Team.\n");
             /* *INDENT-ON* */
+#ifdef __IPHONE__
+			uexit_lua(0);
+#else
             uexit(0);
+#endif
         } else if (ARGUMENT_IS("credits")) {
             char *versions;
             initversionstring(&versions);
@@ -484,7 +488,11 @@ static void parse_options(int ac, char **av)
                  "luajit    : Mike Pall (used in LuajitTeX)\n");
             /* *INDENT-ON* */
             puts(versions);
+#ifdef __IPHONE__
+			uexit_lua(0);
+#else
             uexit(0);
+#endif
         }
     }
     /*tex attempt to find |input_name| and |dump_name| */
@@ -923,10 +931,13 @@ void lua_initialize(int ac, char **av)
     size_t len;
     int starttime;
     int utc;
+#ifndef __IPHONE__
+	// static variables placed in the environment cause iOS_system to crash.
     static char LC_CTYPE_C[] = "LC_CTYPE=C";
     static char LC_COLLATE_C[] = "LC_COLLATE=C";
     static char LC_NUMERIC_C[] = "LC_NUMERIC=C";
     static char engine_luatex[] = "engine=" my_name;
+#endif
     char *old_locale = NULL;
     char *env_locale = NULL;
     char *tmp = NULL;
@@ -1029,11 +1040,18 @@ void lua_initialize(int ac, char **av)
        fprintf(stderr,"Unable to store environment locale.\n");
     }
     /*tex make sure that the locale is 'sane' (for lua) */
+#ifndef __IPHONE__
     putenv(LC_CTYPE_C);
     putenv(LC_COLLATE_C);
     putenv(LC_NUMERIC_C);
     /*tex this is sometimes needed */
     putenv(engine_luatex);
+#else 
+    setenv("LC_CTYPE", "C", 1); 
+    setenv("LC_CTYPE", "C", 1); 
+    setenv("LC_NUMERIC", "C", 1); 
+    setenv("engine", my_name, 1); 
+#endif
     luainterpreter();
     /*tex init internalized strings */
     set_init_keys;

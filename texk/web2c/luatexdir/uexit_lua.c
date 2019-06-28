@@ -31,7 +31,6 @@ uexit_lua (int unix_code)
 	else
 		final_code = unix_code;
 	// Goal: what is messing with memory issues in uexit_lau? 
-#ifdef TESTING_MEMORY_MANAGEMENT
 #ifdef __IPHONE__
 	// This function is called for each exit, either regular exit 
 	// or exit after error. 
@@ -204,6 +203,5 @@ uexit_lua (int unix_code)
 	par_loc = 0;
 	par_token = 0;
 #endif // __IPHONE__
-#endif // TESTING_MEMORY_MANAGEMENT
 	exit (final_code);
 }

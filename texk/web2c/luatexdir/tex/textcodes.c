@@ -140,7 +140,11 @@ int valid_catcode_table(int h)
 void copy_cat_codes(int from, int to)
 {
     if (from < 0 || from > CATCODE_MAX || catcode_valid[from] == 0) {
+#ifdef __IPHONE__
+		uexit_lua(1);
+#else
         uexit(1);
+#endif
     }
     if (to > catcode_max)
         catcode_max = to;
