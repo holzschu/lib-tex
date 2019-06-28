@@ -30,9 +30,21 @@ If you do not have access to the standard input, you will need to disable intera
 dllluatexmain(3, "lualatex", "--interaction=nonstopmode", "myFile.tex");
 ```
 
+Or if you use [ios_system](https://github.com/holzschu/ios_system) just call:
+```
+ios_system("lualatex --interaction=nonstopmode myFile.tex");
+```
+
 # TeX files
 
+This repository contains only the binaries. You will also need the texlive files distribution. The easiest way to get them is:
 
+- get the torrent for the distribution as an ISO file: http://tug.org/texlive/acquire-iso.html
+- mount the ISO file on your Mac
+- `cd` to the directory corresponding to the mounted disk
+- start `./install-tl -gui` to install the files
+- install all the files you need to a temporary directory. Make sure the installer also compiles the formats.
+- copy that directory to `~/Library/texlive/` on your iPad application (so you should have a directory `~/Library/texlive/2019/` containing `texmf-dist`. 
 
 # Limitations 
 
@@ -40,5 +52,5 @@ The TeX commands are in a library, not shell commands. On exit, variables are re
 
 # Backward compatibility
 
-This directory contains the texlive-2019 binaries. An earlier version contained the texlive-2017 binaries. The formats generated are mutually incompatible. To prevent compatibility issues, the `ios_system` releases keep the texlive-2017 binaries, and this directory has the texlive-2019 binaries as a release. 
+This directory contains the texlive-2019 binaries. An earlier version contained the texlive-2017 binaries. The formats generated are mutually incompatible. To prevent compatibility issues, for the time being, the `ios_system` releases keeps the texlive-2017 binaries, and this directory has the texlive-2019 binaries as a release. 
 
