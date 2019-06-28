@@ -46,10 +46,6 @@ This repository contains only the binaries. You will also need the texlive files
 - install all the files you need to a temporary directory. Make sure the installer also compiles the formats.
 - copy that directory to `~/Library/texlive/` on your iPad application (so you should have a directory `~/Library/texlive/2019/` containing `texmf-dist`. 
 
-# Limitations 
-
-The TeX commands are in a library, not shell commands. On exit, variables are reset to their default values and memory is freed. This way, you can call the commands several times in a row, without having to restart the application. There are still memory leaks, but I'm tracking them down. 
-
 # Backward compatibility
 
 This directory contains the texlive-2019 binaries. An earlier version contained the texlive-2017 binaries. The formats generated are mutually incompatible. To prevent compatibility issues, for the time being, the `ios_system` releases keeps the texlive-2017 binaries, and this directory has the texlive-2019 binaries as a release. 
