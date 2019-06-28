@@ -56,8 +56,6 @@ OBJCXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications
 
 echo "Compilation done, generating frameworks"
 
-TEXINSTDIR=${PWD}/inst/lib/
- 
 rm -rf Frameworks/texlua53.framework
 mkdir Frameworks/texlua53.framework 
 cp Work/libs/lua53/.libs/libtexlua53.5.dylib Frameworks/texlua53.framework/texlua53
@@ -84,7 +82,7 @@ plutil -replace CFBundleExecutable -string luatex Frameworks/luatex.framework/In
 plutil -replace CFBundleName -string luatex Frameworks/luatex.framework/Info.plist
 plutil -replace CFBundleIdentifier -string Nicolas-Holzschuch.luatex Frameworks/luatex.framework/Info.plist
 install_name_tool -id @rpath/luatex.framework/luatex   Frameworks/luatex.framework/luatex
-install_name_tool -change $TEXINSTDIR/libtexlua53.5.dylib @rpath/texlua53.framework/texlua53  Frameworks/luatex.framework/luatex
+install_name_tool -change $PWD/inst/lib/libtexlua53.5.dylib @rpath/texlua53.framework/texlua53  Frameworks/luatex.framework/luatex
 install_name_tool -change @rpath/libkpathsea.6.dylib  @rpath/kpathsea.framework/kpathsea Frameworks/luatex.framework/luatex
 
 
