@@ -44,7 +44,9 @@ This repository contains only the binaries. You will also need the texlive files
 - `cd` to the directory corresponding to the mounted disk
 - start `./install-tl -gui` to install the files
 - install all the files you need to a temporary directory. Make sure the installer also compiles the formats.
-- copy that directory to `~/Library/texlive/` on your iPad application (so you should have a directory `~/Library/texlive/2019/` containing `texmf-dist`. 
+- copy that directory to `~/Library/texlive/` on your iPad application (so you should have a directory `~/Library/texlive/2019/` containing `texmf-dist`). 
+
+
 
 # Backward compatibility
 
