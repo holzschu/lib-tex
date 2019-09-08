@@ -211,6 +211,13 @@ extern __thread FILE* thread_stderr;
 #define putchar(a) fputc(a, thread_stdout)
 #define getchar() fgetc(thread_stdin)
 #define getwchar() fgetwc(thread_stdin)
+// Make sure we don't kill the app:
+#ifndef __cplusplus // This fails to compile with pdftosrc.cc
+#define exit ios_exit
+#define abort() ios_exit(1)
+#define _exit ios_exit
+extern void ios_exit(int errorCode) __dead2; // set error code and exits from the thread.
+#endif
 #endif
 
 /* If you want to find subdirectories in a directory with non-Unix

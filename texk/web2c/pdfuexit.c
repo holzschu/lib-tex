@@ -24,7 +24,7 @@ extern void PdfObjTree_free(void);
 void
 uexitandclear (int unix_code)
 {
-  	fprintf(stderr, "Entering uexitandclear\n");
+  // 	fprintf(stderr, "Entering uexitandclear\n");
   int final_code;
   
   if (unix_code == 0)
@@ -128,6 +128,6 @@ uexitandclear (int unix_code)
   dump_name = NULL; // dump_name needs to be reset, but not freed
   // it's a pointer to an area that has already been freed. 
 #endif /* __IPHONE__ */
-  	fprintf(stderr, "Leaving uexitandclear\n");
+  //	fprintf(stderr, "Leaving uexitandclear\n");
   exit (final_code);
 }

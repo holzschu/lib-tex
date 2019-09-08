@@ -19,11 +19,18 @@ extern __thread FILE* thread_stdout;
 extern __thread FILE* thread_stderr;
 #undef stdout
 #undef stderr
+#undef stdin
 #define stdout thread_stdout
 #define stderr thread_stderr
+#define stdin thread_stdin
 #define putchar(a) fputc(a, thread_stdout)
 #define getchar() fgetc(thread_stdin)
 #define getwchar() fgetwc(thread_stdin)
+// Make sure we don't kill the app:
+#define exit ios_exit
+#define abort() ios_exit(1)
+#define _exit ios_exit
+extern void ios_exit(int errorCode) __dead2; // set error code and exits from the thread.
 #endif
 
 /*
