@@ -47,11 +47,11 @@
 CC=clang \
 CXX=clang++ \
 OBJCXX=clang++ \
-CFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\  " \
-CPPFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -D\ __IPHONE__\ " \
-LDFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -F${PWD}/Frameworks\ -framework\ ios_system\ " \
-CXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -std=c++11\ -D\ __IPHONE__\ " \
-OBJCXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -fembed-bitcode\ -std=c++11\ -D\ __IPHONE__\ " \
+CFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -D\ __IPHONE__\  " \
+CPPFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -D\ __IPHONE__\ " \
+LDFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -F${PWD}/Frameworks\ -framework\ ios_system\ " \
+CXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ -std=c++11\ -D\ __IPHONE__\ " \
+OBJCXXFLAGS="-arch\ arm64\ -miphoneos-version-min=11.0\ -isysroot\ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk\ \ -std=c++11\ -D\ __IPHONE__\ " \
 >& build_cross.log
 
 echo "Compilation done, generating frameworks"

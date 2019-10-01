@@ -77,7 +77,8 @@ void clear_tex_languages() {
 	for(int n = 0; n < MAX_TEX_LANGUAGES; n++) {
 		if (tex_languages[n] != NULL) {
 			// xfree(tex_languages[n]->patterns); 
-			hnj_hyphen_free(tex_languages[n]->patterns);
+			if (tex_languages[n]->patterns) 
+				hnj_hyphen_free(tex_languages[n]->patterns);
 			xfree(tex_languages[n]); 
 		}
 	}

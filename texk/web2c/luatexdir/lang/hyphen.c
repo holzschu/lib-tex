@@ -480,12 +480,18 @@ static void clear_dict(HyphenDict * dict)
     int state_num;
     for (state_num = 0; state_num < dict->num_states; state_num++) {
         HyphenState *hstate = &dict->states[state_num];
-        if (hstate->match)
+        if (hstate == NULL) continue;
+        if (hstate->match) {
             hnj_free(hstate->match);
-        if (hstate->trans)
+            hstate->match = NULL;
+		}
+        if (hstate->trans) {
             hnj_free(hstate->trans);
+			hstate->trans = NULL; 
+		}
     }
     hnj_free(dict->states);
+    dict->states = NULL;
     clear_hyppat_hash(&dict->patterns);
     clear_hyppat_hash(&dict->merged);
     clear_state_hash(&dict->state_num);
