@@ -3459,14 +3459,14 @@ mflua_CPPFLAGS = $(AM_CPPFLAGS) $(X_CFLAGS) $(LUA_INCLUDES)
 mflua_LDADD = libmflua.a $(LDADD) $(windowlib) $(mf_x_libs) $(LUA_LIBS)
 # mflua_LDFLAGS = -export-dynamic
 # __IPHONE__ change: create a dynamic library, not an executable
-mflua_LDFLAGS=-arch arm64 -dynamiclib -export-dynamic -L/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/ -mios-version-min=11
+mflua_LDFLAGS=-dynamiclib -export-dynamic -L$(SYSROOT)/usr/lib/
 #
 nodist_mflua_nowin_SOURCES = $(dist_mflua_SOURCES)
 mflua_nowin_CPPFLAGS = $(mflua_CPPFLAGS) -DMFNOWIN $(LUA_INCLUDES)
 mflua_nowin_LDADD = libmflua.a $(LDADD) $(windowlib) $(LUA_LIBS)
 # mflua_nowin_LDFLAGS = -export-dynamic
 # __IPHONE__ change: create a dynamic library, not an executable
-mflua_nowin_LDFLAGS=-arch arm64 -dynamiclib -export-dynamic -L/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/ -mios-version-min=11
+mflua_nowin_LDFLAGS=-dynamiclib -export-dynamic -L$(SYSROOT)/usr/lib/
 
 # MFLua C sources
 mflua_c_h = mfluaini.c mflua0.c mfluacoerce.h mfluad.h
@@ -4651,9 +4651,9 @@ luajittex_CXXFLAGS = $(WARNING_CXXFLAGS)
 # luatex_LDFLAGS = -export-dynamic
 #luatex53_LDFLAGS = -export-dynamic
 # __IPHONE__ change: create a dynamic library, not an executable
-luatex_LDFLAGS=-arch arm64 -dynamiclib  -export-dynamic -L/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/ -mios-version-min=11
+luatex_LDFLAGS=-dynamiclib  -export-dynamic -L$(SYSROOT)/usr/lib/
 # __IPHONE__ change: create a dynamic library, not an executable. See also all lines with dynamic_LDFLAGS
-dynamic_LDFLAGS=-arch arm64 -dynamiclib -L/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/ -mios-version-min=11
+dynamic_LDFLAGS=-dynamiclib -L$(SYSROOT)/usr/lib/
 
 luajittex_LDFLAGS = -export-dynamic $(LUAJIT_LDEXTRA)
 
@@ -4715,7 +4715,7 @@ xetex_dependencies = $(proglib) $(KPATHSEA_DEPEND) $(ICU_DEPEND) \
 	$(ZLIB_DEPEND) libmd5.a
 @XETEX_MACOSX_TRUE@xetex_LDFLAGS = -framework ApplicationServices -framework Cocoa
 # __IPHONE__ change: create a dynamic library, not an executable. 
-@XETEX_IPHONE_TRUE@xetex_LDFLAGS = -framework CoreText -framework CoreFoundation -framework CoreGraphics -lobjc -framework UIKit -framework Foundation -arch arm64 -dynamiclib -L/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib/ -mios-version-min=11
+@XETEX_IPHONE_TRUE@xetex_LDFLAGS = -framework CoreText -framework CoreFoundation -framework CoreGraphics -lobjc -framework UIKit -framework Foundation -dynamiclib -L$(SYSROOT)/usr/lib/ 
 
 xetex_CPPFLAGS = $(xetex_cppflags) $(am__append_139)
 xetex_CFLAGS = $(WARNING_CFLAGS)
