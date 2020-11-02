@@ -16,7 +16,7 @@ rm ios_system.xcframework.zip
 # 2) build for iOS:
 echo "Building for iOS:"
 
-export SYSROOT="/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk" 
+export SYSROOT=$(xcrun --sdk iphoneos --show-sdk-path) 
 ./Build --host=arm-apple-darwin --build=x86_64-apple-darwin \
 --disable-native-texlive-build \
 --enable-shared \
@@ -126,7 +126,7 @@ install_name_tool -change @rpath/libkpathsea.6.dylib @rpath/kpathsea.framework/k
 #3 Now compile for the simulator: 
 echo "Building for Simulator:"
 
-export SYSROOT="/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk" 
+export SYSROOT=$(xcrun --sdk iphonesimulator --show-sdk-path) 
 ./Build --host=x86-apple-darwin --build=x86_64-apple-darwin \
 --disable-native-texlive-build \
 --enable-shared \
@@ -172,11 +172,11 @@ export SYSROOT="/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhone
 CC=clang \
 CXX=clang++ \
 OBJCXX=clang++ \
-CFLAGS="-mios-simulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -D\ __IPHONE__\  " \
-CPPFLAGS="-mios-simulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -D\ __IPHONE__\ " \
-LDFLAGS="-mios-simulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -F${PWD}/ios_system.xcframework/ios-i386_x86_64-simulator\ -framework\ ios_system\ " \
-CXXFLAGS="-mios-simulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -std=c++11\ -D\ __IPHONE__\ " \
-OBJCXXFLAGS="-mios-simulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ \ -std=c++11\ -D\ __IPHONE__\ " \
+CFLAGS="-miphonesimulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -D\ __IPHONE__\  " \
+CPPFLAGS="-miphonesimulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -D\ __IPHONE__\ " \
+LDFLAGS="-miphonesimulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -F${PWD}/ios_system.xcframework/ios-x86_64-simulator\ -framework\ ios_system\ " \
+CXXFLAGS="-miphonesimulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ -std=c++11\ -D\ __IPHONE__\ " \
+OBJCXXFLAGS="-miphonesimulator-version-min=11.0\ -isysroot\ ${SYSROOT}\ \ -std=c++11\ -D\ __IPHONE__\ " \
 >& build_simulator.log
 
 echo "Compilation done, generating frameworks"
