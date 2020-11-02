@@ -13,27 +13,27 @@ let package = Package(
         .binaryTarget(
             name: "texlua53",
             url: "https://github.com/holzschu/lib-tex/releases/download/1.0/texlua53.xcframework.zip",
-            checksum: "62e34069ddef84a02f3c211aa0ab8165da13bcc27b71d0293442fc6722f3f301"
+            checksum: "d22becd28e56c4653004605cbd4b726a4f86fd78588c1113e6c86498d9a935f3"
         ),
         .binaryTarget(
             name: "kpathsea",
             url: "https://github.com/holzschu/lib-tex/releases/download/1.0/kpathsea.xcframework.zip",
-            checksum: "5579e3067857663fa73527fb0eeba86d92cd10767a051cfd3ad132405a72ac94"
+            checksum: "a5074f20ad8500e324655692e35c35872b3429b557e58a1c311f0098857522d7"
         ),
         .binaryTarget(
             name: "luatex",
             url: "https://github.com/holzschu/lib-tex/releases/download/1.0/luatex.xcframework.zip",
-            checksum: "1598bea608ad7b54316d2cba69b954bc8bb2a41887b0c9c7634811047ca36d56"
+            checksum: "d2698c3b9b1390771d9b5eca17a5254d9ac68155208673eccb96e07f65bf1e91"
         ),
         .binaryTarget(
             name: "pdftex",
             url: "https://github.com/holzschu/lib-tex/releases/download/1.0/pdftex.xcframework.zip",
-            checksum: "c0724610fde95686d0842400473dd6f7cc55d943b545ceb7a6de2bb2473024bf"
+            checksum: "546b2cc2be8ea55928f59e372749e1927ef91e277538847f4f873437cca5a8ec"
         ),
         .binaryTarget(
             name: "bibtex",
             url: "https://github.com/holzschu/lib-tex/releases/download/1.0/bibtex.xcframework.zip",
-            checksum: "a8711eab1c058ca04363617405cceb48be1fbf936dd6b83028898b6ff183194c"
+            checksum: "aaf5273926947edb18fc32d7d8fc93badc4fa1bafd35533f390b9e8dca728076"
         )
     ]
 )
